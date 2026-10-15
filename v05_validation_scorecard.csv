@@ -1,0 +1,10 @@
+dimension,required,methodology_version
+PERFORMANCE,true,VS_V1
+ROBUSTNESS,true,VS_V1
+STATISTICS,true,VS_V1
+COST,true,VS_V1
+REGIME_STABILITY,true,VS_V1
+CAPACITY,true,VS_V1
+MODEL_HEALTH,true,VS_V1
+EXECUTION,true,VS_V1
+OPERATIONAL_RISK,true,VS_V1

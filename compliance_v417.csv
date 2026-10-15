@@ -1,0 +1,22 @@
+requirement_id,requirement_text,priority,implementation_status,code_reference,schema_reference,test_reference,evidence_reference,owner,unresolved_gap
+MP174-01,data validation,CRITICAL,TESTED,src/trading_platform/data/quality.py,schemas/v12_compliance_matrix.csv,tests/test_v03_data.py,evidence://data-validation,engineering,Verification evidence is application-level; production operational review remains external
+MP174-02,PIT,CRITICAL,TESTED,src/trading_platform/data/pit.py,,tests/test_v03_data.py,evidence://pit,engineering,Independent production evidence and review remain external
+MP174-03,invariants,CRITICAL,TESTED,src/trading_platform/accounting/invariants.py,,tests/test_accounting.py,evidence://invariants,engineering,Independent production evidence and review remain external
+MP174-04,state matrix,CRITICAL,TESTED,src/trading_platform/state/compatibility.py,schemas/v18_compliance_matrix.csv,tests/test_state.py,evidence://state-matrix,engineering,Independent production evidence and review remain external
+MP174-05,risk engine,CRITICAL,TESTED,src/trading_platform/risk,budgets,tests/test_ttl.py,evidence://risk-engine,risk,Independent production evidence and review remain external
+MP174-06,kill,CRITICAL,TESTED,src/trading_platform/operations/readiness.py,,tests/test_state.py,evidence://kill,operations,Independent production evidence and review remain external
+MP174-07,reconciliation,CRITICAL,TESTED,src/trading_platform/accounting/reconciliation.py,,tests/test_accounting.py,evidence://reconciliation,operations,Live exchange reconciliation evidence remains external
+MP174-08,accounting,CRITICAL,TESTED,src/trading_platform/accounting/ledger.py,,tests/test_accounting.py,evidence://accounting,finance,Independent production evidence and review remain external
+MP174-09,realistic execution,CRITICAL,TESTED,src/trading_platform/execution,schemas/v13_testnet_runner_registry.csv,tests/test_v381_testnet_e2e.py,evidence://execution,execution,Authenticated live/Testnet execution evidence remains external
+MP174-10,monitoring,CRITICAL,PARTIAL,src/trading_platform/v369/monitoring_drill.py,v15_operational_readiness.csv,tests/test_v369_monitoring_drill.py,evidence://monitoring,operations,Real production monitoring/on-call drill not verified
+MP174-11,security,CRITICAL,PARTIAL,src/trading_platform/security,schemas/v18_compliance_matrix.csv,tests/test_v370_security_review_drill.py,evidence://security,security,Independent security assessment not verified
+MP174-12,permissions,CRITICAL,PARTIAL,src/trading_platform/security/permissions.py,,tests/test_v359_human_review.py,evidence://permissions,security,Production permission review and sign-off not verified
+MP174-13,network isolation,CRITICAL,PARTIAL,src/trading_platform/v391/network_segmentation.py,,tests/test_m3525_research_network.py,evidence://network-segmentation,platform,Live network segmentation evidence not verified
+MP174-14,backup,CRITICAL,PARTIAL,src/trading_platform/ops/backup_restore.py,,tests/test_v367_backup_restore.py,evidence://backup,operations,Production backup evidence not verified
+MP174-15,restore,CRITICAL,PARTIAL,src/trading_platform/ops/backup_restore.py,,tests/test_v367_backup_restore.py,evidence://restore,operations,Production restore evidence not verified
+MP174-16,rollback,CRITICAL,PARTIAL,src/trading_platform/v368/rollback_exercise.py,,tests/test_v368_rollback_exercise.py,evidence://rollback,operations,Production rollback exercise not verified
+MP174-17,failure injection,CRITICAL,TESTED,src/trading_platform/verification/failure_injection.py,,tests/test_v360_readiness_evidence.py,evidence://failure-injection,operations,Independent operational failure-injection evidence remains external
+MP174-18,recovery proof,CRITICAL,PARTIAL,src/trading_platform/v355/recovery_readiness.py,,tests/test_v355_m28_recovery_readiness.py,evidence://recovery-proof,operations,Production recovery proof not verified
+MP174-19,evidence snapshot,CRITICAL,TESTED,src/trading_platform/evidence/snapshot.py,,tests/test_v345_m18_evidence_snapshot.py,evidence://evidence-snapshot,governance,External evidence and review remain outstanding
+MP174-20,promotion bundle,CRITICAL,TESTED,src/trading_platform/promotion/contracts.py,,tests/test_v346_m19_promotion_bundle.py,evidence://promotion-bundle,governance,External approval and operational evidence remain outstanding
+MP174-21,approval,CRITICAL,PARTIAL,src/trading_platform/v359/human_review.py,,tests/test_v359_human_review.py,evidence://approval,governance,Independent human production approval not verified

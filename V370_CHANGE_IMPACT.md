@@ -1,0 +1,11 @@
+# V3.70 Change Impact
+
+change_id=V370_SECURITY_HYGIENE_DRILL
+classification=DESIGN_CONSTANT
+changed_component=src/trading_platform/v370/security_review_drill.py
+affected_components=release_validation;research_network_boundary;secret_hygiene
+invalidated_artifacts=none
+invalidated_evidence=none
+required_retests=full_suite;wheel_build;archive_extraction
+production_activation_impact=NO_ACTIVATION
+rollback_impact=remove_v370_module_and_tests

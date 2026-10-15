@@ -1,0 +1,13 @@
+field,type,required,policy
+key_id,string,YES,stable non-secret identifier
+algorithm,enum,YES,currently ED25519 only
+public_key_b64,string,YES,public key only; never a private key
+valid_from_ms,int,YES,activation boundary
+expires_at_ms,int,YES,expiry boundary
+status,enum,YES,ACTIVE/REVOKED/EXPIRED/UNKNOWN
+allowed_scopes,string[],YES,deny-by-default scope binding
+registry_version,string,YES,versioned trust-anchor registry identity
+key_fingerprint,hex64,YES,SHA-256 of canonical raw public key bytes
+external_attestation_ref,string,NO,required for production VERIFIED status
+rotation_reference,string,NO,required on key rotation
+revocation_reference,string,NO,required when revoked

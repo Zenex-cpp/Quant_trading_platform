@@ -1,0 +1,11 @@
+# V3.71 Change Impact
+
+change_id=V371_OPERATIONAL_OBSERVABILITY_DRILL
+classification=DESIGN_CONSTANT
+changed_component=src/trading_platform/v371/operational_observability.py
+affected_components=monitoring;alerting;incident_response;fail_safe
+invalidated_artifacts=none
+invalidated_evidence=none
+required_retests=full_suite;wheel_build;archive_extraction
+production_activation_impact=NO_ACTIVATION
+rollback_impact=remove_v371_module_and_tests

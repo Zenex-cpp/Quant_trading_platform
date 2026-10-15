@@ -1,0 +1,6 @@
+requirement,status,evidence
+Champion/Challenger health gating,PASS,src/trading_platform/v26/governance.py
+Critical drift/evidence invalidation freezes model,PASS,GovernanceDecision
+Risk monotonicity,PASS,evaluate_model
+Quarantine invalid promotion evidence,PASS,invalidate_promotion
+Single active champion,PASS,ChampionChallengerRegistry

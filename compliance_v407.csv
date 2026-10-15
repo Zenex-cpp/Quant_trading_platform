@@ -1,0 +1,5 @@
+requirement_id,requirement_text,implementation_status,verification,evidence_status,notes
+M15,External evidence invalidation/revalidation,TESTED,979/979 PASS,NOT_VERIFIED,V4.7 binds snapshot self-identity into dependency freshness
+M17,Evidence dependency invalidation,TESTED,979/979 PASS,NOT_VERIFIED,V4.7 prevents stale snapshot reuse at critical promotion
+M25,Operational readiness,PARTIAL,979/979 PASS,NOT_VERIFIED,Real external operational evidence remains required
+M30,Production deployment readiness,PARTIAL,979/979 PASS,NOT_VERIFIED,V4.7 does not authorize deployment

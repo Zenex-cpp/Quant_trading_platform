@@ -1,0 +1,31 @@
+requirement_id,requirement_text,priority,implementation_status,code_reference,test_reference,evidence_reference,owner,unresolved_gap
+M1,No Order without valid RiskDecision,CRITICAL,IMPLEMENTED,execution/guards.py,tests/test_v02_foundation.py,,CORE,Persistence-backed enforcement pending
+M2,No Order with expired RiskDecision,CRITICAL,IMPLEMENTED,core/decision.py execution/guards.py,tests/test_v02_foundation.py,,RISK,Full downstream TTL graph pending
+M3,No Order when Position UNKNOWN,CRITICAL,IMPLEMENTED,execution/guards.py,tests/test_v02_foundation.py,,RISK,Venue reconciliation pending
+M5,No stale upstream decisions,CRITICAL,PARTIAL,contracts/causal.py,tests/test_ttl.py,,CORE,Full causal chain pending
+M11,No duplicate side effect due to retry/replay,CRITICAL,IMPLEMENTED,events/idempotency.py state/transition.py,tests/test_idempotency.py tests/test_v02_foundation.py,,CORE,Durable store pending
+M12,No double-counted fill,CRITICAL,IMPLEMENTED,accounting/ledger.py,tests/test_v02_foundation.py,,ACCOUNTING,Venue reconciliation pending
+M16,No live decision from configuration conflict,CRITICAL,IMPLEMENTED,state/compatibility.py,tests/test_state.py,,STATE,Config precedence matrix pending
+M21,Higher uncertainty cannot increase risk,CRITICAL,TESTED,trading_platform/v348/uncertainty_risk_authority.py;trading_platform/v348/uncertainty_registry.py;trading_platform/risk/monotonicity.py,tests/test_v348_m21_uncertainty_risk.py,V348_VERIFICATION_REPORT.md,RISK,Independent review and production ablation/calibration remain pending
+M22,Worse liquidity cannot increase allowed exposure,CRITICAL,IMPLEMENTED,risk/monotonicity.py,tests/test_v02_foundation.py,,RISK,Full liquidity model pending
+M23,Higher drawdown cannot increase risk budget,CRITICAL,PARTIAL,risk/budget.py risk/monotonicity.py,tests/test_v02_foundation.py,,RISK,Dynamic drawdown budget policy pending
+M24,Worse model health cannot increase risk,CRITICAL,IMPLEMENTED,risk/monotonicity.py,tests/test_v02_foundation.py,,RISK,Model health source pending
+M26,Failed methodology assumptions produce METHOD_NOT_APPLICABLE,HIGH,IMPLEMENTED,research/methods.py,tests/test_v02_foundation.py,,RESEARCH,Registry persistence pending
+M28,Post-recovery state cannot be READY/LIVE without recovery proof,CRITICAL,IMPLEMENTED,accounting/reconciliation.py,tests/test_v02_foundation.py,,OPS,System lifecycle integration pending
+M30,Downstream artifact cannot exist without required valid upstream dependency,CRITICAL,IMPLEMENTED,contracts/causal.py execution/guards.py,tests/test_ttl.py tests/test_v02_foundation.py,,CORE,Full graph registry pending
+
+V07-01,Realtime Event Envelope,CRITICAL,IMPLEMENTED,realtime/events.py,tests/test_v07.py,,CORE,Durable event bus pending
+V07-02,Order book contiguous sequencing,CRITICAL,IMPLEMENTED,realtime/orderbook.py,tests/test_v07.py,,DATA,Live venue snapshot/resync pending
+V07-03,Duplicate/old update idempotency,CRITICAL,IMPLEMENTED,realtime/orderbook.py,tests/test_v07.py,,CORE,Durable dedupe pending
+V07-04,Clock integrity guard,CRITICAL,IMPLEMENTED,realtime/clock.py,tests/test_v07.py,,OPS,System lifecycle integration pending
+V07-05,Rate-limit budget guard,HIGH,IMPLEMENTED,realtime/adapter.py,tests/test_v07.py,,EXECUTION,Exchange counter integration pending
+V07-06,Microstructure derived state,HIGH,IMPLEMENTED,realtime/microstructure.py,tests/test_v07.py,,FEATURES,PIT lineage integration pending
+V07-07,Binance adapter boundary,HIGH,IMPLEMENTED,docs/25_V07_REALTIME.md,tests/test_v07.py,,ADAPTER,Concrete adapter intentionally deferred
+
+V2.1,Temporal event-sourced ledger,Append-only hash-chained events + deterministic replay + three-way reconciliation,IMPLEMENTED,offline tests only; live remains NOT_VERIFIED
+
+V23-GAP-RECOVERY,implemented,161 tests,fail-closed REST snapshot + contiguous suffix replay,production remains blockedV2.7,governance rollback,append-only hash chain + deterministic rollback,Implemented,Verified with offline tests,No live mutation
+V28-01,Deployment orchestration fail-closed,Promotion gates + staged lifecycle + canary hard caps,IMPLEMENTED,trading_platform/v28/deployment.py,test_v28.py,CRITICAL,DEPLOYMENT
+V28-02,Immutable deployment audit,Hash-chained transition events with sequence verification,IMPLEMENTED,trading_platform/v28/deployment.py,test_v28.py,CRITICAL,AUDIT
+V28-03,Abort and rollback safety,Terminal paths force deployment risk to zero,IMPLEMENTED,trading_platform/v28/deployment.py,test_v28.py,CRITICAL,RISK
+V28-04,Offline deployment demo,Plan-only CLI with no network mutation capability,IMPLEMENTED,run_v28_deployment.py,test_v28.py,HIGH,OPS

@@ -1,0 +1,4 @@
+requirement_id,requirement_text,priority,implementation_status,code_reference,test_reference,evidence_reference,owner,unresolved_gap
+M35,"Rollback exercise must cover the governed deployment path",HIGH,VERIFIED,src/trading_platform/v368/rollback_exercise.py,tests/test_v368_rollback_exercise.py,V368_ROLLBACK_DRILL.json,platform,Production operational rollback evidence remains OPEN
+M36,"Rollback must leave zero residual deployment risk and disallow trading",CRITICAL,VERIFIED,src/trading_platform/v368/rollback_exercise.py,tests/test_v368_rollback_exercise.py,V368_ROLLBACK_DRILL.json,platform,Production operational rollback evidence remains OPEN
+M37,"Rollback audit chain must remain valid through terminal close",HIGH,VERIFIED,src/trading_platform/v368/rollback_exercise.py,tests/test_v368_rollback_exercise.py,V368_ROLLBACK_DRILL.json,platform,Independent operational rollback review remains OPEN

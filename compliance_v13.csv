@@ -1,0 +1,74 @@
+requirement_id,requirement_text,priority,implementation_status,test_reference,evidence_reference,unresolved_gap
+177-M1,No Order without valid RiskDecision,CRITICAL,TESTED,tests/test_v08.py,offline only,
+177-M11,No duplicate side effect due to retry/replay,CRITICAL,TESTED,tests/test_idempotency.py,offline only,
+177-M14,No artifact execution when compatibility fails,CRITICAL,TESTED,tests/test_v10.py,offline only,
+177-M15,No artifact deployment when integrity fails,CRITICAL,TESTED,tests/test_v10.py,offline only,
+183-VENUE,Exchange-specific assumptions confined to adapter,CRITICAL,TESTED,tests/test_v12_testnet.py;tests/test_v13_runner.py,offline only,live adapter session evidence pending
+184-TESTS,Exchange adapter test contract defined,CRITICAL,TESTED,tests/test_v13_runner.py,offline only,live connectivity/fill/reconciliation evidence pending
+94-HOLDOUT,Final Holdout protected from tuning,CRITICAL,TESTED,tests/test_v03_completion.py,offline only,independent operational access review pending
+118-INVALIDATION,Dependency invalidation propagates downstream,CRITICAL,TESTED,tests/test_v09.py,offline only,
+151-RECOVERY,Recovery proof requires reconciled state/invariants/guards,CRITICAL,TESTED,tests/test_v08.py,offline only,live restart/recovery run pending
+V13-C01,Testnet runner requires TESTNET environment,CRITICAL,TESTED,tests/test_v13_runner.py,offline contract,
+V13-C02,Testnet runner requires TLS,CRITICAL,TESTED,tests/test_v13_runner.py,offline contract,
+V13-C03,Obvious Binance mainnet host rejected,CRITICAL,TESTED,tests/test_v13_runner.py,offline contract,
+V13-C04,Runtime credentials are not stored in evidence/config,CRITICAL,TESTED,testnet/client.py;testnet/runner.py,offline inspection,live secret-store integration pending
+V13-C05,Scenario evidence is hashable,CRITICAL,TESTED,tests/test_v12_testnet.py;tests/test_v13_runner.py,offline contract,
+V13-C06,Offline harness cannot claim production ready,CRITICAL,TESTED,tests/test_v13_runner.py,offline contract,
+TN-01,Authenticated connectivity,CRITICAL,NOT_VERIFIED,,V13 live evidence,operator session required
+TN-02,Exchange rules snapshot,CRITICAL,NOT_VERIFIED,,V13 live evidence,operator session required
+TN-03,Order acknowledgement,CRITICAL,NOT_VERIFIED,,V13 live evidence,operator session required
+TN-04,Cancellation acknowledgement,CRITICAL,NOT_VERIFIED,,V13 live evidence,operator session required
+TN-05,Partial fill,CRITICAL,NOT_VERIFIED,,V13 live evidence,operator session required
+TN-06,Full fill,CRITICAL,NOT_VERIFIED,,V13 live evidence,operator session required
+TN-07,Unknown order reconciliation,CRITICAL,NOT_VERIFIED,,V13 live evidence,operator session required
+TN-08,Restart reconnect,CRITICAL,NOT_VERIFIED,,V13 live evidence,operator session required
+TN-09,Account position reconciliation,CRITICAL,NOT_VERIFIED,,V13 live evidence,operator session required
+TN-10,Fee funding reconciliation,CRITICAL,NOT_VERIFIED,,V13 live evidence,operator session required
+TN-11,Failure injection recovery,CRITICAL,TESTED,tests/test_v11_verification.py;tests/test_v13_runner.py,offline contract,live operational replay pending
+MD
+cat > docs/evidence/V13_TEST_RUN.txt <<'TXT'
+V1.3 TEST RUN
+2026-09-11
+pytest -q
+108 passed in 0.96s
+
+This is offline/software evidence only. It is not exchange-session evidence.
+TXT
+sha256sum $(find . -type f ! -path './.git/*' ! -path './package_manifest.sha256' ! -path './manifest_v13.sha256' ! -name '*.pyc' | sort) > manifest_v13.sha256
+cat > V13_VERIFICATION_REPORT.md <<'MD'
+# V1.3 Verification Report
+
+Date: 2026-09-11
+
+## Result
+
+Software regression: **108/108 PASS**.
+
+## Verified by software tests
+
+The suite covers TESTNET-only environment gating, TLS enforcement, obvious Binance mainnet-host rejection, runtime credential references, deterministic evidence hashing, existing V1.2 testnet contracts, promotion/readiness contracts and the previously established V0.1–V1.2 regression suite.
+
+## Not verified
+
+`TN-01` through `TN-10` remain `NOT_VERIFIED`. No real Binance Testnet account/session evidence was available in the build environment, so no claim of connectivity, order acknowledgement, fills, reconciliation or restart recovery is made.
+
+`TN-11` is offline-contract-testable and passes the software suite, but operational recovery evidence remains pending.
+
+## Production readiness
+
+`PRODUCTION_READY = FALSE`.
+
+A passing software suite is not sufficient to satisfy the Master Prompt's VERIFIED or PRODUCTION_READY definition.
+MD
+python - <<'PY'
+from pathlib import Path
+p=Path('README.md')
+s=p.read_text()
+s += '\n\n# V1.3\nLive Testnet Evidence Runner added. See `docs/37_V13_TESTNET_RUNNER.md` and `V13_VERIFICATION_REPORT.md`. Software tests: 108/108 PASS. No live exchange evidence claimed.\n'
+p.write_text(s)
+PY
+rm -f package_v13.tar.gz trading_platform_v1_3.sha256
+cd .. && tar --exclude='trading_platform_v1_3/.pytest_cache' --exclude='trading_platform_v1_3/**/__pycache__' -czf trading_platform_v1_3.tar.gz trading_platform_v1_3
+sha256sum trading_platform_v1_3.tar.gz > trading_platform_v1_3.sha256
+cat trading_platform_v1_3.sha256
+ls -lh trading_platform_v1_3.tar.gz trading_platform_v1_3.sha256 trading_platform_v1_3/compliance_v13.csv

@@ -1,0 +1,41 @@
+{
+  "activation_flag": "NOT_SET",
+  "baseline_sha256": "3e0409eebb3edeebc7a336aa6dc666bef9287cf8abdf45a2ac0f4adff6ca70ac",
+  "baseline_version": "V4.27-RECOVERY",
+  "external_evidence": false,
+  "hosted_github_actions": "NOT_RUN",
+  "implementation_preflight": {
+    "allowed": true,
+    "event_hash": "002431400e33cb8e4886d6703fe975439566ff2bad4291f250b5ed533fa0fe6b",
+    "input_fingerprint_count": 36,
+    "matrix_hash": "9bd0e781ebbd6d7666500aff6aa441aeeca076fc8768ce4486922bc9edd0372d",
+    "status": "READY_FOR_MILESTONE"
+  },
+  "mandatory_pipeline": {
+    "event_hash": "708b5a8f0cdd2b33da56af74f86fc9345ec156e0ffdccdd40bac81fd63a5e4ec",
+    "full_regression": "PASS",
+    "full_regression_tests": 1157,
+    "input_fingerprint_count": 36,
+    "matrix_hash": "9bd0e781ebbd6d7666500aff6aa441aeeca076fc8768ce4486922bc9edd0372d",
+    "pipeline_status": "PASS",
+    "release_hygiene": "PASS",
+    "status": "READY_FOR_MILESTONE",
+    "steps": [
+      {
+        "name": "full_regression",
+        "return_code": 0,
+        "status": "PASS"
+      },
+      {
+        "name": "release_hygiene",
+        "return_code": 0,
+        "status": "PASS"
+      }
+    ]
+  },
+  "milestone_id": "V4.28-RECOVERY",
+  "production_ready": false,
+  "remote_github_capture": "NOT_RUN",
+  "schema_version": "V4.28-LOCAL-VALIDATION",
+  "trust_anchor": "NOT_CONFIGURED"
+}

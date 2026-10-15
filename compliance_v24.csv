@@ -1,0 +1,9 @@
+requirement,status,evidence,severity
+Accounting state enum,machine-checkable,src/trading_platform/accounting/reconciliation.py;src/trading_platform/v24/accounting.py,HIGH
+LOCAL-EXCHANGE-RECONSTRUCTED loop,implemented,src/trading_platform/v24/accounting.py,HIGH
+Fee/funding separation,implemented,src/trading_platform/v24/pnl.py,MEDIUM
+Non-finite accounting blocked,implemented,tests/v24/test_accounting_reconciliation.py,HIGH
+P&L attribution idempotency,implemented,src/trading_platform/v24/pnl.py,HIGH
+Exchange vs reconstructed critical divergence,implemented,src/trading_platform/v24/accounting.py,CRITICAL
+Live mutations,not executed,verification report,CRITICAL
+Production readiness,not ready,verification report,CRITICAL

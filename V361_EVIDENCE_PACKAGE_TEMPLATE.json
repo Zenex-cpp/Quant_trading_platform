@@ -1,0 +1,22 @@
+{
+  "package_id": "REPLACE_WITH_REAL_PACKAGE_ID",
+  "scope": "PRODUCTION",
+  "created_at_ms": 0,
+  "source_system": "REPLACE_WITH_REAL_SOURCE_SYSTEM",
+  "evidence": [
+    {
+      "evidence_id": "REPLACE_WITH_REAL_EVIDENCE_ID",
+      "evidence_class": "LIVE_VENUE",
+      "scope": "PRODUCTION",
+      "result": "PASS",
+      "observed_at_ms": 0,
+      "valid_from_ms": 0,
+      "expires_at_ms": 0,
+      "source_system": "REPLACE_WITH_REAL_SOURCE_SYSTEM",
+      "source_ref": "REPLACE_WITH_EXTERNAL_REFERENCE",
+                "source_kind": "EXTERNAL",
+      "content_hash": "REPLACE_WITH_SHA256"
+    }
+  ],
+  "package_hash": "REPLACE_WITH_COMPUTED_SHA256"
+}

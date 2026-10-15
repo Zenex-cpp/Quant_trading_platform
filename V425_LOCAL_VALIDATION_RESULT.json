@@ -1,0 +1,61 @@
+{
+  "activation_flag": "NOT_SET",
+  "baseline_archive_sha256": "5ad06a5cf86efda3d2c9046c9cbea1374967fefb19826148b472acd294dcbfba",
+  "captured_at_utc": "2026-10-12T18:41:17.750927+00:00",
+  "compliance_matrix_sha256": "d3de982bded2d9fd003007a11286467623a4d8d4e22657e61d91fde851d319f3",
+  "compliance_rows": 36,
+  "compliance_status_counts": {
+    "": 0
+  },
+  "decision_id": "V425-FINAL-RELEASE",
+  "external_evidence": false,
+  "hosted_github_actions": "NOT_RUN",
+  "lineage": "V4.25 Recovery Build based on V4.24 Recovery archive; canonical V4.23 byte-for-byte lineage not established",
+  "milestone_id": "V4.25-RECOVERY",
+  "pipeline_status": "PASS",
+  "preflight_status": "READY_FOR_MILESTONE",
+  "production_ready": false,
+  "release_hygiene": "PASS",
+  "remote_governance_diagnostic": {
+    "allowed": false,
+    "blocker_count": 31,
+    "status": "BLOCKED",
+    "target_repository": "example/trading-platform (placeholder only; not a real captured target)",
+    "trust_anchor_configured": false
+  },
+  "remote_provider_capture": "NOT_RUN",
+  "schema_version": "V4.25-RECOVERY-LOCAL-VALIDATION",
+  "scope": "LOCAL_ONLY",
+  "steps": [
+    {
+      "command": [
+        "/opt/pyvenv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--disable-warnings",
+        "--maxfail=1"
+      ],
+      "finished_at_ms": 1791830388542,
+      "name": "full_regression",
+      "return_code": 0,
+      "started_at_ms": 1791830373790,
+      "status": "PASS"
+    },
+    {
+      "command": [
+        "/opt/pyvenv/bin/python",
+        "scripts/validate_release_hygiene.py",
+        "/mnt/data/v425_work/base"
+      ],
+      "finished_at_ms": 1791830389639,
+      "name": "release_hygiene",
+      "return_code": 0,
+      "started_at_ms": 1791830388545,
+      "status": "PASS"
+    }
+  ],
+  "workflow_sha256": "34f4c02dea43d0569c8b2ef5653d897993151a89f3b5538413ae7fa68114ea6e"
+}

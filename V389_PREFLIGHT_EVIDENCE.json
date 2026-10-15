@@ -1,0 +1,11 @@
+{
+  "artifact_type": "V389_TESTNET_CREDENTIAL_PREFLIGHT",
+  "external_testnet_execution": "NOT_VERIFIED",
+  "metadata": null,
+  "mutating_api_called": false,
+  "production_ready": false,
+  "raw_credentials_persisted": false,
+  "reason": "TESTNET_RUNTIME_CREDENTIALS_MISSING",
+  "retrieved_at": "2026-10-05T15:48:45.264077+00:00",
+  "status": "NOT_VERIFIED"
+}

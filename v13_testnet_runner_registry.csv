@@ -1,0 +1,7 @@
+contract_id,description,severity,acceptance
+V13-C01,Runner environment must be TESTNET,CRITICAL,non-TESTNET rejected
+V13-C02,REST endpoint must use TLS,CRITICAL,non-HTTPS rejected
+V13-C03,Obvious Binance mainnet host must be rejected,CRITICAL,mainnet hostname rejected
+V13-C04,Credential values must be runtime-only,HIGH,no credential value persisted in config/evidence
+V13-C05,Scenario evidence must be hashable,HIGH,deterministic SHA-256 artifact hash
+V13-C06,Offline runner may never claim production ready,CRITICAL,production_ready=false

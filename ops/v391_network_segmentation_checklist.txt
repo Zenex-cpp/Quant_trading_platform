@@ -1,0 +1,14 @@
+V3.91 NETWORK SEGMENTATION CHECKLIST
+
+[ ] DENY_BY_DEFAULT
+[ ] RESEARCH -> PRODUCTION denied by infrastructure control
+[ ] RESEARCH -> TESTNET denied by infrastructure control
+[ ] TESTNET_EXECUTION -> PRODUCTION denied by infrastructure control
+[ ] PRODUCTION_TRADING -> TESTNET denied by infrastructure control
+[ ] Exact destination allowlists only; no wildcard routes
+[ ] No ambient proxy / redirect escape from the application boundary
+[ ] Host firewall / security-group / NACL / container policy evidence attached
+[ ] Independent infrastructure reviewer identified
+[ ] Evidence hash captured after deployment
+
+The application contract in V3.91 is necessary but not sufficient for production readiness.

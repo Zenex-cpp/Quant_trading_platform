@@ -1,0 +1,6 @@
+V1.3 TEST RUN
+2026-09-11
+pytest -q
+108 passed in 0.96s
+
+This is offline/software evidence only. It is not exchange-session evidence.

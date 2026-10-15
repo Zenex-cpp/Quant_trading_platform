@@ -1,0 +1,5 @@
+requirement_id,requirement_text,priority,implementation_status,code_reference,test_reference,evidence_reference,owner,unresolved_gap
+M31,Backup/restore drill must be machine-checkable,HIGH,VERIFIED,src/trading_platform/ops/backup_restore.py,tests/test_v367_backup_restore.py,V367_BACKUP_RESTORE_DRILL.md,platform,Production infrastructure backup evidence remains OPEN
+M32,Restore must verify manifest hashes,HIGH,VERIFIED,src/trading_platform/ops/backup_restore.py,tests/test_v367_backup_restore.py,V367_BACKUP_RESTORE_DRILL.md,platform,Production infrastructure backup evidence remains OPEN
+M33,Secret-like paths must not enter backup,HIGH,VERIFIED,src/trading_platform/ops/backup_restore.py,tests/test_v367_backup_restore.py,V367_BACKUP_RESTORE_DRILL.md,platform,Production secret-store evidence remains OPEN
+M34,RPO/RTO target breach must fail closed,HIGH,VERIFIED,src/trading_platform/ops/backup_restore.py,tests/test_v367_backup_restore.py,V367_BACKUP_RESTORE_DRILL.md,platform,Operational RPO/RTO evidence remains OPEN

@@ -1,0 +1,12 @@
+control,status,evidence
+TESTNET_ONLY,PASS,"BinanceTestnetExecutionConfig rejects non-TESTNET"
+TLS_REQUIRED,PASS,"HTTPS required by config validation"
+ALLOWLIST,PASS,"TESTNET_POLICY.assert_allowed enforced"
+RUNTIME_CREDENTIALS,PASS,"credentials passed to operation and not persisted"
+CLIENT_ORDER_CORRELATION,PASS,"newClientOrderId/origClientOrderId mapping tested"
+AMBIGUOUS_SUBMIT,PASS,"transport exception produces ExchangeUncertain"
+NO_BLIND_RETRY,PASS,"ambiguous outcome cannot be converted into retry"
+QUERY_RESOLUTION,PASS,"query resolves by origClientOrderId"
+CANCEL_RESOLUTION,PASS,"cancel resolves by origClientOrderId"
+LIVE_EVIDENCE,NOT_RUN,"No network call performed"
+PRODUCTION_READY,FALSE,"Live verification and operational approval absent"

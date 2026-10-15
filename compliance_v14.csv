@@ -1,0 +1,7 @@
+requirement_id,requirement_text,priority,implementation_status,test_reference,evidence_reference,owner,unresolved_gap
+V14-01,Testnet environment mandatory,CRITICAL,TESTED,tests/verification/test_v14_operational.py::test_session_rejects_mainnet,docs/evidence/V14_OFFLINE_EVIDENCE.md,platform,real-session evidence pending
+V14-02,TLS mandatory,CRITICAL,TESTED,tests/verification/test_v14_operational.py::test_session_requires_tls,docs/evidence/V14_OFFLINE_EVIDENCE.md,platform,real-session evidence pending
+V14-03,Network execution explicit,CRITICAL,TESTED,tests/verification/test_v14_operational.py::test_network_execution_is_explicit,docs/evidence/V14_OFFLINE_EVIDENCE.md,platform,real-session evidence pending
+V14-04,Durable evidence hash,CRITICAL,TESTED,tests/verification/test_v14_operational.py::test_read_only_plan_produces_hashed_evidence,docs/evidence/V14_OFFLINE_EVIDENCE.md,platform,real-session evidence pending
+V14-05,TN-03..TN-10 require approved mutation plan,HIGH,PARTIAL,tests/verification/test_v14_operational.py,docs/V14_OPERATIONAL_TESTNET.md,security,mutation plan and real testnet session pending
+V14-06,Actual Binance testnet connectivity,CRITICAL,NOT_VERIFIED,,docs/evidence/V14_OFFLINE_EVIDENCE.md,exchange,requires real testnet session

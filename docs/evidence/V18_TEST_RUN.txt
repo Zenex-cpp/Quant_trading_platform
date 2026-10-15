@@ -1,0 +1,5 @@
+V1.8 regression verification
+Date: 2026-09-12
+Result: 136 passed
+Live exchange mutations: 0
+Production readiness: NOT_READY

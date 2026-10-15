@@ -1,0 +1,11 @@
+control,requirement,status,evidence
+SAFETY,durable OrderRequest can be required before final dispatch,PASS,V320 ledger + dispatch integration
+STATE_INTEGRITY,request identity and full authority payload are immutable,PASS,V320 tests
+DATA_INTEGRITY,complete OrderRequest payload is persisted and replayed,PASS,v320 durable_request.py
+EVIDENCE_INTEGRITY,append-only hash-chained persistence,PASS,EventStore verify_chain + corruption test
+RISK_CONTROL,missing/mismatching durable request blocks before transport,PASS,V320 dispatch gate
+EXECUTION_INTEGRITY,no credentials or transport state persisted,PASS,V320 design review
+FAIL_SAFE,invalid authority payload or corrupt chain fails closed,PASS,V320 replay/validation tests
+RESTART,deterministic request reconstruction after restart,PASS,V320 replay test
+NO_LIVE_IO,no exchange requests in verification,PASS,V320 verification report
+PRODUCTION,production readiness,PASS,"FALSE (not production ready)"

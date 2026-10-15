@@ -1,0 +1,4 @@
+requirement_id,requirement_text,priority,implementation_status,code_reference,schema_reference,test_reference,evidence_reference,owner,unresolved_gap
+M18,No promotion without Evidence Snapshot,CRITICAL,PARTIAL,v403/revalidation.py,Evidence Snapshot contract,tests/v403/test_revalidation.py,V403_EXTERNAL_REVALIDATION_EVIDENCE.json,platform,real operational evidence pending
+M19,No promotion without valid Promotion Bundle,CRITICAL,PARTIAL,v403/revalidation.py,Promotion Bundle binding,tests/v403/test_revalidation.py,V403_EXTERNAL_REVALIDATION_EVIDENCE.json,platform,real operational evidence pending
+M28,Post-recovery state cannot be READY/LIVE without recovery proof,CRITICAL,PARTIAL,v403/revalidation.py,Recovery evidence binding,tests/v403/test_revalidation.py,V403_EXTERNAL_REVALIDATION_EVIDENCE.json,platform,real DR evidence pending

@@ -1,0 +1,9 @@
+requirement,implementation,evidence,status
+V39-01,"Binance WS API userDataStream start/ping/stop boundary","trading_platform/v39/binance_user_data_control.py",PASS
+V39-02,"Runtime-only API key; no credential persistence","RuntimeCredential + durable state exclusion inherited from V3.7",PASS
+V39-03,"TLS-only control endpoint","BinanceUserDataControlConfig.validate",PASS
+V39-04,"Fail-closed on control transport/response failure","ControlTransportError/ControlResponseError + session expiry",PASS
+V39-05,"Keepalive before 60m expiry","keepalive_interval_s default 3300s",PASS
+V39-06,"No trading re-enable without recovery","V3.7 coordinator remains authoritative",PASS
+V39-07,"Network-free verification via injected transport","tests/v39/test_binance_user_data_control.py",PASS
+V39-08,"No live/testnet exchange mutation during verification","V39_VERIFICATION_REPORT.md",PASS

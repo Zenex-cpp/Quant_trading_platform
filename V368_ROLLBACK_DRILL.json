@@ -1,0 +1,16 @@
+{
+  "after_close_phase": "CLOSED",
+  "after_phase": "ROLLED_BACK",
+  "before_phase": "ACTIVATED",
+  "chain_valid": true,
+  "closed_without_residual_risk": true,
+  "content_hash": "a3369c3136a5f6163bbe08058826d3ac183b193dfc608bd3a951cc4c9c8e3651",
+  "evidence_class": "ROLLBACK",
+  "result": "PASS",
+  "risk_after": "0",
+  "risk_before": "5",
+  "rollback_event_present": true,
+  "scenario_id": "V368-ROLLBACK-EXERCISE",
+  "source_kind": "INTERNAL",
+  "trading_allowed_after": false
+}

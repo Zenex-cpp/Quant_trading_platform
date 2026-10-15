@@ -1,0 +1,11 @@
+requirement,implementation,verification,status
+Operational Truth mandatory at risk boundary,trading_platform.v31.authority.RuntimeAuthority,tests/v31/test_authority_router.py,PASS
+Trade risk <= effective risk,RuntimeAuthority.evaluate,tests/v31/test_authority_router.py,PASS
+Stale truth fails closed,RuntimeAuthority.evaluate,tests/v31/test_authority_router.py,PASS
+UNKNOWN/BLOCKED fail closed for trade,RuntimeAuthority.evaluate,tests/v31/test_authority_router.py,PASS
+Kill switch fail closed,RuntimeAuthority.evaluate,tests/v31/test_authority_router.py,PASS
+Deploy governed by canonical truth,RuntimeAuthority.evaluate,tests/v31/test_authority_router.py,PASS
+Execution router requires authority,ExecutionRouter,tests/v31/test_authority_router.py,PASS
+Deterministic decision provenance,AuthorityDecision.input_fingerprint,tests/v31/test_authority_router.py,PASS
+No live exchange mutation,V3.1 offline-only boundary,verification report,PASS
+Production readiness not implied,release policy,verification report,PASS

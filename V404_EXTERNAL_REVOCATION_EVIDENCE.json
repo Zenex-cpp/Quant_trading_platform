@@ -1,0 +1,25 @@
+{
+  "release": "v4.4",
+  "status": "NOT_VERIFIED",
+  "production_ready": false,
+  "testnet_mutation_executed": false,
+  "production_mutation_executed": false,
+  "application_contract": "TESTED",
+  "new_control": "DURABLE_SIGNED_REVALIDATION_REVOCATION",
+  "operational_execution": "PENDING",
+  "blocking_gaps": [
+    "actual_independent_security_assessment",
+    "actual_production_monitoring_paging_oncall_drill",
+    "actual_infrastructure_network_segmentation_evidence",
+    "actual_secret_store_deployment_rotation_evidence",
+    "actual_backup_restore_failover_failback_evidence",
+    "actual_authenticated_testnet_mutation",
+    "actual_independent_human_approval_operation",
+    "actual_production_rollback_exercise",
+    "production_operational_security_signoff",
+    "real_external_evidence_materialization_and_review",
+    "real_signed_revalidation_witness",
+    "real_revocation_control_execution"
+  ],
+  "evidence_integrity": "APPLICATION_CONTRACT_TESTED_EXTERNAL_OPERATIONAL_EVIDENCE_PENDING"
+}

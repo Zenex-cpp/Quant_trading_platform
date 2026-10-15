@@ -1,0 +1,16 @@
+{
+  "application_egress_boundary": "VERIFIED",
+  "artifact_type": "V390_TESTNET_EGRESS_PREFLIGHT",
+  "authorization_payload": {
+    "ambient_proxy": "BLOCKED",
+    "endpoint_host": "testnet.binancefuture.com",
+    "endpoint_scheme": "https",
+    "environment": "TESTNET",
+    "redirects": "BLOCKED"
+  },
+  "credential_release_allowed": true,
+  "mutating_api_called": false,
+  "production_ready": false,
+  "retrieved_at": "2026-10-05T15:55:45.724855+00:00",
+  "status": "READY_FOR_NETWORK_PROBE"
+}

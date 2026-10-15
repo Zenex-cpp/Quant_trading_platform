@@ -1,0 +1,3 @@
+requirement_id,requirement_text,priority,implementation_status,code_reference,test_reference,evidence_reference,owner,unresolved_gap
+MACHINE-HR-IND-01,Human review reviewer must be distinct from Promotion Bundle authorizer,CRITICAL,IMPLEMENTED,src/trading_platform/v359/human_review.py,tests/test_v359_human_review.py,V366_VERIFICATION_REPORT.md,Governance,Organizational independence remains external
+MACHINE-HR-IND-02,Human review reviewer must be distinct from Approval approvers,CRITICAL,IMPLEMENTED,src/trading_platform/v359/human_review.py,tests/test_v359_human_review.py,V366_VERIFICATION_REPORT.md,Governance,Actual human sign-off remains external

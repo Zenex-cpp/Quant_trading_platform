@@ -1,0 +1,11 @@
+requirement_id,requirement_text,priority,implementation_status,code_reference,test_reference,evidence_reference,owner,unresolved_gap
+V37-01,Durable user-stream event evidence,P0,implemented,trading_platform/v37/user_stream_runtime.py,tests/v37/test_user_stream_runtime.py,V37_VERIFICATION_REPORT.md,execution,Physical storage durability depends on SQLite filesystem health
+V37-02,Cross-restart dedupe,P0,implemented,trading_platform/v37/user_stream_runtime.py,tests/v37/test_user_stream_runtime.py,V37_VERIFICATION_REPORT.md,execution,None
+V37-03,Disconnect fail-closed,P0,implemented,trading_platform/v37/user_stream_runtime.py,tests/v37/test_user_stream_runtime.py,V37_VERIFICATION_REPORT.md,risk,None
+V37-04,Reconnect requires reconciliation,P0,implemented,trading_platform/v37/user_stream_runtime.py,tests/v37/test_user_stream_runtime.py,V37_VERIFICATION_REPORT.md,risk,REST reconciliation executor remains an injected boundary
+V37-05,Listen-key expiry handling,P0,implemented,trading_platform/v37/user_stream_runtime.py,tests/v37/test_user_stream_runtime.py,V37_VERIFICATION_REPORT.md,execution,None
+V37-06,Ordering guard for same event type,P0,implemented,trading_platform/v37/user_stream_runtime.py,tests/v37/test_user_stream_runtime.py,V37_VERIFICATION_REPORT.md,data,No exchange sequence number is assumed
+V37-07,No trading after failed recovery,P0,implemented,trading_platform/v37/user_stream_runtime.py,tests/v37/test_user_stream_runtime.py,V37_VERIFICATION_REPORT.md,risk,None
+V37-08,No credentials persisted,P0,implemented,trading_platform/v37/user_stream_runtime.py,tests/v37/test_user_stream_runtime.py,V37_VERIFICATION_REPORT.md,security,No OS-level encrypted storage claim is made
+V37-09,Exchange-specific semantics isolated,P0,implemented,trading_platform/v37/user_stream_runtime.py,07_BINANCE_REFERENCE.md,V37_RELEASE_NOTES.md,architecture,Concrete socket/network implementation remains a separate adapter
+V37-10,Live execution safety,P0,implemented,V35 boundary + V37 recovery gate,full suite,V37_VERIFICATION_REPORT.md,security,Production readiness remains FALSE

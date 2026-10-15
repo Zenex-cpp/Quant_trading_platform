@@ -1,0 +1,5 @@
+requirement_id,requirement_text,priority,implementation_status,code_reference,schema_reference,test_reference,evidence_reference,owner,unresolved_gap
+V365-001,Release artifacts exclude transient cache and bytecode artifacts,HIGH,IMPLEMENTED,scripts/validate_release_hygiene.py,,tests/test_v365_release_hygiene.py,V365_VERIFICATION_REPORT.md,Release Engineering,
+V365-002,Release staging must pass machine-checkable hygiene validation before manifest generation,HIGH,TESTED,scripts/validate_release_hygiene.py,,tests/test_v365_release_hygiene.py,V365_VERIFICATION_REPORT.md,Release Engineering,
+V365-003,Python package version contract remains unchanged at 3.61.0,MEDIUM,VERIFIED,pyproject.toml,,tests/test_v365_release_hygiene.py,V365_VERIFICATION_REPORT.md,Release Engineering,
+V365-004,V3.65 must not imply production readiness,HIGH,VERIFIED,README.md,,tests/test_v362_release_integrity.py,V365_VERIFICATION_REPORT.md,Governance,External operational evidence and independent review remain open

@@ -1,0 +1,12 @@
+{
+  "release": "v4.3",
+  "status": "NOT_VERIFIED",
+  "production_ready": false,
+  "real_external_revalidation_executed": false,
+  "testnet_mutation_executed": false,
+  "production_mutation_executed": false,
+  "inherited_verifiable_base": "v3.98",
+  "automated_regression": "956/956 PASS",
+  "blocking_reason": "REAL_EXTERNAL_OPERATIONAL_EVIDENCE_AND_SIGNED_REVALIDATION_WITNESS_PENDING",
+  "evidence_integrity": "APPLICATION_CONTRACT_TESTED_EXTERNAL_EVIDENCE_PENDING"
+}

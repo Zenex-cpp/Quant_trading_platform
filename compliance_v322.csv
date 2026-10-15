@@ -1,0 +1,12 @@
+control,status,evidence
+SAFETY,VERIFIED,PENDING/UNKNOWN reconciliation cannot authorize retry
+STATE_INTEGRITY,VERIFIED,Attempt binding is checked before reconciliation closure
+DATA_INTEGRITY,VERIFIED,EventStore hash-chain verification gates replay
+EVIDENCE_INTEGRITY,VERIFIED,Evidence ID/source/fingerprint persisted and bounded
+RISK_CONTROL,VERIFIED,Original order remains non-retryable after reconciliation
+EXECUTION_INTEGRITY,VERIFIED,Closure is append-only and exact-attempt bound
+RECOVERY,VERIFIED,assert_recovery_closed blocks while unresolved attempts remain
+SECURITY,VERIFIED,No credentials/raw payloads/transport objects persisted
+IDEMPOTENCY,VERIFIED,Same reconciliation payload replays idempotently; conflicting reuse fails
+NO_LIVE_IO,VERIFIED,Tests perform no Binance/Testnet exchange calls
+PRODUCTION_READY,FALSE,Controlled deployment prerequisites remain incomplete

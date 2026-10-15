@@ -1,0 +1,4 @@
+requirement_id,requirement_text,priority,implementation_status,code_reference,test_reference,evidence_reference,owner,unresolved_gap
+M38,"Monitoring alert severity and scope must route deterministically to fail-safe actions",CRITICAL,VERIFIED,src/trading_platform/v369/monitoring_drill.py,tests/test_v369_monitoring_drill.py,V369_MONITORING_DRILL.json,platform,Production operational monitoring evidence remains OPEN
+M39,"Monitoring unavailability must fail closed for new operational risk",CRITICAL,VERIFIED,src/trading_platform/v369/monitoring_drill.py,tests/test_v369_monitoring_drill.py,V369_MONITORING_DRILL.json,platform,Infrastructure monitoring failure evidence remains OPEN
+M40,"Duplicate alert/replay must not create duplicate side effects",HIGH,VERIFIED,src/trading_platform/v369/monitoring_drill.py,tests/test_v369_monitoring_drill.py,V369_MONITORING_DRILL.json,platform,External operational observability review remains OPEN

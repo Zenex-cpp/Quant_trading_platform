@@ -1,0 +1,18 @@
+{
+  "activation_flag": "NOT_SET",
+  "branch_protection": "NOT_VERIFIED",
+  "codeowners_effective_rules": "NOT_VERIFIED",
+  "external_evidence": false,
+  "hosted_github_actions": "NOT_RUN",
+  "independent_reviewer": "NOT_VERIFIED",
+  "lineage": "RECOVERY_EXTENSION_FROM_V4.27_RECOVERY_ARCHIVE;V4.26_ARCHIVE_NOT_AVAILABLE;CANONICAL_V4.23_LINEAGE_NOT_ESTABLISHED",
+  "local_path_safety": "TESTED",
+  "production_ready": false,
+  "release_version": "V4.28-RECOVERY",
+  "remote_github_capture": "NOT_RUN",
+  "remote_provider_capture": "NOT_RUN",
+  "rulesets": "NOT_VERIFIED",
+  "schema_version": "V4.28",
+  "source_baseline": "V4.27-RECOVERY",
+  "trust_anchor": "NOT_CONFIGURED"
+}

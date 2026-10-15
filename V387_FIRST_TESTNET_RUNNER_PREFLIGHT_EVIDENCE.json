@@ -1,0 +1,20 @@
+{
+  "artifact_type": "V387_FIRST_TESTNET_RUNNER_PREFLIGHT_EVIDENCE",
+  "connectivity_status": "NOT_VERIFIED",
+  "evidence_hash": "ecdcda8892d5b61531cefa8890b27425aee55c8a6c838de39276589af317a8a3",
+  "full_suite_status": "PASS",
+  "full_suite_tests": 803,
+  "mutating_api_called": false,
+  "mutating_live_testnet_called": false,
+  "operator_gate": "NOT_REACHED",
+  "probe_only": true,
+  "production_ready": false,
+  "reason": "DNS_RESOLUTION_FAILED:gaierror",
+  "rest_dns": "UNRESOLVED",
+  "rest_endpoint": "https://testnet.binancefuture.com",
+  "retrieved_at": "2026-10-05T14:35:19.944443+00:00",
+  "submit_performed": false,
+  "v387_status": "PASS",
+  "v387_tests": 10,
+  "ws_private_endpoint": "wss://fstream.binancefuture.com/private"
+}

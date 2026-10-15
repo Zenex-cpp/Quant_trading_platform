@@ -1,0 +1,3 @@
+detector_id,version,metric_family,warning_threshold,critical_threshold,min_observations,max_missing_rate,action_on_critical
+psi,1.0.0,distribution,0.10,0.25,5,0.05,FREEZE
+mean_shift,1.0.0,level,0.10,0.50,5,0.05,FREEZE

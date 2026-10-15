@@ -1,0 +1,11 @@
+field,value,classification,source_or_rationale
+venue,BINANCE_USDM,EXTERNAL_REFERENCE,"Current Binance USDⓈ-M documentation/change log"
+symbol,BTCUSDT,DESIGN_CONSTANT,"Initial market contract in Master Prompt §23"
+time_in_force_supported,"GTC|IOC|FOK|GTX|RPI",EXTERNAL_REFERENCE,"Binance current order-update/change-log references"
+gtx_reject_code,-5022,EXTERNAL_REFERENCE,"Binance error code GTX_ORDER_REJECT"
+fok_reject_code,-5021,EXTERNAL_REFERENCE,"Binance error code FOK_ORDER_REJECT"
+queue_model_version,PRICE_TIME_L2_V1,DESIGN_CONSTANT,"Conservative L2 queue proxy; not exact exchange queue reconstruction"
+rpi_supported,false,CONFIGURABLE_PARAMETER,"RPI uses separate liquidity and is excluded from L2 book simulation"
+maker_fee_source,EXTERNAL_CONFIG,CONFIGURABLE_PARAMETER,"Must be populated from versioned venue fee reference at implementation time"
+taker_fee_source,EXTERNAL_CONFIG,CONFIGURABLE_PARAMETER,"Must be populated from versioned venue fee reference at implementation time"
+latency_offsets,0,CONFIGURABLE_PARAMETER,"Simulation parameter; not inferred from market data"

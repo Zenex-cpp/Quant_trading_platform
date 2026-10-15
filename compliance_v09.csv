@@ -1,0 +1,15 @@
+requirement_id,requirement_text,priority,implementation_status,code_reference,test_reference,evidence_reference,owner,unresolved_gap
+R09-001,Hypothesis ledger,CRITICAL,IMPLEMENTED,src/trading_platform/research/ledger.py,tests/test_v09.py,,research,raw experiment count remains V0.5
+R09-002,Research branches,CRITICAL,IMPLEMENTED,src/trading_platform/research/ledger.py,tests/test_v09.py,,research,
+R09-003,Research decision object,CRITICAL,IMPLEMENTED,src/trading_platform/research/ledger.py,tests/test_v09.py,,research,
+R09-004,Research cost model,MEDIUM,IMPLEMENTED,src/trading_platform/research/ledger.py,tests/test_v09.py,,research,
+R09-005,Anti-duplication gate,HIGH,IMPLEMENTED,src/trading_platform/research/anti_duplication.py,tests/test_v09.py,,research,
+R09-006,Knowledge base,HIGH,IMPLEMENTED,src/trading_platform/research/knowledge.py,tests/test_v09.py,,research,
+R09-007,Research stopping,HIGH,IMPLEMENTED,src/trading_platform/research/stopping.py,tests/test_v09.py,,research,
+R09-008,Decision bias log,MEDIUM,IMPLEMENTED,src/trading_platform/research/ledger.py,tests/test_v09.py,,research,
+R09-009,Edge registry,MEDIUM,IMPLEMENTED,src/trading_platform/research/edge.py,tests/test_v09.py,,research,
+R09-010,Evidence dependency graph,CRITICAL,IMPLEMENTED,src/trading_platform/evidence/graph.py,tests/test_v09.py,,evidence,
+R09-011,Evidence invalidation,HIGH,IMPLEMENTED,src/trading_platform/evidence/invalidation.py,tests/test_v09.py,,evidence,
+R09-012,Evidence snapshot,HIGH,IMPLEMENTED,src/trading_platform/evidence/snapshot.py,tests/test_v09.py,,evidence,
+R09-013,Gate invalidation,HIGH,IMPLEMENTED,src/trading_platform/gates/contracts.py,tests/test_v09.py,,gates,
+R09-014,Promotion prerequisite contract,CRITICAL,IMPLEMENTED,src/trading_platform/evidence/promotion_checks.py,tests/test_v09.py,,promotion,full bundle integration pending

@@ -1,0 +1,40 @@
+{
+  "artifact_type": "DECISION_STAGE_PARITY_EVIDENCE",
+  "checks": [
+    {
+      "backtest_trace_hash": "33bf0f36697ede8b1cc4d7596fcb99a8b9d5f328a5493916333f0f6f1d2d1171",
+      "check": "shared_decision_stage_trace",
+      "event_count": 4,
+      "live_trace_hash": "33bf0f36697ede8b1cc4d7596fcb99a8b9d5f328a5493916333f0f6f1d2d1171",
+      "mismatch_offsets": [],
+      "pass": true
+    },
+    {
+      "check": "deliberate_stage_mutation_is_detected",
+      "mutation_mismatch_offsets": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "pass": true
+    },
+    {
+      "check": "backtest_replay_completed",
+      "pass": true,
+      "state_hash": "dfcca0434b52d2e620f64bb5cb7f7ea8333034a972b168171113fddecae30da5"
+    }
+  ],
+  "evidence_boundary": [
+    "Proves the shared decision-stage seam only.",
+    "Does not prove live market-data transport parity.",
+    "Does not prove execution, accounting, reconciliation, latency, or operational shadow parity.",
+    "Does not establish production readiness."
+  ],
+  "evidence_hash": "117d899a9ca1b3a2075f42435cd75ba1ce1011a1c4f23447ab771e4785c8832f",
+  "production_ready": false,
+  "schema_version": "V375_DECISION_STAGE_PARITY_1",
+  "scope": "APPLICATION_BACKTEST_LIVE_SHADOW_DECISION_STAGE",
+  "source_kind": "INTERNAL",
+  "status": "PASS"
+}

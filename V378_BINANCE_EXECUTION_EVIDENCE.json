@@ -1,0 +1,117 @@
+{
+  "artifact_type": "BINANCE_VENUE_EXECUTION_EVIDENCE",
+  "checks": [
+    {
+      "check": "multi_level_market_sweep_quantities",
+      "expected": [
+        "10",
+        "5"
+      ],
+      "pass": true,
+      "value": null
+    },
+    {
+      "check": "taker_fee_total",
+      "expected": "0.304",
+      "pass": true,
+      "value": null
+    },
+    {
+      "check": "gtx_reject",
+      "expected": "GTX_ORDER_REJECT",
+      "pass": true,
+      "value": null
+    },
+    {
+      "check": "gtx_exchange_code",
+      "expected": "-5022",
+      "pass": true,
+      "value": null
+    },
+    {
+      "check": "fok_reject",
+      "expected": "FOK_ORDER_REJECT",
+      "pass": true,
+      "value": null
+    },
+    {
+      "check": "fok_exchange_code",
+      "expected": "-5021",
+      "pass": true,
+      "value": null
+    },
+    {
+      "check": "ioc_fill",
+      "expected": "10",
+      "pass": true,
+      "value": null
+    },
+    {
+      "check": "ioc_cancel_remainder",
+      "expected": [
+        [
+          "I1",
+          "2",
+          "IOC_REMAINDER"
+        ]
+      ],
+      "pass": true,
+      "value": null
+    },
+    {
+      "check": "queue_ahead_then_maker_fill",
+      "expected": "3",
+      "pass": true,
+      "value": null
+    },
+    {
+      "check": "maker_fee",
+      "expected": "0.0297",
+      "pass": true,
+      "value": null
+    },
+    {
+      "check": "queue_remainder_preserved",
+      "expected": [
+        [
+          "I1",
+          "3",
+          "5"
+        ]
+      ],
+      "pass": true,
+      "value": null
+    },
+    {
+      "check": "rpi_fail_closed",
+      "expected": "RPI_LIQUIDITY_MODEL_UNSUPPORTED",
+      "pass": true,
+      "value": null
+    },
+    {
+      "check": "deterministic_state_hash",
+      "expected": "4de9d739b33c08b09615248ad267344c26aef28741291f1a9e3986398802dd04",
+      "pass": true,
+      "value": null
+    }
+  ],
+  "evidence_boundary": [
+    "Exact exchange matching-engine queue reconstruction is not proven.",
+    "RPI liquidity is intentionally not simulated.",
+    "Maker/taker fee values are versioned inputs, not hard-coded live fee truth.",
+    "No claim of live execution parity is made by this artifact."
+  ],
+  "evidence_hash": "3d9063b4487b87fa97c25bea9f1d70ed18d8c84f5d7064d783f4b55a6fcc68d5",
+  "external_references": [
+    "https://developers.binance.com/en/docs/derivatives/usds-margined-futures/change-log",
+    "https://developers.binance.com/en/docs/products/derivatives-trading-portfolio-margin/error-code",
+    "https://developers.binance.com/en/docs/products/derivatives-trading-usds-futures/websocket-market-streams/Live-Subscribing-Unsubscribing-to-streams",
+    "https://developers.binance.com/en/docs/products/derivatives-trading-coin-futures/user-data-streams"
+  ],
+  "production_ready": false,
+  "queue_model": "PRICE_TIME_L2_V1",
+  "retrieved_at": "2026-10-02",
+  "schema_version": "V378_BINANCE_VENUE_EXECUTION_1",
+  "scope": "APPLICATION_BACKTEST_BINANCE_USDM_VENUE_EXECUTION",
+  "status": "PASS"
+}

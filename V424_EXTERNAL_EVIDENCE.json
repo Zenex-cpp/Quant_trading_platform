@@ -1,0 +1,15 @@
+{
+  "schema_version": "V4.24",
+  "release_kind": "RECOVERY_BUILD",
+  "source_code_baseline": "trading_platform_v4_18.tar.gz",
+  "source_archive_sha256": "13715ee341c4b4936a34a3b7aadbf7e8f90e118d1f591c6b59fa0b86ca7db3c6",
+  "canonical_v423_lineage": "NOT_VERIFIED; V4.23 source archive absent from build runtime",
+  "hosted_github_actions": "NOT_RUN",
+  "remote_branch_protection": "NOT_VERIFIED",
+  "codeowners_provider_snapshot": "NOT_VERIFIED",
+  "reviewer_trust_anchor": "NOT_CONFIGURED",
+  "synthetic_ed25519_tests": "TESTED_ONLY",
+  "external_evidence": false,
+  "production_ready": false,
+  "activation_flag": "NOT_SET"
+}

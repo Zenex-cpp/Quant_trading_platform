@@ -1,0 +1,30 @@
+{
+  "credential_release": "OUTSIDE_POLICY_SCOPE",
+  "deny_by_default": true,
+  "evidence_id": "V391-NETWORK-SEGMENTATION-001",
+  "infrastructure_proof": "NOT_VERIFIED",
+  "mutating_network_call": false,
+  "production_ready": false,
+  "production_to_testnet": "DENY",
+  "research_to_production": "DENY",
+  "research_to_testnet": "DENY",
+  "schema_version": "V391_NETWORK_SEGMENTATION_POLICY_1",
+  "scope": "APPLICATION_POLICY_CONTRACT",
+  "testnet_to_production": "DENY",
+  "wildcards": "DENY",
+  "zones": {
+    "PRODUCTION_TRADING": [
+      "api.binance.com",
+      "dapi.binance.com",
+      "fapi.binance.com",
+      "fstream-auth.binance.com",
+      "fstream.binance.com",
+      "ws-fapi.binance.com"
+    ],
+    "RESEARCH": [],
+    "TESTNET_EXECUTION": [
+      "fstream.binancefuture.com",
+      "testnet.binancefuture.com"
+    ]
+  }
+}

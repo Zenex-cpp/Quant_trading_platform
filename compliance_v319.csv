@@ -1,0 +1,11 @@
+control,requirement,status,evidence
+SAFETY,durable OrderIntent required before optional final dispatch gate,PASS,V319 durable intent ledger + dispatch integration
+STATE_INTEGRITY,immutable intent_id and payload fingerprint,PASS,V319 tests
+DATA_INTEGRITY,complete intent payload persisted and replayed,PASS,V319 durable_intent.py
+EVIDENCE_INTEGRITY,append-only hash-chained ledger,PASS,EventStore verify_chain
+RISK_CONTROL,missing/mismatching durable intent blocks transport,PASS,V319 dispatch test
+EXECUTION_INTEGRITY,no credentials/transport state persisted,PASS,V319 design review
+FAIL_SAFE,corrupt ledger fails closed,PASS,V319 corruption test
+RESTART,deterministic intent replay after restart,PASS,V319 restart test
+NO_LIVE_IO,no exchange requests in verification,PASS,V319 verification report
+PRODUCTION,production readiness,PASS,"FALSE (not production ready)"

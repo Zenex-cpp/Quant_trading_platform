@@ -1,0 +1,13 @@
+requirement_id,requirement,priority,status,evidence
+V384-001,Connectivity proof must be VERIFIED before Testnet activation,CRITICAL,VERIFIED,V384_VERIFICATION_REPORT.md
+V384-002,Connectivity evidence hash must be present and bound to activation,CRITICAL,VERIFIED,V384_VERIFICATION_REPORT.md
+V384-003,Production endpoint cannot be bound to Testnet activation,CRITICAL,VERIFIED,V384_VERIFICATION_REPORT.md
+V384-004,Operator approval scope must be TESTNET_ORDER_MUTATION,CRITICAL,VERIFIED,V384_VERIFICATION_REPORT.md
+V384-005,Operator approval must be unexpired,CRITICAL,VERIFIED,V384_VERIFICATION_REPORT.md
+V384-006,Reconciliation must be GREEN before activation,CRITICAL,VERIFIED,V384_VERIFICATION_REPORT.md
+V384-007,Activation TTL is bounded and auto-expires,CRITICAL,VERIFIED,V384_VERIFICATION_REPORT.md
+V384-008,Symbol allowlist and absolute notional ceiling are enforced,CRITICAL,VERIFIED,V384_VERIFICATION_REPORT.md
+V384-009,Halt/deactivation blocks new risk,CRITICAL,VERIFIED,V384_VERIFICATION_REPORT.md
+V384-010,Credentials are not retained by activation authority or audit,CRITICAL,VERIFIED,V384_VERIFICATION_REPORT.md
+V384-011,Real Testnet mutation,CRITICAL,NOT_VERIFIED,V384_VERIFICATION_REPORT.md
+V384-012,Production readiness,CRITICAL,BLOCKED,V384_VERIFICATION_REPORT.md

@@ -1,0 +1,25 @@
+{
+  "release": "v4.10",
+  "status": "NOT_VERIFIED",
+  "production_ready": false,
+  "application_contract": "TESTED_999_999",
+  "external_operational_evidence": "PENDING",
+  "control": "exact-scope-and-evidence-fingerprint-readiness-binding",
+  "changes": [
+    "scope binding",
+    "exact evidence-id-set binding",
+    "exact evidence fingerprint binding",
+    "preflight fingerprint binding"
+  ],
+  "blockers": [
+    "independent security assessment",
+    "production monitoring/paging/on-call drill",
+    "infrastructure network segmentation evidence",
+    "deployed secret-store/rotation evidence",
+    "backup/restore/failover/failback evidence",
+    "authenticated Testnet mutation evidence",
+    "independent human approval operation",
+    "production rollback exercise",
+    "production operational/security sign-off"
+  ]
+}

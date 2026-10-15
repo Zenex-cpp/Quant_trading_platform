@@ -1,0 +1,5 @@
+requirement_id,requirement_text,implementation_status,verification,evidence_status,notes
+M15,External evidence invalidation/revalidation,TESTED,999/999 PASS,NOT_VERIFIED,V4.10 exact evidence fingerprints fail closed on changed or expired readiness evidence
+M17,Evidence dependency invalidation,TESTED,999/999 PASS,NOT_VERIFIED,V4.10 preserves V4.9 dependency checkpoint and revalidation binding
+M25,Operational readiness,PARTIAL,999/999 PASS,NOT_VERIFIED,V4.10 adds exact scope/evidence binding but real external readiness evidence remains required
+M30,Production deployment readiness,PARTIAL,999/999 PASS,NOT_VERIFIED,V4.10 does not authorize production without external evidence and independent approval operation

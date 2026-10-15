@@ -1,0 +1,79 @@
+{
+  "artifact_type": "V381_TESTNET_E2E_EVIDENCE",
+  "evidence_hash": "f016018cb11c86402e2e312df4376f6f619cd6233e63b46cde52d86538a2e4e2",
+  "external_references": [
+    "https://www.binance.com/en/support/announcement/detail/ebf9b0aa9eca4ff3804eef6fb09ba32a",
+    "https://developers.binance.com/en/docs/products/derivatives-trading-coin-futures/user-data-streams",
+    "https://developers.binance.com/zh-CN/docs/products/derivatives-trading-coin-futures/change-log"
+  ],
+  "generated_at": "2026-10-03T08:14:44.890112+00:00",
+  "live_preflight": {
+    "credentials_present": false,
+    "endpoint": "https://testnet.binancefuture.com/fapi/v1/time",
+    "error": "URLError:<urlopen error [Errno -3] Temporary failure in name resolution>",
+    "mutation": "NONE",
+    "status": "NOT_VERIFIED"
+  },
+  "local_e2e": {
+    "accounting_state_hash": "661f3a3678f2899b7922f6b5caef6503c6dc50f13bf7b2a482091899b523f1a6",
+    "chain_hash": "2837f433c32086757ce5693138ce45bd540322f39e86441c74784c5fe2bcd385",
+    "checks": [
+      {
+        "check": "intent_to_order_request",
+        "pass": true
+      },
+      {
+        "check": "venue_params_complete",
+        "pass": true
+      },
+      {
+        "check": "order_update_projection_accepts_sequence",
+        "pass": true
+      },
+      {
+        "check": "duplicate_trade_idempotent",
+        "pass": true
+      },
+      {
+        "check": "order_projected_filled",
+        "pass": true
+      },
+      {
+        "check": "account_update_projected_position",
+        "pass": true
+      },
+      {
+        "check": "rest_ws_reconciliation_green",
+        "pass": true
+      },
+      {
+        "check": "fill_ledger_no_double_count",
+        "pass": true
+      },
+      {
+        "check": "position_ledger_matches_stream",
+        "pass": true
+      },
+      {
+        "check": "accounting_invariants",
+        "pass": true
+      },
+      {
+        "check": "position_unknown_not_created",
+        "pass": true
+      },
+      {
+        "check": "negative_reconciliation_blocks",
+        "pass": true
+      }
+    ],
+    "position_quantity": "0.0002",
+    "reconciliation_state": "GREEN",
+    "scenario_id": "TN-E2E-V381-001",
+    "status": "PASS",
+    "websocket_route": "wss://stream.binancefuture.com/private/ws?listenKey=<listenKey>&events=ORDER_TRADE_UPDATE&events=ACCOUNT_UPDATE"
+  },
+  "mutating_testnet_order_executed": false,
+  "production_ready": false,
+  "schema_version": "V381_TESTNET_E2E_1"
+}

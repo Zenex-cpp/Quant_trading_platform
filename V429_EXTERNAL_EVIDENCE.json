@@ -1,0 +1,16 @@
+{
+  "schema_version": "V4.29-EXTERNAL-EVIDENCE",
+  "parent_archive": "trading_platform_v4_28_recovery.tar.gz",
+  "parent_archive_sha256": "c04b3584d9c5de21bd57c22f491895101da5fb7f3d5d99c034a9b77c5f8b09a4",
+  "real_github_capture": "NOT_RUN",
+  "hosted_github_actions": "NOT_RUN",
+  "effective_branch_protection": "NOT_VERIFIED",
+  "effective_rulesets": "NOT_VERIFIED",
+  "effective_codeowners": "NOT_VERIFIED",
+  "independent_reviewer_identity": "NOT_VERIFIED",
+  "trust_anchor": "NOT_CONFIGURED",
+  "external_evidence": false,
+  "activation_flag": "NOT_SET",
+  "production_ready": false,
+  "canonical_v4_23_v4_26_lineage": "NOT_ESTABLISHED"
+}

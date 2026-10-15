@@ -1,0 +1,9 @@
+method_id,version,status,description
+EQUAL_WEIGHT,0.6,IMPLEMENTED,Simple equal weight baseline
+INVERSE_VOL,0.6,IMPLEMENTED,Inverse volatility baseline
+RISK_PARITY,0.6,REGISTERED,Deferred until evidence
+VOL_TARGET,0.6,REGISTERED,Deferred until evidence
+MEAN_VARIANCE,0.6,REGISTERED,Deferred until evidence
+CVAR,0.6,REGISTERED,Deferred until evidence
+ROBUST,0.6,REGISTERED,Deferred until evidence
+REGIME_CONDITIONED,0.6,REGISTERED,Deferred until evidence

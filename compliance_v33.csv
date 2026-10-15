@@ -1,0 +1,8 @@
+id,control,status,evidence
+V33-01,capability validation precedes dispatch,PASS,tests/v33/test_commit_coordinator.py
+V33-02,one-shot capability consumption,PASS,tests/v33/test_commit_coordinator.py
+V33-03,idempotent duplicate returns same OrderRequest,PASS,tests/v33/test_commit_coordinator.py
+V33-04,UNKNOWN state forces reconciliation,PASS,tests/v33/test_commit_coordinator.py
+V33-05,blind retry blocked on UNKNOWN,PASS,tests/v33/test_commit_coordinator.py
+V33-06,existing regression suite preserved,PASS,pytest offline
+V33-07,live exchange mutation,NOT_RUN,no credentials/live session

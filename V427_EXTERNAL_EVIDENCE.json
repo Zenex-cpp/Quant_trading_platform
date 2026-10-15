@@ -1,0 +1,14 @@
+{
+  "schema_version": "V4.27",
+  "remote_provider_capture": "NOT_RUN",
+  "hosted_github_actions": "NOT_RUN",
+  "branch_protection": "NOT_VERIFIED",
+  "rulesets": "NOT_VERIFIED",
+  "codeowners_effective_rules": "NOT_VERIFIED",
+  "trust_anchor": "NOT_CONFIGURED",
+  "independent_reviewer": "NOT_VERIFIED",
+  "external_evidence": false,
+  "activation_flag": "NOT_SET",
+  "production_ready": false,
+  "lineage": "RECOVERY_EXTENSION_FROM_V4.25_RECOVERY;V4.26_ARCHIVE_NOT_AVAILABLE;CANONICAL_V4.23_LINEAGE_NOT_ESTABLISHED"
+}

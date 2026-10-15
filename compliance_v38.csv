@@ -1,0 +1,7 @@
+id,requirement,status,evidence
+V38-01,TLS WebSocket only,PASS,WebSocketConfig.validate
+V38-02,Disconnect blocks trading,PASS,test_disconnect_and_reconnect_remain_blocked_until_recovery
+V38-03,Reconnect requires reconciliation,PASS,test_disconnect_and_reconnect_remain_blocked_until_recovery
+V38-04,Explicit keepalive boundary,PASS,test_keepalive_is_explicit_and_network_injected
+V38-05,No network during verification,PASS,V38_VERIFICATION_REPORT.md
+V38-06,Production readiness remains false,PASS,V38_VERIFICATION_REPORT.md

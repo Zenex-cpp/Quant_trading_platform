@@ -1,0 +1,7 @@
+requirement_id,requirement_text,priority,implementation_status,code_reference,schema_reference,test_reference,evidence_reference,owner,unresolved_gap
+V363-M01,"Canonical runtime package is under src/trading_platform",CRITICAL,VERIFIED,src/trading_platform/,pyproject.toml,tests/test_v363_source_layout.py,V363_VERIFICATION_REPORT.md,Platform,
+V363-M02,"Root-level duplicate trading_platform package is absent",CRITICAL,VERIFIED,,docs/00_REPOSITORY_SOURCE_OF_TRUTH.md,tests/test_v363_source_layout.py,V363_VERIFICATION_REPORT.md,Platform,
+V363-M03,"Wheel discovery packages only the canonical src tree",CRITICAL,VERIFIED,pyproject.toml,package discovery,tests/test_v363_source_layout.py,V363_VERIFICATION_REPORT.md,Platform,
+V363-M04,"Repository import resolution loads trading_platform from src",HIGH,VERIFIED,,pyproject.toml,tests/test_v363_source_layout.py,V363_VERIFICATION_REPORT.md,Platform,
+V363-M05,"Full verification suite passes after migration",CRITICAL,VERIFIED,,pyproject.toml,pytest,648-test suite,V363_VERIFICATION_REPORT.md,Platform,
+V363-M06,"Historical V3.58 acceptance evidence remains immutable",CRITICAL,VERIFIED,,,hash verification,V363_VERIFICATION_REPORT.md,Platform,

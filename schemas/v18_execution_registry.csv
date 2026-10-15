@@ -1,0 +1,5 @@
+scenario_id,endpoint,mutation,gate_required,evidence
+TN-04,/fapi/v1/order/test,false,false,true
+TN-05,/fapi/v1/order,true,true,true
+TN-06,/fapi/v1/order,true,true,true
+TN-07,/fapi/v1/order,true_for_recovery_only,true,true

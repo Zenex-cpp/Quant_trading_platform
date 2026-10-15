@@ -1,0 +1,33 @@
+{
+  "artifact_type": "V382_AUTHENTICATED_TESTNET_EVIDENCE",
+  "evidence_hash": "a1df64b43b535bbc3c36032a82f39abe21c775a28164c2fdd47b94eb293d9840",
+  "generated_at": "2026-10-03T08:20:31.687628+00:00",
+  "live_reason": "LIVE_AUTHENTICATED_TESTNET_REQUIRES_OPERATOR_API_KEY_AND_EXPLICIT_TESTNET_WS_API_URL",
+  "live_status": "NOT_VERIFIED",
+  "local_checks": [
+    {
+      "check": "control_start",
+      "pass": true
+    },
+    {
+      "check": "private_event_projection",
+      "pass": true
+    },
+    {
+      "check": "listen_key_rotation",
+      "pass": true
+    },
+    {
+      "check": "expiry_fail_closed",
+      "pass": true
+    },
+    {
+      "check": "stop_control_plane",
+      "pass": true
+    }
+  ],
+  "local_status": "PASS",
+  "mutation": "NONE",
+  "production_ready": false,
+  "schema_version": "V382_AUTHENTICATED_TESTNET_1"
+}

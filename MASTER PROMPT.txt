@@ -1,0 +1,3094 @@
+MASTER PROMPT v5.0
+
+Formalized AI Quantitative Trading, Research, Portfolio, Risk, Execution & Evidence System
+
+0. DOCUMENT PURPOSE
+
+Questo documento è la specifica normativa principale del progetto.
+
+Non è soltanto un prompt.
+
+È simultaneamente:
+
+system specification;
+
+architecture contract;
+
+implementation contract;
+
+research protocol;
+
+risk-control contract;
+
+execution contract;
+
+evidence/governance contract;
+
+deployment contract.
+
+Il sistema deve essere progettato in modo:
+
+machine-checkable;
+
+reproducible;
+
+auditable;
+
+fault-tolerant;
+
+security-aware;
+
+evidence-driven;
+
+modular;
+
+extensible.
+
+Non costruire un semplice AI trading bot.
+
+Costruire una piattaforma quantitativa completa.
+
+1. MISSION
+
+La missione è sviluppare una piattaforma capace di:
+
+acquisire dati storici e realtime;
+
+validare i dati;
+
+costruire un dataset proprietario;
+
+generare feature quantitative;
+
+identificare regimi;
+
+ricercare edge;
+
+formulare e falsificare hypothesis;
+
+addestrare modelli;
+
+confrontare modelli e strategie;
+
+costruire portfolio;
+
+applicare risk controls;
+
+eseguire ordini realisticamente;
+
+monitorare il sistema;
+
+rilevare drift;
+
+rilevare edge decay;
+
+aggiornare i modelli sotto governance;
+
+produrre evidence;
+
+invalidare evidence quando necessario;
+
+promuovere soltanto artifact verificati;
+
+operare eventualmente in produzione in modo controllato.
+
+Obiettivo economico:
+
+MAXIMIZE ROBUST NET RISK-ADJUSTED RETURN
+
+sotto hard constraints di:
+
+capital preservation;
+
+drawdown;
+
+risk of ruin;
+
+liquidity;
+
+leverage;
+
+transaction costs;
+
+spread;
+
+slippage;
+
+funding;
+
+market impact;
+
+execution risk;
+
+model risk;
+
+operational risk;
+
+capacity.
+
+Non promettere rendimenti.
+
+2. CORE PRIORITY ORDER
+
+La gerarchia assoluta è:
+
+SAFETY
+
+STATE INTEGRITY
+
+DATA INTEGRITY
+
+EVIDENCE INTEGRITY
+
+RISK CONTROL
+
+EXECUTION INTEGRITY
+
+ECONOMIC OPTIMIZATION
+
+PERFORMANCE
+
+Sul piano quantitativo:
+
+ROBUSTNESS
+
+HISTORICAL PERFORMANCE
+
+OOS
+
+IN-SAMPLE
+
+NET PERFORMANCE
+
+GROSS PERFORMANCE
+
+SIMPLE ROBUST
+
+COMPLEX FRAGILE
+
+NO EDGE
+
+FORCED TRADE
+
+NO DEPLOYMENT
+
+UNVERIFIED DEPLOYMENT
+
+3. ANTI-COMPLEXITY CONTRACT
+
+Ogni componente non banale deve dichiarare:
+
+purpose;
+
+problem solved;
+
+expected benefit;
+
+measured benefit;
+
+implementation cost;
+
+latency cost;
+
+compute cost;
+
+maintenance cost;
+
+operational risk;
+
+failure modes;
+
+simpler alternative.
+
+Severity:
+
+CRITICAL HIGH MEDIUM LOW EXPERIMENTAL
+
+Regole:
+
+CRITICAL failure → deployment blocked.
+
+HIGH failure → affected component activation blocked.
+
+MEDIUM → warning / technical debt.
+
+LOW → non-blocking.
+
+EXPERIMENTAL → non mandatory for production.
+
+Se un componente non dimostra un beneficio sufficiente:
+
+REMOVE / SIMPLIFY / DEFER.
+
+4. REQUIREMENT FORMALIZATION
+
+Ogni requisito CRITICAL deve essere espresso, quando possibile, come almeno uno fra:
+
+schema;
+
+enum;
+
+invariant;
+
+state transition;
+
+guard;
+
+threshold;
+
+acceptance criterion;
+
+automated test;
+
+audit event;
+
+versioned artifact;
+
+ownership;
+
+failure policy;
+
+remediation policy.
+
+Non lasciare safety-critical requirements soltanto in linguaggio naturale.
+
+5. DECISION CLASSIFICATION
+
+Ogni decisione deve avere una categoria:
+
+DESIGN_CONSTANT CONFIGURABLE_PARAMETER RESEARCH_PARAMETER EMPIRICALLY_DISCOVERED_PARAMETER DERIVED_PARAMETER RUNTIME_STATE EXTERNAL_REFERENCE SECRET ENVIRONMENT_VARIABLE
+
+Per ogni decisione non determinata dalla specifica:
+
+DECISION_RECORD
+
+con:
+
+decision_id decision classification rationale evidence actor timestamp version revalidation_condition
+
+6. SYSTEM ARCHITECTURE
+
+Architettura logica:
+
+DATA → EVENTS → FEATURES → REGIME → RESEARCH / MODELS → PREDICTION → SIGNAL → OPPORTUNITY → PORTFOLIO → RISK → ORDER INTENT → ORDER → FILL → POSITION → ACCOUNTING → P&L
+
+Parallelamente:
+
+ARTIFACTS → DEPENDENCY GRAPH → EVIDENCE → GATES → PROMOTION → DEPLOYMENT.
+
+7. ORTHOGONAL STATE MODEL
+
+NON utilizzare un unico state per rappresentare tutto.
+
+Separare:
+
+LIFECYCLE OPERATIONAL MODE HEALTH APPROVAL DEPLOYMENT ROLE
+
+Esempio Model:
+
+Lifecycle: EXPERIMENTAL CANDIDATE APPROVED RETIRED
+
+Mode: RESEARCH BACKTEST SIMULATION SHADOW CANARY LIVE CLOSING_ONLY
+
+Health: HEALTHY DEGRADED FAILED FROZEN
+
+Approval: PENDING APPROVED EXPIRED REVOKED
+
+Deployment: NOT_DEPLOYED STAGED ACTIVE ROLLED_BACK FAILED
+
+Role: NONE CHALLENGER CHAMPION
+
+Questi assi sono indipendenti.
+
+8. STATE COMPATIBILITY MATRIX
+
+Creare una matrice machine-checkable:
+
+Lifecycle × Operational Mode × Health × Approval × Deployment × Role
+
+Risultato:
+
+VALID INVALID
+
+Esempi:
+
+EXPERIMENTAL × LIVE → INVALID.
+
+APPROVED × LIVE × APPROVED × ACTIVE → VALID.
+
+RETIRED × LIVE → INVALID.
+
+HEALTH=FAILED × LIVE → INVALID.
+
+APPROVAL=EXPIRED × LIVE → INVALID.
+
+CHAMPION × NOT_DEPLOYED → INVALID.
+
+La matrice deve essere versionata e testata.
+
+9. STATE/ACTION MATRIX
+
+Definire per ogni stato:
+
+OPEN INCREASE DECREASE CLOSE CANCEL RECONCILE RETRAIN DEPLOY ROLLBACK
+
+Valori:
+
+ALLOW CONDITIONAL BLOCK.
+
+Questa matrice è un contratto operativo.
+
+10. STATE TRANSITION ATOMICITY
+
+Ogni transition:
+
+BEGIN → VALIDATE → GUARDS → STATE CHANGE → SIDE EFFECTS → COMMIT
+
+oppure:
+
+ROLLBACK → CONSISTENT STATE
+
+Mai lasciare un sistema in stato parzialmente aggiornato.
+
+Ogni transition deve avere:
+
+source;
+
+target;
+
+guards;
+
+preconditions;
+
+postconditions;
+
+side effects;
+
+audit event;
+
+idempotency key;
+
+failure state;
+
+recovery path.
+
+11. STATE MACHINE IDEMPOTENCY
+
+Ripetere una transition già committed deve produrre:
+
+NO DUPLICATE SIDE EFFECT.
+
+Recovery/replay devono essere idempotenti.
+
+12. SYSTEM LIFECYCLE
+
+INIT DATA_VALIDATING READY RESEARCH BACKTEST SIMULATION SHADOW CANARY LIVE DEGRADED HALTED RECOVERY ERROR
+
+Transition non consentite:
+
+REJECT.
+
+13. RISK STATE MACHINE
+
+Separare:
+
+RISK SYSTEM STATE
+
+da:
+
+RISK DECISION.
+
+Risk states:
+
+NORMAL ELEVATED RESTRICTED FROZEN EMERGENCY RECOVERY.
+
+Risk decisions:
+
+ALLOW REDUCE REJECT EXIT EMERGENCY_HALT.
+
+14. RISK MONOTONICITY
+
+Regole matematiche obbligatorie:
+
+Higher uncertainty → risk cannot increase.
+
+Worse liquidity → allowed exposure cannot increase.
+
+Higher drawdown → risk budget cannot increase.
+
+Worse model health → risk cannot increase.
+
+Higher execution risk → position size cannot increase.
+
+Higher concentration → correlated exposure cannot increase.
+
+15. RISK BUDGET MONOTONICITY
+
+Un peggioramento di Risk State non può aumentare:
+
+remaining_budget available_new_risk maximum_exposure
+
+senza una specifica:
+
+RECOVERY EVENT
+
+validata e auditata.
+
+16. HARD CONSTRAINT HIERARCHY
+
+La gerarchia obbligatoria è:
+
+HARD CONSTRAINTS → FEASIBILITY → SAFETY FILTER → RISK FILTER → DYNAMIC RISK ADJUSTMENT → OPTIMIZATION → RANKING.
+
+Mai consentire a una objective function di compensare un hard risk violation.
+
+17. ABSOLUTE RISK CEILING
+
+Sempre:
+
+effective_risk ≤ absolute_risk_ceiling
+
+effective_exposure ≤ absolute_exposure_ceiling
+
+model recommendation non può modificare questi limiti.
+
+18. RISK LIMIT BREACH
+
+Separare:
+
+RISK_LIMIT_BREACH
+
+da:
+
+RISK_LIMIT_CONFIGURATION_CHANGE.
+
+Sono eventi distinti.
+
+Breach:
+
+detection;
+
+action;
+
+containment;
+
+scope;
+
+recovery;
+
+audit.
+
+Configuration Change:
+
+old value;
+
+new value;
+
+reason;
+
+approval;
+
+validation;
+
+effective time;
+
+impact;
+
+revalidation.
+
+19. RISK DECISION FRESHNESS
+
+RiskDecision:
+
+decision_id created_at valid_from expires_at configuration_version risk_state_version portfolio_version position_version reservation_id.
+
+Expired:
+
+INVALID FOR NEW RISK.
+
+20. GENERAL DECISION TTL
+
+TTL obbligatoria per:
+
+Prediction Signal Opportunity Score Portfolio Allocation Decision Risk Decision Order Intent
+
+Ogni object:
+
+valid_from expires_at.
+
+Downstream artifact non può utilizzare upstream scaduto.
+
+21. CAUSAL ARTIFACT CHAIN
+
+La relazione formale deve essere:
+
+Prediction → Signal → Opportunity → Portfolio Decision → Risk Decision → Order Intent → Order Request → Exchange Order → Fill → Position → Portfolio → Accounting → P&L.
+
+Ogni step:
+
+ha ID;
+
+version;
+
+timestamp;
+
+TTL;
+
+dependencies;
+
+state;
+
+provenance.
+
+22. CAUSALITY INVARIANT
+
+Un downstream artifact obbligatorio non può esistere senza tutti gli upstream artifacts required e validi.
+
+Esempi:
+
+OrderRequest senza RiskDecision → INVALID.
+
+RiskDecision senza PortfolioDecision quando richiesta → INVALID.
+
+Prediction scaduta → Signal nuovo basato su essa → INVALID.
+
+23. DATA ENGINE
+
+Supportare:
+
+Historical Realtime Account Execution.
+
+Mercato iniziale:
+
+BTCUSDT Perpetual Futures.
+
+Reference:
+
+BTCUSDT Spot.
+
+Venue iniziale:
+
+Binance.
+
+Core:
+
+VENUE AGNOSTIC.
+
+24. MARKET DATA
+
+Supportare, ove disponibile:
+
+OHLCV;
+
+trades;
+
+aggregate trades;
+
+bid;
+
+ask;
+
+spread;
+
+order book;
+
+ticker;
+
+klines;
+
+mark;
+
+index;
+
+funding;
+
+open interest;
+
+OI changes;
+
+basis;
+
+liquidation/force-order information;
+
+account events;
+
+execution events.
+
+25. MARKET DATA DELIVERY CONTRACT
+
+Per ogni feed dichiarare:
+
+delivery_semantics duplicate_possible deduplication ordering_guarantee sequence_guarantee recovery_behavior.
+
+Non dichiarare exactly-once senza proof.
+
+26. EVENT MODEL
+
+Separare:
+
+EventEnvelope EventPayload.
+
+Envelope:
+
+event_id event_type event_version schema_version event_time receive_time processing_time source correlation_id sequence_number.
+
+Payload:
+
+event-specific.
+
+27. EVENT SCHEMA REGISTRY
+
+schema_id event_type version compatibility_mode producer consumer effective_from deprecation_date migration_reference.
+
+28. EVENT ORDERING
+
+Definire chronology deterministica quando:
+
+timestamp uguali;
+
+sequence missing;
+
+events out-of-order;
+
+events late;
+
+multi-venue concurrent.
+
+29. IDEMPOTENCY CONTRACT
+
+Applicare a:
+
+ingestion;
+
+event processing;
+
+order submission;
+
+cancel;
+
+replace;
+
+reconciliation;
+
+deployment;
+
+recovery;
+
+state transition.
+
+Ogni operation:
+
+idempotency_key deduplication replay_behavior duplicate_handling audit.
+
+30. CLOCK CONTRACT
+
+Distinguere:
+
+exchange/source time wall-clock monotonic clock persisted event time.
+
+Source/exchange time:
+
+market chronology.
+
+Monotonic:
+
+local latency.
+
+Monitorare:
+
+NTP/PTP offset drift time integrity.
+
+Time integrity failure:
+
+ALERT → DEGRADED/HALTED → block new entry.
+
+31. TEMPORAL CONTRACT
+
+Ogni object temporale deve poter tracciare:
+
+source_event_time ingestion_time feature_available_time prediction_time signal_time opportunity_time portfolio_decision_time risk_decision_time order_intent_time order_submission_time exchange_ack_time fill_time mark_time.
+
+32. DATA AVAILABILITY VECTOR
+
+Per ogni feature/target/prediction:
+
+available_at availability_source publication_delay revision_policy.
+
+33. REVISION-AWARE DATA
+
+Conservare:
+
+first_published_version revised_version as_of_availability revision_timestamp.
+
+Backtest:
+
+AS-OF INFORMATION.
+
+Mai utilizzare retroattivamente una versione che all'epoca non esisteva.
+
+34. DATA QUALITY
+
+Controllare:
+
+missing;
+
+duplicate;
+
+out-of-order;
+
+corrupted;
+
+invalid OHLC;
+
+invalid price;
+
+invalid volume;
+
+anomalous jumps;
+
+stale;
+
+broken sequence;
+
+order-book inconsistencies;
+
+clock anomalies.
+
+States:
+
+VALID WARNING INVALID CRITICAL.
+
+35. UNKNOWN SEMANTICS
+
+Distinguere:
+
+NULL UNKNOWN NOT_APPLICABLE NOT_PROVIDED NOT_YET_AVAILABLE.
+
+UNKNOWN è uno stato operativo e non un semplice dato mancante.
+
+36. DATASET CONTRACT
+
+Ogni dataset:
+
+dataset_id dataset_version schema_version source snapshot_id lineage content_hash schema_hash coverage quality_status quality_report retention_policy ingestion_time.
+
+37. DATASET-01
+
+Il CSV iniziale dell'utente:
+
+DATASET-01 / HISTORICAL RESEARCH SOURCE.
+
+Prima dell'uso definitivo:
+
+audit;
+
+quality report;
+
+coverage;
+
+temporal validation;
+
+source comparison;
+
+anomaly documentation.
+
+Non considerarlo automaticamente authoritative.
+
+38. FEATURE ENGINE
+
+Famiglie:
+
+PRICE TREND MOMENTUM VOLATILITY VOLUME MICROSTRUCTURE DERIVATIVES MULTI-TIMEFRAME.
+
+Ogni feature:
+
+hypothesis definition source availability window implementation_version validation_status lineage.
+
+39. FEATURE STORE
+
+Ogni set:
+
+feature_set_id version definitions dependencies timeframes lookbacks datasets creation_method implementation validation lineage.
+
+40. TARGET ENGINE
+
+Ogni target:
+
+target_id version horizon entry_definition exit_definition cost_assumption labeling_method overlap_policy class_balance missing_label_policy.
+
+41. REGIME ENGINE
+
+Supportare:
+
+rule-based;
+
+clustering;
+
+probabilistic;
+
+hidden-state;
+
+ML.
+
+Regime dimensions:
+
+trend;
+
+volatility;
+
+liquidity;
+
+momentum;
+
+stress;
+
+order flow;
+
+transition.
+
+42. STRATEGY ENGINE
+
+Candidate:
+
+Trend Momentum Breakout Mean Reversion Volatility Order Flow / Microstructure.
+
+Ogni strategy:
+
+strategy_id version hypothesis_id mechanism preferred_regimes adverse_regimes holding_period capacity cost_sensitivity failure_modes falsification_criteria validity_scope.
+
+43. VALIDITY SCOPE
+
+Ogni strategy/model dichiara:
+
+valid_instruments valid_venues valid_timeframes valid_market_conditions valid_capital_range valid_latency_assumptions valid_execution_assumptions.
+
+44. NO EXTRAPOLATION OF EVIDENCE
+
+Evidence su:
+
+asset venue timeframe regime capital scale latency execution model
+
+non è automaticamente valida altrove.
+
+Cambio materiale:
+
+TRANSFER_VALIDATION_REQUIRED = TRUE.
+
+45. BASELINE REGISTRY
+
+Ogni baseline:
+
+baseline_id version description assumptions implementation benchmark_role.
+
+Baseline candidates:
+
+no trade;
+
+simple trend;
+
+simple momentum;
+
+simple mean reversion;
+
+risk-controlled baseline;
+
+buy-and-hold quando appropriato.
+
+46. BENCHMARK REGISTRY
+
+Ogni candidate registra PRIMA della valutazione:
+
+primary_benchmark secondary_benchmark why_appropriate benchmark_version selection_rationale.
+
+Benchmark selection retroattiva:
+
+FORBIDDEN.
+
+47. METRIC APPLICABILITY REGISTRY
+
+Ogni metric:
+
+metric_id strategy_type required optional not_applicable definition_version formula limitations.
+
+Non utilizzare metriche non appropriate al tipo di strategia.
+
+48. OBJECTIVE FUNCTION REGISTRY
+
+Ogni objective:
+
+objective_version return_component risk_penalty cost_penalty drawdown_penalty capacity_penalty uncertainty_penalty stability_component normalization_method aggregation_method.
+
+49. STATISTICAL METHOD REGISTRY
+
+Ogni metodo:
+
+method_id version assumptions applicability limitations implementation_reference required_inputs output_semantics.
+
+Se le assumptions non sono rispettate:
+
+METHOD_NOT_APPLICABLE.
+
+Non produrre semplicemente un numero potenzialmente fuorviante.
+
+50. AI MODEL LAB
+
+Candidati:
+
+statistical;
+
+linear;
+
+logistic;
+
+tree-based;
+
+LightGBM;
+
+XGBoost;
+
+CatBoost;
+
+LSTM;
+
+GRU;
+
+temporal CNN;
+
+Transformer;
+
+ensemble.
+
+Reinforcement Learning:
+
+EXPERIMENTAL ONLY.
+
+51. MODEL INPUT / OUTPUT CONTRACT
+
+Versionare:
+
+model_input_schema model_output_schema feature_schema prediction_schema.
+
+Compatibilità obbligatoria prima dell'esecuzione.
+
+52. MODEL ARTIFACT EXECUTION CONTRACT
+
+Prima del load:
+
+artifact hash;
+
+integrity/signature;
+
+input schema;
+
+output schema;
+
+feature version;
+
+model version;
+
+runtime compatibility;
+
+dependency compatibility;
+
+configuration compatibility.
+
+Failure:
+
+REJECT LOAD.
+
+53. PREDICTION
+
+Prediction object:
+
+prediction_id model_id model_version timestamp feature_version target_version prediction probability expected_return expected_risk uncertainty calibration_state valid_from expires_at.
+
+54. UNCERTAINTY
+
+Ogni uncertainty measure:
+
+method source definition bounds threshold action monitoring.
+
+Higher uncertainty cannot increase risk.
+
+55. CALIBRATION
+
+Misurare, quando applicabile:
+
+Brier;
+
+calibration error;
+
+reliability;
+
+calibration drift.
+
+Calibration state:
+
+CALIBRATED ACCEPTABLE POOR UNKNOWN.
+
+POOR/UNKNOWN può limitare sizing.
+
+56. META MODEL
+
+Inputs:
+
+strategy outputs;
+
+prediction;
+
+regime;
+
+volatility;
+
+liquidity;
+
+spread;
+
+execution state;
+
+model health;
+
+uncertainty.
+
+Output:
+
+OPPORTUNITY_SCORE
+
+con TTL.
+
+57. OPPORTUNITY SEMANTICS
+
+Opportunity Score:
+
+NON è un ordine.
+
+Può produrre:
+
+OPEN INCREASE DECREASE CLOSE HOLD NO_ACTION.
+
+58. PORTFOLIO DECISION
+
+Portfolio Allocation Decision:
+
+allocation_id portfolio_version timestamp valid_from expires_at inputs methodology_version constraints output risk_state evidence.
+
+59. PORTFOLIO ENGINE
+
+Considerare:
+
+expected return;
+
+risk;
+
+volatility;
+
+correlation;
+
+tail correlation;
+
+drawdown contribution;
+
+capacity;
+
+liquidity utilization;
+
+concentration;
+
+signal overlap;
+
+regime dependence;
+
+uncertainty;
+
+model health.
+
+60. PORTFOLIO ALLOCATION
+
+Confrontare:
+
+equal weight;
+
+inverse volatility;
+
+risk parity;
+
+volatility targeting;
+
+mean variance;
+
+CVaR;
+
+robust optimization;
+
+regime-conditioned allocation.
+
+Mai:
+
+highest historical return → highest capital.
+
+61. TURNOVER BUDGET
+
+Supportare:
+
+turnover_budget rebalance_frequency minimum_trade_threshold transaction_cost_threshold.
+
+62. PORTFOLIO RISK
+
+Supportare:
+
+gross_exposure net_exposure leverage concentration margin_utilization liquidity_utilization risk_contribution factor_exposure quando appropriato.
+
+63. CHALLENGER DIVERSITY
+
+Misurare:
+
+feature overlap;
+
+model architecture overlap;
+
+signal overlap;
+
+prediction correlation;
+
+return correlation;
+
+regime dependence;
+
+trade overlap.
+
+Non assumere diversificazione senza evidence.
+
+64. ORDER INTENT
+
+Order Intent:
+
+intent_id decision_id portfolio_decision_id risk_decision_id strategy_id model_id execution_version timestamp valid_from expires_at symbol side action quantity price order_type time_in_force.
+
+Action:
+
+OPEN INCREASE DECREASE CLOSE NO_ACTION.
+
+65. RISK ENGINE
+
+Il RiskEngine è indipendente dai modelli.
+
+Può:
+
+REJECT
+
+anche quando:
+
+model healthy;
+
+signal strong;
+
+expected return high.
+
+66. RISK DECISION
+
+RiskDecision contiene:
+
+requested exposure;
+
+allowed exposure;
+
+risk state;
+
+active limits;
+
+multipliers;
+
+rejection reason;
+
+risk reservation;
+
+TTL;
+
+provenance.
+
+67. RISK MULTIPLIER CONTRACT
+
+Ogni multiplier:
+
+multiplier_id formula bounds source rationale owner version logging test ablation.
+
+ON vs OFF test obbligatorio.
+
+68. POSITION SIZE
+
+Possibile framework:
+
+effective_risk = base_risk × signal_quality × uncertainty_factor × regime_factor × volatility_factor × liquidity_factor × drawdown_factor × model_health_factor.
+
+Sempre:
+
+effective_risk ≤ absolute ceiling.
+
+69. RISK BUDGET LEDGER
+
+Per:
+
+SYSTEM PORTFOLIO STRATEGY MODEL TRADE ORDER
+
+conservare:
+
+allocated reserved consumed released expired overridden remaining.
+
+Reservation:
+
+ATOMICA.
+
+70. RISK RESERVATION INVARIANT
+
+Ogni order che consuma risk budget deve avere:
+
+valid risk reservation.
+
+Una reservation non può essere consumata due volte.
+
+Una reservation senza accounting:
+
+INVALID.
+
+71. CLOSING_ONLY
+
+CLOSING_ONLY:
+
+ALLOW
+
+CLOSE
+
+DECREASE
+
+CANCEL
+
+EMERGENCY REDUCTION.
+
+BLOCK:
+
+OPEN
+
+INCREASE.
+
+72. EXECUTION ENGINE
+
+Separare:
+
+SIGNAL DECISION ORDER INTENT ORDER REQUEST EXCHANGE ORDER FILL.
+
+73. ORDER COMMAND
+
+Ogni comando:
+
+order_request_id correlation_id idempotency_key client_order_id intent_id risk_decision_id execution_version timestamp deadline.
+
+74. ORDER STATE
+
+CREATED SUBMITTED ACKNOWLEDGED PARTIALLY_FILLED FILLED CANCEL_REQUESTED CANCELLED REJECTED EXPIRED UNKNOWN.
+
+75. ORDER UNKNOWN
+
+UNKNOWN:
+
+NO BLIND RETRY.
+
+Procedure:
+
+QUERY → RECONCILE → DECIDE.
+
+76. PARTIAL FILL
+
+Conservare:
+
+cumulative_quantity remaining_quantity weighted_average_price fee funding slippage impact realized/unrealized state.
+
+77. POSITION STATE
+
+FLAT OPENING OPEN REDUCING CLOSING CLOSED UNKNOWN.
+
+UNKNOWN:
+
+NO NEW ORDER.
+
+78. ACCOUNTING STATE
+
+Definire:
+
+UNRECONCILED RECONCILED ADJUSTED UNKNOWN.
+
+UNKNOWN:
+
+accounting blocked for new risk until resolved.
+
+79. ACCOUNTING INVARIANTS
+
+Definire e verificare:
+
+position quantity
+
+valid fills ± instrument/account events.
+
+Equity must be explainable via the applicable account model:
+
+equity_change
+
+P&L + fees + funding + deposits/withdrawals + other_valid_account_events.
+
+Ogni eccezione deve essere esplicitata nel model.
+
+80. P&L TRUTH MODEL
+
+Confrontare:
+
+LOCAL P&L EXCHANGE P&L RECONSTRUCTED P&L.
+
+Classificare:
+
+EXPECTED WARNING CRITICAL.
+
+81. FEE/FUNDING ACCOUNTING
+
+Separare:
+
+trading_fee funding execution_impact slippage market_impact carrying_cost.
+
+Attribuire:
+
+order trade strategy model portfolio.
+
+82. PRECISION / ROUNDING
+
+Venue Adapter gestisce:
+
+price precision;
+
+quantity precision;
+
+notional precision;
+
+tick size;
+
+lot size;
+
+minimum quantity;
+
+minimum notional;
+
+rounding mode.
+
+83. NON-FINITE VALUES
+
+Gestire esplicitamente:
+
+NaN +Inf -Inf overflow underflow negative zero.
+
+Non-finite value:
+
+NON PUÒ raggiungere silenziosamente:
+
+prediction risk sizing order.
+
+84. BACKTEST ENGINE
+
+Event-driven:
+
+Market → Feature → Regime → Prediction → Signal → Opportunity → Portfolio → Risk → Intent → Order → Execution → Fill → Position → Accounting → Portfolio → P&L.
+
+85. BACKTEST / LIVE PARITY
+
+Condividere il più possibile:
+
+SignalEngine PortfolioEngine RiskEngine.
+
+Cambiare principalmente:
+
+data adapter execution adapter environment.
+
+86. EXECUTION MODEL
+
+Versionare:
+
+fee spread slippage latency funding market impact fill probability partial fill rejection cancellation latency venue rules.
+
+87. SIMULATION MODES
+
+IDEALIZED REALISTIC STRESS.
+
+Ogni mode definisce:
+
+assumptions;
+
+costs;
+
+latency;
+
+fills;
+
+liquidity;
+
+rejection;
+
+stochasticity;
+
+seed.
+
+88. REPLAY ENGINE
+
+Ricostruire tutto il causal chain.
+
+Supportare:
+
+event_offset snapshot_version state_hash.
+
+89. DETERMINISM CONTRACT
+
+Ogni componente:
+
+EXACT TOLERANCE_EQUIVALENT STOCHASTIC_BUT_SEEDED.
+
+90. INSTRUMENT LIFECYCLE
+
+Supportare:
+
+listing;
+
+delisting;
+
+symbol change;
+
+contract changes;
+
+maintenance;
+
+halts;
+
+precision changes;
+
+fee schedule changes.
+
+Versionare exchange rules.
+
+91. VALIDATION ARCHITECTURE
+
+Separare:
+
+TRAIN VALIDATION OOS FINAL HOLDOUT.
+
+Supportare quando appropriato:
+
+walk-forward;
+
+rolling;
+
+purging;
+
+embargo;
+
+CPCV;
+
+cross-fitting;
+
+non-overlapping labels.
+
+92. EFFECTIVE SAMPLE SIZE
+
+Ogni statistical test specifica:
+
+sample definition effective sample size minimum sample confidence method dependence assumptions.
+
+Non assumere i.i.d. automaticamente.
+
+93. FINAL HOLDOUT
+
+Final Holdout:
+
+access-controlled;
+
+immutable;
+
+versioned;
+
+hashed;
+
+usage-logged;
+
+unavailable to tuning.
+
+Conservare:
+
+holdout_version snapshot_id content_hash access_log.
+
+94. HOLDOUT ACCESS INCIDENT
+
+Unauthorized access:
+
+COMPROMISED → INCIDENT → INVALIDATE DEPENDENT EVIDENCE → NEW HOLDOUT → REVALIDATE.
+
+95. LEAKAGE ENGINE
+
+Scansionare:
+
+feature leakage;
+
+target leakage;
+
+timestamp leakage;
+
+normalization leakage;
+
+train/test overlap;
+
+label overlap;
+
+duplicated observations;
+
+survivorship bias;
+
+delisting bias;
+
+revision leakage;
+
+corporate-action look-ahead quando applicabile;
+
+timezone/DST;
+
+cross-asset future information;
+
+selection leakage.
+
+96. STATISTICAL METHOD APPLICABILITY
+
+Se una metodologia non soddisfa le proprie assumptions:
+
+METHOD_NOT_APPLICABLE.
+
+Mai convertire automaticamente un metodo in un numero senza validità.
+
+97. MULTIPLE TESTING
+
+Research family = accounting unit.
+
+Registrare:
+
+experiments;
+
+variants;
+
+dataset reuse;
+
+feature reuse;
+
+model reuse;
+
+test evaluations.
+
+Valutare quando appropriato:
+
+Deflated Sharpe;
+
+Probability of Backtest Overfitting;
+
+bootstrap;
+
+permutation;
+
+multiple-testing corrections.
+
+98. VALIDATION SCORECARD
+
+Dimensioni:
+
+PERFORMANCE ROBUSTNESS STATISTICS COST REGIME STABILITY CAPACITY MODEL HEALTH EXECUTION OPERATIONAL RISK.
+
+Ogni dimensione:
+
+raw metrics normalized score methodology version evidence warning reason.
+
+99. RESEARCH HYPOTHESIS LEDGER
+
+Ogni hypothesis:
+
+hypothesis_id statement motivation expected_mechanism falsification_criteria status owner created_at.
+
+100. RESEARCH BRANCHES
+
+Ogni branch:
+
+research_branch_id parent_branch hypothesis purpose status.
+
+Types:
+
+EXPLORATORY CONFIRMATION REJECTED PRODUCTION.
+
+101. RESEARCH MERGE
+
+Quando più branch convergono:
+
+MERGE_RECORD
+
+con:
+
+parent_branches combined_lineage merged_hypotheses conflicts selection_rationale new_candidate_id.
+
+102. RESEARCH DECISION OBJECT
+
+Ogni research line:
+
+CONTINUE CHANGE_HYPOTHESIS PAUSE STOP PROMOTE_TO_VALIDATION RETIRE.
+
+Con:
+
+evidence rationale owner timestamp.
+
+103. RESEARCH COST MODEL
+
+Considerare:
+
+research_compute_cost data_cost storage_cost training_cost inference_cost engineering_cost operational_cost.
+
+Priority:
+
+information_gain / total_cost.
+
+104. RESEARCH PRIORITY SCORING
+
+Versionare:
+
+scoring_methodology normalization component_bounds aggregation version.
+
+Input:
+
+novelty plausibility expected_information_gain implementation_cost_inverse.
+
+Nessuna componente domina per pura differenza di scala.
+
+105. ANTI-DUPLICATION GATE
+
+Prima di un nuovo experiment:
+
+SIMILARITY CHECK.
+
+Ricerca:
+
+similar hypothesis;
+
+similar dataset;
+
+similar feature set;
+
+similar target;
+
+similar strategy;
+
+similar experiment genealogy.
+
+Outcome:
+
+REUSE EXTEND JUSTIFY_NEW_EXPERIMENT.
+
+106. KNOWLEDGE BASE
+
+Conservare knowledge consolidata:
+
+SUPPORTED DISPROVED UNCERTAIN OBSOLETE.
+
+La Knowledge Base deve essere interrogabile dal Research Agent.
+
+107. RESEARCH STOPPING
+
+Interrompere un filone quando:
+
+diminishing returns;
+
+repeated variants;
+
+excessive data mining;
+
+budget exhausted;
+
+no incremental information.
+
+Un filone può terminare con:
+
+NO ROBUST EDGE FOUND.
+
+108. RESEARCH CHERRY-PICKING CONTROL
+
+Report devono mostrare:
+
+total experiments;
+
+failed;
+
+selected;
+
+discarded;
+
+rationale.
+
+109. DECISION BIAS LOG
+
+Per decisioni umane discrezionali:
+
+decision_id actor decision reason evidence_seen alternatives selection_effect timestamp.
+
+110. ADVERSARIAL AGENT
+
+Assumption:
+
+CANDIDATE MAY BE OVERFIT.
+
+Cerca:
+
+leakage;
+
+overfitting;
+
+fragile parameters;
+
+regime dependence;
+
+cost dependence;
+
+capacity issues;
+
+lucky sequence;
+
+suspicious feature dependence;
+
+temporal instability.
+
+111. EDGE REGISTRY
+
+Ogni edge:
+
+edge_id name hypothesis mechanism evidence best_regimes worst_regimes cost_sensitivity capacity decay confidence status.
+
+Status:
+
+ACTIVE WATCH DEGRADED RETIRED.
+
+112. EDGE DECAY
+
+Monitorare:
+
+DISCOVERY → ADOPTION → PEAK → DECAY → RETIREMENT.
+
+113. EVIDENCE MODEL
+
+Ogni evidence:
+
+evidence_id type state version created_at source_refs dependencies methodology_version scope validity_window hash owner.
+
+States:
+
+VALID SUSPENDED INVALIDATED REVALIDATED EXPIRED.
+
+114. EVIDENCE SCOPE
+
+Ogni evidence definisce:
+
+valid_instruments valid_venues valid_timeframes valid_regimes valid_capital_range valid_execution_model valid_latency_model valid_data_version.
+
+115. EVIDENCE SNAPSHOT
+
+Ogni promotion deve conservare:
+
+EVIDENCE_SNAPSHOT
+
+contenente snapshot immutabile di:
+
+evidence;
+
+metrics;
+
+gates;
+
+dependencies;
+
+versions;
+
+hashes;
+
+methodology;
+
+approvals;
+
+scope.
+
+La promotion non deve dipendere solo da current references.
+
+116. EVIDENCE DEPENDENCY GRAPH
+
+Graph:
+
+DATASET → FEATURE → TARGET → EXPERIMENT → MODEL → STRATEGY → BACKTEST → VALIDATION → GATE → CANDIDATE → PROMOTION → DEPLOYMENT.
+
+Ogni node:
+
+upstream_dependencies downstream_dependents.
+
+117. DEPENDENCY GRAPH VERSIONING
+
+Il graph stesso è:
+
+VERSIONED IMMUTABLE FOR HISTORICAL SNAPSHOTS.
+
+Modificare il graph genera nuova graph version.
+
+118. EVIDENCE INVALIDATION ENGINE
+
+Quando un dependency diventa invalido:
+
+identify downstream artifacts;
+
+identify affected evidence;
+
+identify affected gates;
+
+identify candidates;
+
+identify promotions;
+
+identify deployments;
+
+mark affected objects;
+
+create incident;
+
+require revalidation.
+
+119. EVIDENCE PROPAGATION
+
+State flow:
+
+VALID → SUSPENDED → INVALIDATED → REVALIDATED
+
+Non tutti gli incidenti implicano cancellazione definitiva.
+
+SUSPENDED deve essere disponibile quando l'indagine è in corso.
+
+120. EPISTEMIC INCIDENT
+
+Definire:
+
+EPISTEMIC_INCIDENT.
+
+Esempi:
+
+holdout contamination;
+
+leakage discovered;
+
+backtest bug;
+
+metric bug;
+
+statistical methodology bug;
+
+execution model bug;
+
+dataset corruption;
+
+retroactive exchange-rule issue.
+
+Può invalidare una evidence family intera.
+
+121. DEPENDENCY BLAST RADIUS
+
+Ogni artifact change deve determinare:
+
+changed_component → upstream/downstream → affected artifacts → invalidated evidence → invalidated gates → required revalidation → deployment impact.
+
+122. DATA CORRUPTION POST-HOC
+
+Se un dataset storico viene dichiarato corrotto:
+
+DATASET INVALIDATION → EVIDENCE INVALIDATION → DEPENDENCY PROPAGATION → RESEARCH INCIDENT → REVALIDATION.
+
+123. EXCHANGE RULE CHANGE
+
+Se cambia una regola venue:
+
+EXTERNAL REFERENCE CHANGE → IMPACT ANALYSIS → AFFECTED SIMULATIONS → AFFECTED EVIDENCE → REVALIDATION.
+
+124. PROMOTION EXPIRATION
+
+Ogni approval/promotional evidence deve avere:
+
+valid_from expires_at revalidation_condition.
+
+Quando scade:
+
+APPROVAL_EXPIRED → REVALIDATION_REQUIRED.
+
+Il Champion non deve essere considerato indefinitamente validato.
+
+125. MODEL CARD
+
+Ogni model:
+
+MODEL_CARD
+
+con:
+
+intended use;
+
+validity scope;
+
+training data;
+
+features;
+
+target;
+
+regimes;
+
+prohibited regimes;
+
+limitations;
+
+failure modes;
+
+dependencies;
+
+capital range;
+
+venues;
+
+timeframes;
+
+execution assumptions;
+
+approval scope.
+
+126. STRATEGY CARD
+
+Ogni strategy:
+
+STRATEGY_CARD
+
+con:
+
+intended use;
+
+hypothesis;
+
+mechanism;
+
+valid instruments;
+
+valid venues;
+
+valid timeframes;
+
+valid conditions;
+
+capital range;
+
+execution assumptions;
+
+best regimes;
+
+adverse regimes;
+
+failure modes;
+
+costs;
+
+capacity;
+
+validation evidence;
+
+approval scope.
+
+127. PARAMETER LIFECYCLE
+
+TUNABLE → VALIDATED → FROZEN → PRODUCTION_LOCKED.
+
+Production-locked:
+
+modification requires:
+
+change impact → revalidation → approval.
+
+128. ARTIFACT COMPATIBILITY MATRIX
+
+Ogni artifact deve essere verificato contro:
+
+runtime input schema output schema feature schema configuration dependencies execution engine hardware/runtime requirements quando applicabili venue rules.
+
+Risultati:
+
+COMPATIBLE INCOMPATIBLE UNKNOWN.
+
+UNKNOWN:
+
+production activation blocked.
+
+129. MODEL / STRATEGY ROLLBACK
+
+Separare:
+
+MODEL_ROLLBACK STRATEGY_ROLLBACK CONFIG_ROLLBACK EXECUTION_ROLLBACK FULL_BUNDLE_ROLLBACK.
+
+La tipologia dipende dal failure source.
+
+130. PROMOTION BUNDLE
+
+Immutable bundle:
+
+strategy_version model_version feature_version target_version configuration_version execution_model_version code_version evidence_snapshot gate_results artifact_hashes approval scope rollback_target.
+
+131. PROMOTION VALIDITY
+
+Promotion valid only if:
+
+bundle complete;
+
+compatibility PASS;
+
+evidence valid;
+
+required gates PASS;
+
+approval valid;
+
+scope valid;
+
+artifacts integrity valid.
+
+132. GATE CONTRACT
+
+Ogni gate:
+
+gate_id candidate_version run_id input_versions checks PASS WARNING FAIL required_artifacts evidence_refs owner reviewer timestamp expiration revalidation_condition.
+
+133. GATE INVALIDATION
+
+Gate PASS invalidato quando cambia una dipendenza critica.
+
+Il dependency graph decide:
+
+affected gate → required rerun.
+
+134. PROMOTION GATES
+
+GATE 0 — DATA VALIDITY GATE 1 — BASELINE GATE 2 — OOS GATE 3 — WALK-FORWARD GATE 4 — ROBUSTNESS GATE 5 — ADVERSARIAL GATE 6 — COST/CAPACITY GATE 7 — SHADOW GATE 8 — HUMAN APPROVAL GATE 9 — CANARY GATE 10 — LIVE.
+
+135. GATE EXPIRATION
+
+Ogni gate può avere:
+
+validity period revalidation trigger.
+
+136. HARD / SOFT CONDITIONS
+
+Hard rejection:
+
+condition_id trigger evidence requirement automatic action audit review.
+
+Soft warning:
+
+warning_id threshold severity visibility remediation.
+
+137. MODEL ROLE
+
+Role:
+
+NONE CHALLENGER CHAMPION.
+
+CHALLENGER:
+
+competitive role.
+
+CHAMPION:
+
+approved primary model.
+
+138. SHADOW MODE
+
+SHADOW è operational mode.
+
+Non è model lifecycle.
+
+Shadow deve impedire tecnicamente real orders del challenger.
+
+139. CANARY
+
+CANARY è operational mode.
+
+Dedicated risk budget.
+
+Upper absolute risk bound obbligatorio.
+
+Promote gradualmente.
+
+140. SYSTEM HEALTH PRECEDENCE
+
+Definire precedence deterministica:
+
+SECURITY
+
+DATA INTEGRITY
+
+RECONCILIATION
+
+RISK
+
+EXECUTION
+
+MODEL
+
+PERFORMANCE.
+
+Uno stato superiore può imporre:
+
+DEGRADED FROZEN CLOSING_ONLY HALTED.
+
+141. INCIDENT SEVERITY × SCOPE
+
+Severity:
+
+INFO WARNING ERROR CRITICAL EMERGENCY.
+
+Scope:
+
+ORDER TRADE STRATEGY MODEL PORTFOLIO GLOBAL.
+
+Definire matrice:
+
+severity × scope → mandatory action.
+
+142. FAILURE PRECEDENCE
+
+Definire ordine di autorità:
+
+SECURITY → DATA → RECONCILIATION → RISK → EXECUTION → MODEL → PERFORMANCE.
+
+Non usare un lower-layer recovery per bypassare un higher-layer failure.
+
+143. FAIL-SAFE MATRIX
+
+Per ogni failure:
+
+Failure → Detection → Severity → State → Action → Block Scope → Recovery → Audit.
+
+Casi:
+
+malformed data;
+
+corrupted data;
+
+schema failure;
+
+missing feature;
+
+missing prediction;
+
+stale prediction;
+
+stale signal;
+
+stale opportunity;
+
+stale portfolio decision;
+
+stale risk;
+
+model unavailable;
+
+artifact integrity failure;
+
+config conflict;
+
+feature store unavailable;
+
+database unavailable;
+
+event bus unavailable;
+
+audit unavailable;
+
+invalid clock;
+
+exchange unavailable;
+
+maintenance;
+
+authentication failure;
+
+rate limit;
+
+duplicate response;
+
+unknown order;
+
+ambiguous fill;
+
+reconciliation mismatch;
+
+monitoring unavailable;
+
+deployment failure;
+
+rollback failure.
+
+144. DEFAULT FAIL-SAFE
+
+Per nuove entry:
+
+FAIL CLOSED
+
+salvo deroga esplicita, versionata e auditata.
+
+145. UNKNOWN PROPAGATION
+
+Esempio:
+
+POSITION UNKNOWN → STRATEGY DEGRADED → ENTRY BLOCKED → PORTFOLIO RISK RESTRICTED.
+
+Definire propagation per ogni critical UNKNOWN.
+
+146. EXCHANGE STATE
+
+NORMAL DEGRADED MAINTENANCE DISCONNECTED UNKNOWN RECOVERING.
+
+Trading behavior dipende dallo state.
+
+147. DATA OUTAGE PROTOCOL
+
+DATA OUTAGE → FREEZE ENTRY → CLOSING_ONLY quando appropriato → OPTIONAL REDUCTION → RECONNECT → RECONCILE → GUARDS → RESUME.
+
+148. PRE-TRADE SNAPSHOT
+
+Prima dell'ordine conservare:
+
+positions;
+
+portfolio;
+
+risk;
+
+limits;
+
+market;
+
+liquidity;
+
+model state;
+
+strategy state;
+
+decision chain;
+
+versions.
+
+149. POST-TRADE SNAPSHOT
+
+Dopo fill conservare:
+
+positions;
+
+portfolio;
+
+accounting;
+
+risk;
+
+fees;
+
+funding;
+
+execution;
+
+state transitions.
+
+150. RECONCILIATION
+
+Supportare:
+
+startup pre-trade post-trade post-restart event-driven scheduled.
+
+Per mismatch:
+
+case_id severity status owner remediation closure_evidence.
+
+151. RECOVERY PROOF
+
+Recovery è VERIFIED solo se:
+
+state_reconciled = TRUE AND invariants_pass = TRUE AND no_unresolved_critical_issue = TRUE AND guards_pass = TRUE.
+
+Altrimenti:
+
+RECOVERY INCOMPLETE.
+
+152. CRASH CONSISTENCY
+
+Vietare:
+
+order without audit audit without order fill without position update risk reservation without accounting deployment without promotion bundle promotion without evidence snapshot.
+
+153. SECURITY THREAT MODEL
+
+Considerare:
+
+compromised research agent;
+
+compromised model;
+
+dependency compromise;
+
+credential leak;
+
+config tampering;
+
+duplicate orders;
+
+replay;
+
+unauthorized deployment;
+
+audit tampering;
+
+supply chain attack.
+
+Ogni threat:
+
+prevention detection remediation owner.
+
+154. NETWORK SEGMENTATION
+
+Separare:
+
+RESEARCH DATA SHADOW/TESTNET PRODUCTION TRADING.
+
+Research:
+
+NO ROUTE verso production trading endpoints.
+
+155. PERMISSIONS
+
+Capability separation:
+
+research training backtest shadow canary production trading deployment configuration security/admin.
+
+156. HUMAN APPROVAL BOUNDARIES
+
+Categorie:
+
+FULLY_AUTOMATED HUMAN_REVIEWED DUAL_APPROVAL PROHIBITED_AUTOMATION.
+
+Dual approval consigliata/obbligatoria secondo policy per:
+
+risk limit increase;
+
+leverage increase;
+
+production credential changes;
+
+global kill reset;
+
+emergency overrides;
+
+new venue.
+
+157. SECRET MANAGEMENT
+
+No secrets in:
+
+source;
+
+repository;
+
+versioned config;
+
+logs.
+
+Definire:
+
+secret store rotation expiry revocation audit.
+
+158. REPRODUCIBILITY
+
+Ogni run:
+
+dataset_version code_version git_commit dependency_lock configuration_version seed model_artifact feature_set target cost_model execution_model runtime_environment artifact_hashes environment_fingerprint.
+
+159. ARTIFACT REGISTRY
+
+Ogni artifact:
+
+artifact_id type version hash storage_reference created_at creator provenance compatibility.
+
+160. DATA / EVIDENCE LINEAGE
+
+Ogni promoted result deve risalire a:
+
+source → raw data → normalized → feature → target → experiment → model → strategy → evidence → gate → promotion.
+
+161. INCIDENT MANAGEMENT
+
+Technical incident e epistemic incident devono restare distinguibili.
+
+Technical:
+
+availability / infrastructure / execution.
+
+Epistemic:
+
+validity / evidence / research.
+
+Entrambi devono avere:
+
+owner severity timeline root cause impact remediation closure evidence.
+
+162. MODEL DRIFT
+
+Monitorare:
+
+feature drift prediction drift target drift regime drift error drift performance drift.
+
+Ogni detector:
+
+reference window comparison window method threshold minimum sample severity action.
+
+163. RETRAINING
+
+Supportare:
+
+scheduled rolling drift-triggered performance-triggered emergency freeze.
+
+RETRAINING ≠ DEPLOYMENT.
+
+164. MODEL HEALTH
+
+States:
+
+HEALTHY DEGRADED FAILED FROZEN.
+
+Inputs:
+
+prediction quality calibration error drift regime behavior P&L drawdown contribution.
+
+165. EDGE RETIREMENT
+
+Retirement trigger deve essere basato su evidence, non soltanto su una losing streak.
+
+166. LIVE/BACKTEST DRIFT
+
+Monitorare:
+
+expected vs observed
+
+per:
+
+returns;
+
+win rate;
+
+costs;
+
+slippage;
+
+latency;
+
+calibration;
+
+frequency;
+
+regime.
+
+167. CHANGE CONTROL
+
+Ogni modifica:
+
+change_id actor reason old_reference new_reference validation approval timestamp affected_components.
+
+168. CHANGE IMPACT
+
+Ogni change:
+
+changed_component → affected_components → invalidated_artifacts → invalidated_evidence → invalidated_gates → required_retests → reapproval → rollback_impact.
+
+169. EXTERNAL REFERENCE GOVERNANCE
+
+Ogni reference:
+
+provider reference retrieval_timestamp effective_period version/hash affected_component.
+
+Per exchange rules:
+
+conservare quale reference era in vigore per la build/version.
+
+170. KNOWLEDGE GOVERNANCE
+
+Knowledge Base deve evitare duplicazione.
+
+Prima di una nuova ricerca:
+
+check knowledge base → similar evidence → reuse / extend / new hypothesis.
+
+171. VERSION GRAPH
+
+Collegare:
+
+dataset feature target experiment strategy model execution configuration code evidence gate promotion deployment.
+
+172. VERSION GRAPH IMMUTABILITY
+
+Historical graph snapshots:
+
+IMMUTABLE.
+
+Current graph:
+
+new version on change.
+
+173. ACCOUNTING / P&L RECONCILIATION LOOP
+
+LOCAL ↔ EXCHANGE ↔ RECONSTRUCTED.
+
+Ogni divergenza:
+
+classify;
+
+preserve evidence;
+
+remediate;
+
+audit.
+
+174. PRODUCTION READINESS
+
+Necessari:
+
+data validation;
+
+PIT;
+
+invariants;
+
+state matrix;
+
+risk engine;
+
+kill;
+
+reconciliation;
+
+accounting;
+
+realistic execution;
+
+monitoring;
+
+security;
+
+permissions;
+
+network isolation;
+
+backup;
+
+restore;
+
+rollback;
+
+failure injection;
+
+recovery proof;
+
+evidence snapshot;
+
+promotion bundle;
+
+approval.
+
+175. COMPLIANCE MATRIX
+
+Ogni requirement:
+
+requirement_id requirement_text priority implementation_status code_reference schema_reference test_reference evidence_reference owner unresolved_gap.
+
+Statuses:
+
+IMPLEMENTED TESTED VERIFIED PARTIAL BLOCKED NOT_APPLICABLE.
+
+176. VERIFIED DEFINITION
+
+DOCUMENTED
+
+requirement described.
+
+IMPLEMENTED
+
+code/schema exists.
+
+TESTED
+
+tests pass.
+
+VERIFIED
+
+test + evidence + review.
+
+PRODUCTION_READY
+
+VERIFIED + operational readiness + security + recovery + approval.
+
+177. MANDATORY MACHINE CHECKS
+
+Almeno:
+
+M1. No Order without valid RiskDecision.
+
+M2. No Order with expired RiskDecision.
+
+M3. No Order when Position = UNKNOWN.
+
+M4. No New Entry when stale market data.
+
+M5. No New Entry with expired Prediction/Signal/Opportunity/Portfolio/Risk/Intent where required.
+
+M6. No Production Deployment without valid Approval.
+
+M7. No Champion without required gates.
+
+M8. No Final Holdout access from tuning workflow.
+
+M9. No Production credential visibility from Research.
+
+M10. No immutable record update without version/audit.
+
+M11. No duplicate side effect due to retry/replay.
+
+M12. No double-counted fill.
+
+M13. No activation after critical reconciliation mismatch.
+
+M14. No artifact execution when compatibility fails.
+
+M15. No artifact deployment when integrity fails.
+
+M16. No live decision from configuration conflict.
+
+M17. No gate reuse after invalidating change.
+
+M18. No promotion without Evidence Snapshot.
+
+M19. No promotion without valid Promotion Bundle.
+
+M20. No risk reservation double consumption.
+
+M21. Higher uncertainty cannot increase risk.
+
+M22. Worse liquidity cannot increase allowed exposure.
+
+M23. Higher drawdown cannot increase risk budget.
+
+M24. Worse model health cannot increase risk.
+
+M25. Research network cannot reach production trading endpoints.
+
+M26. Failed methodology assumptions produce METHOD_NOT_APPLICABLE.
+
+M27. Final Holdout improper access invalidates dependent evidence.
+
+M28. Post-recovery state cannot be READY/LIVE without recovery proof.
+
+M29. Risk budget cannot increase solely because state worsened.
+
+M30. Downstream artifact cannot exist without required valid upstream dependency.
+
+178. END-TO-END ACCEPTANCE TEST
+
+Prima di V1.0:
+
+Historical Data → Validation → Feature → Target → Baseline → Model → Prediction → Signal → Opportunity → Portfolio → Risk → Intent → Order Simulation → Execution → Fill → Position → Accounting → P&L → Audit → Replay → Evidence → Gate.
+
+Verificare:
+
+deterministic identifiers;
+
+provenance;
+
+reproducibility;
+
+failure injection;
+
+recovery;
+
+rollback.
+
+179. FIRST DELIVERY
+
+Prima di implementazione significativa produrre:
+
+System Architecture.
+
+Repository Structure.
+
+State Orthogonality Model.
+
+State Compatibility Matrix.
+
+State/Action Matrix.
+
+State Transition Tables.
+
+Global Invariants Catalog.
+
+Safety Monotonicity Matrix.
+
+Configuration Precedence Matrix.
+
+Event Envelope/Payload Schemas.
+
+Event Schema Registry.
+
+Idempotency Contract.
+
+Clock Contract.
+
+PIT Contract.
+
+Data Quality Contract.
+
+Source-of-Truth Matrix.
+
+Error Taxonomy.
+
+Fail-Safe Matrix.
+
+Failure Precedence Matrix.
+
+Incident Severity × Scope Matrix.
+
+Risk State Model.
+
+Risk Budget Model.
+
+Risk Reservation Flow.
+
+Decision TTL Contract.
+
+Causal Dependency Graph.
+
+Evidence State Model.
+
+Evidence Dependency Graph.
+
+Evidence Invalidation Design.
+
+Statistical Method Registry.
+
+Metric Applicability Registry.
+
+Objective Function Registry.
+
+Benchmark Registry.
+
+Model Card Template.
+
+Strategy Card Template.
+
+Artifact Compatibility Matrix.
+
+Accounting State Model.
+
+Accounting Invariants.
+
+Reconciliation Model.
+
+Promotion Bundle Specification.
+
+Holdout Access Policy.
+
+Gate Dependency Matrix.
+
+Gate Invalidation Policy.
+
+Threat Model.
+
+Permission Model.
+
+Network Segmentation Model.
+
+Research Branch Model.
+
+Knowledge Base Model.
+
+Change Impact Model.
+
+Research Cost Model.
+
+Compliance Matrix.
+
+Test Plan.
+
+Failure-Injection Plan.
+
+Recovery/Restart Plan.
+
+Disaster Recovery Plan.
+
+Open Gaps Register.
+
+180. DEVELOPMENT ORDER
+
+Preferire:
+
+SPECIFICATION → SAFETY → STATE MODELS → INVARIANTS → SCHEMAS → CONTRACT TESTS → DATA → EVENTS → ACCOUNTING → REPLAY → BACKTEST → BASELINES → RISK → FEATURES → REGIME → ML → PORTFOLIO → REALTIME → EXECUTION → RECONCILIATION → MONITORING → RESEARCH → EVIDENCE → DEPLOYMENT → CHAOS → DR.
+
+181. VERSION ROADMAP
+
+V0.1 Data + schemas + event foundation + invariants + replay.
+
+V0.2 Baseline + backtester + risk + accounting.
+
+V0.3 Features + regime + PIT + leakage.
+
+V0.4 ML + target + calibration + uncertainty.
+
+V0.5 Meta model + ensemble + robustness + adversarial.
+
+V0.6 Portfolio + allocation + capacity + turnover + risk budget.
+
+V0.7 Realtime + proprietary data + order book.
+
+V0.8 Execution + reconciliation + testnet.
+
+V0.9 Research Lab + evidence graph + invalidation + knowledge base.
+
+V1.0 Champion/Challenger + shadow + promotion bundle + canary + operational readiness.
+
+V1.x Controlled live.
+
+182. ENGINEERING STACK
+
+Initial candidate:
+
+Python PostgreSQL Redis Docker Git NumPy Polars/Pandas scikit-learn LightGBM XGBoost CatBoost PyTorch Optuna.
+
+Rust/C++/distributed systems only when benchmark evidence justifies them.
+
+183. EXCHANGE ADAPTER
+
+Exchange-specific assumptions confined to adapter:
+
+REST;
+
+WebSocket;
+
+authentication;
+
+fees;
+
+precision;
+
+rate limits;
+
+order semantics;
+
+maintenance;
+
+errors;
+
+retries;
+
+instrument rules.
+
+Use current official documentation at implementation time and register reference version.
+
+184. EXCHANGE ADAPTER TESTS
+
+Test:
+
+auth;
+
+connectivity;
+
+subscription;
+
+sequence;
+
+reconnect;
+
+placement;
+
+acknowledgement;
+
+cancellation;
+
+partial fill;
+
+full fill;
+
+reject;
+
+rate limits;
+
+precision;
+
+min quantity;
+
+maintenance;
+
+unknown order;
+
+reconciliation.
+
+185. OPERATIONAL RUNBOOKS
+
+Document runbooks for:
+
+stale data;
+
+exchange disconnect;
+
+unknown order;
+
+unknown position;
+
+reconciliation mismatch;
+
+risk halt;
+
+model degradation;
+
+deployment failure;
+
+rollback;
+
+database recovery;
+
+disaster recovery;
+
+security incident;
+
+epistemic incident.
+
+186. HUMAN REVIEW
+
+Per ogni critical promotion:
+
+evidence package + risk summary + known limitations + scope + rollback + open incidents + revalidation status.
+
+187. FINAL OPERATING PRINCIPLES
+
+Hard constraints > optimization.
+
+Safety > profit.
+
+Risk Engine > model.
+
+Unknown state > new risk.
+
+Expired decision > no action.
+
+Invalid evidence > no promotion.
+
+Invalidated dependency > revalidation.
+
+Research Agent cannot control production.
+
+Challenger cannot self-promote.
+
+Historical evidence cannot be extrapolated without validation.
+
+More complexity cannot imply more confidence.
+
+Higher uncertainty cannot create more exposure.
+
+Worse conditions cannot increase risk.
+
+Recovery requires proof.
+
+Rollback requires testing.
+
+Documentation alone is not verification.
+
+Every production artifact requires provenance.
+
+Every promotion requires an immutable evidence snapshot.
+
+Every critical change requires impact analysis.
+
+Every research family must account for selection/multiple-testing effects.
+
+Every research path may terminate with NO ROBUST EDGE FOUND.
+
+FLAT is a valid trading decision.
+
+NO_ACTION is different from FLAT.
+
+REDUCE is different from EXIT.
+
+NO TRADE is preferable to BAD TRADE.
+
+188. FINAL COMMAND
+
+Do not begin with:
+
+LIVE TRADING.
+
+Do not begin with:
+
+ADVANCED AI.
+
+Do not begin with:
+
+AUTOMATED OPTIMIZATION.
+
+Begin with:
+
+SPECIFICATION → DATA INTEGRITY → PIT → STATE MODELS → INVARIANTS → ACCOUNTING → REPLAY → BACKTEST → BASELINE → RISK → RESEARCH → VALIDATION → EXECUTION → OPERATIONAL HARDENING → CONTROLLED DEPLOYMENT.
+
+Before implementing each milestone:
+
+run Compliance Matrix.
+
+Before calling a requirement VERIFIED:
+
+produce evidence.
+
+Before promoting an artifact:
+
+verify Evidence Snapshot + Promotion Bundle.
+
+Before increasing risk:
+
+verify hard constraints.
+
+Before using historical results elsewhere:
+
+verify Scope of Validity.
+
+Before accepting a strategy:
+
+try to falsify it.
+
+Before adding complexity:
+
+demonstrate measurable benefit.
+
+When uncertain:
+
+REDUCE RISK or DO NOT TRADE.
+
+When evidence is insufficient:
+
+DO NOT ASSUME.
+
+When evidence is invalid:
+
+DO NOT DEPLOY.
+
+When no robust edge exists:
+
+STOP THE RESEARCH LINE OR CHANGE THE HYPOTHESIS.
+
+END OF MASTER PROMPT v5.0
+

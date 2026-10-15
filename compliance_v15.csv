@@ -1,0 +1,13 @@
+requirement_id,requirement_text,priority,implementation_status,test_reference,evidence_reference,owner,unresolved_gap
+V15-01,TESTNET network allowlist only,CRITICAL,TESTED,tests/ops/test_v15_ops.py::test_network_policy_allows_known_testnet_hosts_only,docs/evidence/V15_BINANCE_REFERENCES.md,security,live network evidence pending
+V15-02,TLS mandatory,CRITICAL,TESTED,tests/ops/test_v15_ops.py::test_network_policy_allows_known_testnet_hosts_only,docs/evidence/V15_BINANCE_REFERENCES.md,security,live network evidence pending
+V15-03,Production Binance hosts denied,CRITICAL,TESTED,tests/ops/test_v15_ops.py::test_network_policy_allows_known_testnet_hosts_only,docs/evidence/V15_BINANCE_REFERENCES.md,security,network-segmentation infrastructure evidence pending
+V15-04,Runtime-only credentials,CRITICAL,TESTED,tests/ops/test_v15_ops.py::test_signed_account_requires_runtime_secrets,,security,secret-manager integration review pending
+V15-05,RPO contract machine-checkable,HIGH,TESTED,tests/ops/test_v15_ops.py::test_dr_contract_enforces_rpo,,operations,measured backup evidence pending
+V15-06,Recovery proof formula enforced,CRITICAL,TESTED,tests/ops/test_v15_ops.py::test_recovery_proof_requires_all_conditions,,operations,live restart/recovery evidence pending
+V15-07,Blocking readiness checks fail closed,CRITICAL,TESTED,tests/ops/test_v15_ops.py::test_acceptance_blocks_when_blocking_item_not_pass,,governance,human approval evidence pending
+V15-08,Readiness PASS requires all blocking items PASS,HIGH,TESTED,tests/ops/test_v15_ops.py::test_acceptance_passes_when_all_blockers_pass,,governance,operational review pending
+V15-09,Read-only testnet probe available,HIGH,TESTED,tests/verification/test_v14_operational.py,docs/V14_OPERATIONAL_TESTNET.md,exchange,real testnet execution pending
+V15-10,Actual testnet order/fill/reconciliation,CRITICAL,NOT_VERIFIED,,docs/V14_OPERATIONAL_TESTNET.md,exchange,real credentials and session required
+V15-11,Network segmentation Research->Production,CRITICAL,PARTIAL,src/trading_platform/ops/network_policy.py,,security,infrastructure enforcement must be proven
+V15-12,Backup restore operational evidence,CRITICAL,NOT_VERIFIED,tests/verification/test_v11_verification.py,,operations,real restore exercise required

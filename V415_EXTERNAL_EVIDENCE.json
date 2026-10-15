@@ -1,0 +1,25 @@
+{
+  "release": "V4.15",
+  "production_ready": false,
+  "operational_evidence_mode": "EXTERNAL_REQUIRED",
+  "verified_locally": [
+    "V4.13 crypto predecessor contract",
+    "V4.14 ordering/idempotence",
+    "V4.15 readiness seal contract",
+    "1022 baseline regression",
+    "11 focused regression"
+  ],
+  "not_verified": [
+    "real trust anchor / PKI / HSM",
+    "real independent reviewer operation",
+    "authenticated Testnet mutation",
+    "monitoring/on-call",
+    "network segmentation",
+    "secret-store deployment/rotation",
+    "backup/restore/failover/failback",
+    "security assessment",
+    "production rollback",
+    "human approval",
+    "production sign-off"
+  ]
+}

@@ -1,0 +1,9 @@
+requirement_id,requirement_text,priority,status,implementation,test_reference,evidence,owner,open_gap
+V390-1,Credentialed Testnet REST target must be exact approved Testnet host,CRITICAL,VERIFIED,src/trading_platform/v390/egress_boundary.py,tests/v390/test_egress_boundary.py,V390_VERIFICATION_REPORT.md,security,no local gap
+V390-2,Testnet egress must require TLS and reject non-default ports/userinfo,CRITICAL,VERIFIED,src/trading_platform/v390/egress_boundary.py,tests/v390/test_egress_boundary.py,V390_VERIFICATION_REPORT.md,security,no local gap
+V390-3,Ambient proxy configuration must fail closed before credentialed network use,CRITICAL,VERIFIED,src/trading_platform/v390/egress_boundary.py,tests/v390/test_egress_boundary.py,V390_VERIFICATION_REPORT.md,security,no local gap
+V390-4,Stdlib transport must not inherit ambient proxies,CRITICAL,VERIFIED,src/trading_platform/v390/egress_boundary.py,tests/v390/test_egress_boundary.py,V390_VERIFICATION_REPORT.md,security,no local gap
+V390-5,HTTP redirects must not change Testnet egress destination,CRITICAL,VERIFIED,src/trading_platform/v390/egress_boundary.py,tests/v390/test_egress_boundary.py,V390_VERIFICATION_REPORT.md,security,no local gap
+V390-6,Exact request target must be revalidated on each outbound call,CRITICAL,VERIFIED,src/trading_platform/v390/egress_boundary.py,tests/v390/test_egress_boundary.py,V390_VERIFICATION_REPORT.md,execution,no local gap
+V390-7,Real authenticated Testnet mutation remains externally unverified until exchange observation,CRITICAL,NOT_VERIFIED,N/A,N/A,V390_VERIFICATION_REPORT.md,operations,requires working DNS/network/dedicated Testnet credentials
+V390-8,OS or infrastructure routing isolation is not claimed by application code,MAJOR,OPEN,docs/V390_M25_NETWORK_ISOLATION.md,N/A,V390_VERIFICATION_REPORT.md,operations,requires deployment-level network evidence

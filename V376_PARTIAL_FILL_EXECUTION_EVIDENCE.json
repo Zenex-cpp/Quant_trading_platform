@@ -1,0 +1,41 @@
+{
+  "artifact_type": "PARTIAL_FILL_EXECUTION_EVIDENCE",
+  "checks": [
+    {
+      "check": "liquidity_constrained_partial_fill",
+      "fill_quantities": [
+        "2.0",
+        "2.0",
+        "1.0"
+      ],
+      "pass": true,
+      "requested_quantity": "5",
+      "total_filled": "5.0"
+    },
+    {
+      "check": "no_overfill",
+      "filled_quantity": "5.0",
+      "open_orders": [],
+      "pass": true,
+      "requested_quantity": "5"
+    },
+    {
+      "check": "deterministic_replay",
+      "pass": true,
+      "run_1_hash": "c2b1c379c53ee2bf79a578501c4e33a393de4fbedc64412241e978351c1240e0",
+      "run_2_hash": "c2b1c379c53ee2bf79a578501c4e33a393de4fbedc64412241e978351c1240e0"
+    }
+  ],
+  "evidence_boundary": [
+    "Proves deterministic partial-fill mechanics against a configurable participation rate.",
+    "Does not prove order-book depth, queue position, maker/taker semantics, or venue matching behavior.",
+    "Participation rate is an explicit simulation assumption, not market-calibrated evidence.",
+    "Does not close platform-wide STRESS mode enforcement or full backtest/live operational parity."
+  ],
+  "evidence_hash": "a2df40c5d4451b85271069997de8ddb4e09d412f6c80a3f1f96b59e64aba38be",
+  "production_ready": false,
+  "schema_version": "V376_PARTIAL_FILL_EXECUTION_1",
+  "scope": "APPLICATION_BACKTEST_REALISTIC_PARTIAL_FILL",
+  "source_kind": "INTERNAL",
+  "status": "PASS"
+}

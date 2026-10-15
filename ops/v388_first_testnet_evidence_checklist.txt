@@ -1,0 +1,19 @@
+V3.88 FIRST TESTNET EVIDENCE CLOSURE CHECKLIST
+
+[ ] TESTNET scope verified
+[ ] V3.83 connectivity VERIFIED
+[ ] user-data stream healthy and fresh
+[ ] REST/WS reconciliation GREEN before mutation
+[ ] V3.84 activation ACTIVE
+[ ] V3.85 immutable pre-trade snapshot captured
+[ ] V3.86 operator gate READY
+[ ] V3.87 LIMIT+GTC non-marketable proof ARMED
+[ ] exactly one durable dispatch attempt
+[ ] ORDER_TRADE_UPDATE correlated by client_order_id
+[ ] terminal order status observed
+[ ] ACCOUNT_UPDATE observed when required by the run
+[ ] REST/WS post-trade reconciliation GREEN
+[ ] accounting reconciliation GREEN
+[ ] evidence bundle content hash verified
+[ ] operator/session closed
+[ ] no unresolved UNKNOWN state

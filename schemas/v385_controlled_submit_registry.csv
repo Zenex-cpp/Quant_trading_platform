@@ -1,0 +1,19 @@
+artifact_type,version,field,semantics,required,fail_policy
+pre_trade_snapshot,V385-1,snapshot_id,immutable unique snapshot identity,Y,BLOCK
+pre_trade_snapshot,V385-1,decision_chain_hash,causal upstream identity,Y,BLOCK
+pre_trade_snapshot,V385-1,positions_hash,position state provenance,Y,BLOCK
+pre_trade_snapshot,V385-1,portfolio_hash,portfolio provenance,Y,BLOCK
+pre_trade_snapshot,V385-1,risk_hash,risk provenance,Y,BLOCK
+pre_trade_snapshot,V385-1,limits_hash,active hard limits provenance,Y,BLOCK
+pre_trade_snapshot,V385-1,market_hash,market state provenance,Y,BLOCK
+pre_trade_snapshot,V385-1,liquidity_hash,liquidity provenance,Y,BLOCK
+pre_trade_snapshot,V385-1,model_health_hash,model health provenance,Y,BLOCK
+pre_trade_snapshot,V385-1,strategy_health_hash,strategy health provenance,Y,BLOCK
+pre_trade_snapshot,V385-1,versions_hash,configuration/runtime version provenance,Y,BLOCK
+pre_trade_snapshot,V385-1,position_state,UNKNOWN blocks new risk,Y,BLOCK
+pre_trade_snapshot,V385-1,accounting_state,RECONCILED required,Y,BLOCK
+pre_trade_snapshot,V385-1,reconciliation_state,GREEN required,Y,BLOCK
+pre_trade_snapshot,V385-1,market_stale,false required,Y,BLOCK
+dispatch_attempt,V385-1,state,PENDING before transport,Y,BLOCK
+retry_policy,V385-1,UNKNOWN,requires reconciliation before retry,Y,BLOCK
+credential_policy,V385-1,transport_scope,credentials are never persisted,Y,BLOCK

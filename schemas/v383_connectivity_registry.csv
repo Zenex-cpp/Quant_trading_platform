@@ -1,0 +1,8 @@
+component,version,environment,contract,status
+REST_PREFLIGHT,V383-1,TESTNET,GET /fapi/v1/time only|no mutation,IMPLEMENTED
+DNS_PREFLIGHT,V383-1,TESTNET,resolution required before connectivity claim,IMPLEMENTED
+CLOCK_INTEGRITY,V383-1,TESTNET,abs(client-server)<=5000ms default,IMPLEMENTED
+ENDPOINT_GUARD,V383-1,TESTNET,production hosts rejected,IMPLEMENTED
+WS_ENDPOINT,V383-1,TESTNET,operator configured|never inferred as verified,IMPLEMENTED
+CREDENTIAL_ISOLATION,V383-1,TESTNET,no credentials consumed by preflight,IMPLEMENTED
+LIVE_CONNECTIVITY,V383-1,TESTNET,requires runtime network|NOT_VERIFIED when unavailable,NOT_VERIFIED

@@ -1,0 +1,4 @@
+reference_id,provider,reference_url,retrieved_on,effective_note,scope
+EXT381-01,Binance,"https://www.binance.com/en/support/announcement/detail/ebf9b0aa9eca4ff3804eef6fb09ba32a",2026-10-03,"USD-M WebSocket Public/Market/Private migration; private production route /private",WEBSOCKET
+EXT381-02,Binance,"https://developers.binance.com/zh-CN/docs/products/derivatives-trading-coin-futures/change-log",2026-10-03,"USD-M Testnet WebSocket base URL recorded as wss://fstream.binancefuture.com; /private composition remains reference-derived until live verification",TESTNET_WEBSOCKET
+EXT381-03,Binance,"https://developers.binance.com/en/docs/products/derivatives-trading-coin-futures/user-data-streams",2026-10-03,"ORDER_TRADE_UPDATE, ACCOUNT_UPDATE, T/E ordering, 24h socket lifetime",USER_DATA

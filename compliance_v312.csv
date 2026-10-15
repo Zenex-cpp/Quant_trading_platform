@@ -1,0 +1,9 @@
+requirement,status,evidence
+runtime_permission_is_authoritative,PASS,trading_allowed gate before dispatch
+exact_committed_order_reused,PASS,dispatcher submits bridge committed request unchanged
+unknown_blocks_retry,PASS,ExchangeUncertain -> bridge.mark_unknown -> reconciliation required
+permission_loss_during_cycle,PASS,post-dispatch snapshot yields recovery_required
+blocked_runtime_zero_transport_calls,PASS,dedicated regression test
+no_live_credentials,PASS,verification used synthetic credential bytes only
+no_exchange_mutation,PASS,no network execution performed
+production_ready,FALSE,controlled testnet implementation only

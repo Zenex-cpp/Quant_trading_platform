@@ -1,0 +1,27 @@
+{
+  "artifact_type": "V385_CONTROLLED_TESTNET_SUBMIT_EVIDENCE",
+  "checks": [
+    {
+      "check": "controlled_submit_acknowledged",
+      "pass": true
+    },
+    {
+      "check": "single_gateway_side_effect",
+      "pass": true
+    },
+    {
+      "check": "pretrade_before_dispatch",
+      "pass": true
+    },
+    {
+      "check": "credentials_not_persisted",
+      "pass": true
+    }
+  ],
+  "evidence_hash": "e33cf23178cf3db3d4d9867f55e4d97c080ae2ffa59cdaa038be6e98a9d154f3",
+  "gateway_calls": 1,
+  "local_status": "PASS",
+  "mutating_live_testnet_called": false,
+  "production_ready": false,
+  "runtime_connectivity_status": "NOT_VERIFIED"
+}

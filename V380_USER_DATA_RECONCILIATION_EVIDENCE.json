@@ -1,0 +1,56 @@
+{
+  "artifact_type": "V380_USER_DATA_RECONCILIATION_EVIDENCE",
+  "checks": [
+    {
+      "check": "routed_private_ws_url",
+      "pass": true
+    },
+    {
+      "check": "order_projection",
+      "pass": true
+    },
+    {
+      "check": "duplicate_event_idempotency",
+      "pass": true
+    },
+    {
+      "check": "trade_count",
+      "pass": true
+    },
+    {
+      "check": "out_of_order_fail_closed",
+      "pass": true
+    },
+    {
+      "check": "reconciliation_green",
+      "pass": true
+    },
+    {
+      "check": "stale_blocks",
+      "pass": true
+    },
+    {
+      "check": "listen_key_expiry_blocks",
+      "pass": true
+    }
+  ],
+  "evidence_hash": "4828b0192f88051163ca67a803da342f2315a5dd63c65d57d744ee95cc74946b",
+  "external_references": [
+    "https://www.binance.com/en-NG/support/announcement/detail/ebf9b0aa9eca4ff3804eef6fb09ba32a",
+    "https://developers.binance.com/en/docs/products/derivatives-trading-coin-futures/user-data-streams",
+    "https://developers.binance.com/en/docs/catalog/core-trading-derivatives-trading-usd-s-m-futures/api/ws-api/user-data-streams",
+    "https://developers.binance.com/zh-CN/docs/products/derivatives-trading-coin-futures/change-log"
+  ],
+  "full_automated_suite": "750/750 PASS",
+  "generated_at": "2026-10-03T08:08:33.119506+00:00",
+  "network_probe": {
+    "endpoint": "https://testnet.binancefuture.com/fapi/v1/time",
+    "error": "URLError:<urlopen error [Errno -3] Temporary failure in name resolution>",
+    "mutation": "NONE",
+    "status": "NOT_VERIFIED"
+  },
+  "production_ready": false,
+  "schema_version": "V380_USER_DATA_RECON_1",
+  "status": "PASS",
+  "targeted_tests": "13/13 PASS"
+}

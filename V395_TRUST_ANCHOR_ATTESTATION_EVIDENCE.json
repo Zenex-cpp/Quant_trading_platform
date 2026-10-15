@@ -1,0 +1,21 @@
+{
+  "release": "v3.95",
+  "control": "M9 / external trust-anchor attestation intake",
+  "application_intake": "TESTED",
+  "in_process_signature_verification": "TESTED",
+  "external_custody": "NOT_VERIFIED",
+  "external_key_ceremony": "NOT_VERIFIED",
+  "independent_reviewer_operation": "NOT_VERIFIED",
+  "synthetic_private_material": "PROHIBITED",
+  "fail_closed_on_mismatch": true,
+  "fail_closed_on_expiry_or_revocation": true,
+  "required_external_artifacts": [
+    "registry_hash",
+    "fingerprint_set",
+    "custody_evidence",
+    "ceremony_evidence",
+    "revocation_drill",
+    "independent_reviewer",
+    "reviewer_signature"
+  ]
+}

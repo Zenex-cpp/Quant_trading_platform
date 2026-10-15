@@ -1,0 +1,33 @@
+{
+  "drill": {
+    "acknowledgement_verified": true,
+    "delivery_verified": true,
+    "drill_id": "V371-OBSERVABILITY-001",
+    "escalation_verified": true,
+    "evidence_hash": "3bdd189d9e4eb7ed60f118187ca59555b4e1c8d54292e4b750bbf826afea061b",
+    "fail_safe_verified": true,
+    "failed_checks": [],
+    "final_action": "HALTED",
+    "heartbeat_verified": true,
+    "monitoring_available": true,
+    "silence_detection_verified": true
+  },
+  "evidence_boundary": [
+    "Does not prove infrastructure monitoring.",
+    "Does not prove external paging/SIEM.",
+    "Does not prove production on-call coverage or incident response.",
+    "Does not close the V3.59 monitoring/alerting operational evidence gap."
+  ],
+  "monitoring_unavailable_case": {
+    "evidence_hash": "acffed39f57235a840b2a02eb5ebd88b2b55ba5af5e8d26a80aea2ee266cc942",
+    "fail_safe_verified": true,
+    "final_action": "HALTED",
+    "monitoring_available": false,
+    "pass": true
+  },
+  "production_ready": false,
+  "schema_version": "V371_OPERATIONAL_OBSERVABILITY_1",
+  "scope": "APPLICATION_OPERATIONAL_OBSERVABILITY",
+  "source_kind": "INTERNAL",
+  "status": "PASS"
+}

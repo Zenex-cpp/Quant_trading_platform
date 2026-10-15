@@ -1,0 +1,25 @@
+{
+  "release": "v3.97",
+  "evidence_type": "APPLICATION_LEVEL_CONTRACT_EVIDENCE",
+  "status": "TESTED_NOT_EXTERNAL",
+  "production_ready": false,
+  "security_assessment": {
+    "authority": "src/trading_platform/v397/readiness_attestation.py",
+    "hard_gate": "CRITICAL=0; HIGH<=policy ceiling",
+    "external_execution": "NOT_VERIFIED"
+  },
+  "monitoring": {
+    "required_signals": [
+      "STALE_MARKET_DATA",
+      "RECONCILIATION_MISMATCH",
+      "RISK_HALT",
+      "SECURITY_BOUNDARY_VIOLATION"
+    ],
+    "external_execution": "NOT_VERIFIED"
+  },
+  "independent_review": "NOT_VERIFIED",
+  "infrastructure_monitoring": "NOT_VERIFIED",
+  "network_segmentation": "NOT_VERIFIED",
+  "secret_store": "NOT_VERIFIED",
+  "authenticated_testnet_mutation": "NOT_VERIFIED"
+}

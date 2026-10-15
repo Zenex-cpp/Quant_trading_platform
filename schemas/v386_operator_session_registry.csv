@@ -1,0 +1,14 @@
+field,type,required,semantics
+session_state,ENUM,true,PRECHECK|READY|SUBMITTED|UNKNOWN|BLOCKED|CLOSED
+connectivity_status,ENUM,true,VERIFIED|NOT_VERIFIED|BLOCKED|FAILED
+user_data_control_healthy,BOOLEAN,true,user-data control plane health
+user_data_websocket_healthy,BOOLEAN,true,private WebSocket health
+listen_key_present,BOOLEAN,true,current user-data session correlation
+last_event_epoch,NUMBER,true,last user-data event timestamp
+event_fresh,BOOLEAN,true,event age within configured threshold
+reconciliation_green,BOOLEAN,true,REST/stream/account reconciliation state
+activation_status,ENUM,true,activation authority status
+credentials_present,BOOLEAN,true,runtime credentials present for current operation only
+mutation_allowed,BOOLEAN,true,final operator-session gate result
+unknown_requires_reconciliation,BOOLEAN,true,UNKNOWN always blocks retry
+production_ready,BOOLEAN,true,always false for v3.86

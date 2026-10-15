@@ -1,0 +1,24 @@
+V3.87 FIRST TESTNET ORDER CHECKLIST
+
+[ ] V3.83 connectivity = VERIFIED
+[ ] clock skew within configured bound
+[ ] authenticated user-data stream = HEALTHY
+[ ] latest user-data event age <= configured TTL
+[ ] REST/WS reconciliation = GREEN
+[ ] operator approval scope = TESTNET_ORDER_MUTATION
+[ ] activation = ACTIVE
+[ ] symbol = BTCUSDT
+[ ] order type = LIMIT
+[ ] TIF = GTC
+[ ] fresh bid/ask obtained
+[ ] BUY price <= bid*(1-min_distance_bps)
+[ ] SELL price >= ask*(1+min_distance_bps)
+[ ] notional <= Testnet hard ceiling
+[ ] immutable pre-trade snapshot captured
+[ ] dispatch attempt durably recorded
+[ ] exactly one submit call
+[ ] user-data observation correlated by client_order_id
+[ ] terminal state observed
+[ ] position reconciliation = GREEN
+[ ] accounting reconciliation = GREEN
+[ ] activation halted/revoked after test

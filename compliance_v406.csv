@@ -1,0 +1,5 @@
+requirement_id,requirement_text,implementation_status,verification,evidence_status,notes
+M15,External evidence invalidation/revalidation,TESTED,973/973 PASS,NOT_VERIFIED,V4.6 preserves fail-closed dependency freshness for downstream gates
+M17,Evidence dependency invalidation,TESTED,973/973 PASS,NOT_VERIFIED,V4.6 consumes the durable dependency invalidation ledger and blocks stale gate reuse
+M25,Operational readiness,PARTIAL,973/973 PASS,NOT_VERIFIED,Real external operational evidence remains required
+M30,Production deployment readiness,PARTIAL,973/973 PASS,NOT_VERIFIED,V4.6 does not authorize deployment; production readiness remains blocked

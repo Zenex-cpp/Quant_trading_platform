@@ -1,0 +1,11 @@
+{
+  "schema_version": "V4.24",
+  "state": "NOT_CONFIGURED",
+  "key_id": null,
+  "signer_id": null,
+  "signer_role": null,
+  "public_key_b64": null,
+  "public_key_sha256": null,
+  "trust_ceremony_reference": null,
+  "note": "Do not populate this file with a synthetic test key. Configure only after independent key ceremony and repository-specific trust approval."
+}

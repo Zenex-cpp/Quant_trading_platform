@@ -1,0 +1,15 @@
+V3.90 TESTNET EGRESS CHECKLIST
+
+[ ] Environment == TESTNET
+[ ] REST endpoint == https://testnet.binancefuture.com
+[ ] TLS certificate validation remains enabled
+[ ] No HTTP_PROXY/HTTPS_PROXY/ALL_PROXY or lowercase equivalents present
+[ ] ProxyHandler is explicitly empty
+[ ] Redirect handling is disabled
+[ ] REST target revalidated immediately before request
+[ ] WebSocket endpoint, when used, is explicitly allowlisted
+[ ] V3.89 one-shot credential capability is still required
+[ ] V3.87 order preparation remains ARMED
+[ ] V3.88 evidence bundle is open and pre-trade complete
+[ ] No production credentials are present
+[ ] No real mutation performed during V3.90 verification

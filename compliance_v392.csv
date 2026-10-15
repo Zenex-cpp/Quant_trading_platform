@@ -1,0 +1,9 @@
+control_id,requirement,status,evidence,notes
+V392-1,Production secret backend cannot be IN_MEMORY_DEV or ENVIRONMENT,TESTED,V392_SECRET_STORE_EVIDENCE.json,Application contract
+V392-2,Production secret store requires attestation,TESTED,V392_SECRET_STORE_EVIDENCE.json,Application contract
+V392-3,Secret lease TTL bounded,TESTED,V392_SECRET_STORE_EVIDENCE.json,Machine-checkable threshold
+V392-4,Expired/revoked/consumed lease blocks production admission,TESTED,V392_SECRET_STORE_EVIDENCE.json,Fail-closed
+V392-5,No raw secret material in review/evidence payloads,TESTED,V392_SECRET_STORE_EVIDENCE.json,Machine-checkable
+V392-6,External secret-store operational evidence,NOT_VERIFIED,V392_SECRET_STORE_REVIEW_PACKAGE.md,External infrastructure evidence required
+V392-7,Independent review of secret-store controls,NOT_VERIFIED,V392_SECRET_STORE_REVIEW_PACKAGE.md,Human evidence required
+V392-8,Production credential mutation/access,NOT_PERFORMED,V392_VERIFICATION_REPORT.md,No production credentials accessed

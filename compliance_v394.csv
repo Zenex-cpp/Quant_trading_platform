@@ -1,0 +1,12 @@
+control_id,requirement,status,evidence,notes
+V394-1,Exact package/review subject binding is signed,TESTED,V394_CRYPTO_ATTESTATION_EVIDENCE.json,Canonical Ed25519 payload
+V394-2,Ed25519 signature is cryptographically verified,TESTED,V394_CRYPTO_ATTESTATION_EVIDENCE.json,Runtime cryptographic verification
+V394-3,Trust anchor fingerprint is verified,TESTED,V394_CRYPTO_ATTESTATION_EVIDENCE.json,SHA-256 raw public key fingerprint
+V394-4,Trust anchor validity window is enforced,TESTED,V394_CRYPTO_ATTESTATION_EVIDENCE.json,Fail-closed expiry
+V394-5,Revoked/unknown trust anchors are blocked,TESTED,V394_CRYPTO_ATTESTATION_EVIDENCE.json,Fail-closed status policy
+V394-6,Trust anchor scope is enforced,TESTED,V394_CRYPTO_ATTESTATION_EVIDENCE.json,Deny-by-default scope binding
+V394-7,Signature-byte hash mismatch is blocked,TESTED,V394_CRYPTO_ATTESTATION_EVIDENCE.json,Deterministic integrity control
+V394-8,Verification audit is durable idempotent and restart-safe,TESTED,V394_CRYPTO_ATTESTATION_EVIDENCE.json,EventStore hash-chain
+V394-9,Audit payload excludes signature/private material,TESTED,V394_CRYPTO_ATTESTATION_EVIDENCE.json,Secret-free evidence contract
+V394-10,External trust-anchor custody and attestation,NOT_VERIFIED,V394_OPEN_GAPS_DELTA.md,External operational evidence required
+V394-11,PKI/HSM/key ceremony evidence,NOT_VERIFIED,V394_OPEN_GAPS_DELTA.md,External infrastructure evidence required

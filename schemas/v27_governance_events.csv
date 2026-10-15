@@ -1,0 +1,6 @@
+event_type,meaning,terminal_risk_rule,evidence_required
+PROMOTION,validated challenger becomes champion,not_increase_without_validation,yes
+DEMOTION,champion loses eligibility,<=previous,yes
+QUARANTINE,model blocked from risk,0,yes
+ROLLBACK,restore prior safe candidate,<=approved_target,yes
+APPROVAL_REVOKED,approval invalidated,0,yes

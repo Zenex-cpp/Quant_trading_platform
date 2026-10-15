@@ -1,0 +1,12 @@
+control_id,requirement,status,evidence,notes
+V395-1,Exact runtime registry hash binding,TESTED,V395_TRUST_ANCHOR_ATTESTATION_EVIDENCE.json,Fail-closed mismatch
+V395-2,Exact authorized fingerprint set binding,TESTED,V395_TRUST_ANCHOR_ATTESTATION_EVIDENCE.json,Set equality required
+V395-3,Custody and ceremony evidence references required,TESTED,V395_TRUST_ANCHOR_ATTESTATION_EVIDENCE.json,Synthetic/demo refs forbidden
+V395-4,Revocation drill must prove revoked anchor blocked,TESTED,V395_TRUST_ANCHOR_ATTESTATION_EVIDENCE.json,Fail-closed
+V395-5,Reviewer must be independent from custodian,TESTED,V395_TRUST_ANCHOR_ATTESTATION_EVIDENCE.json,Actor separation
+V395-6,Reviewer key validity/revocation/scope enforced,TESTED,V395_TRUST_ANCHOR_ATTESTATION_EVIDENCE.json,Fail-closed
+V395-7,Reviewer Ed25519 signature verified,TESTED,V395_TRUST_ANCHOR_ATTESTATION_EVIDENCE.json,Canonical body
+V395-8,Sensitive material rejected,TESTED,V395_TRUST_ANCHOR_ATTESTATION_EVIDENCE.json,No private keys/secrets
+V395-9,Acceptance audit durable and idempotent,TESTED,V395_TRUST_ANCHOR_ATTESTATION_EVIDENCE.json,EventStore hash-chain
+V395-10,External custody/HSM/PKI operational evidence,NOT_VERIFIED,V395_OPEN_GAPS_DELTA.md,External evidence required
+V395-11,Independent reviewer operation,NOT_VERIFIED,V395_OPEN_GAPS_DELTA.md,External evidence required

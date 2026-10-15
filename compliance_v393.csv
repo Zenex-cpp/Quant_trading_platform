@@ -1,0 +1,10 @@
+control_id,requirement,status,evidence,notes
+V393-1,Only EXTERNAL evidence packages may enter independent-review admission,TESTED,V393_EXTERNAL_REVIEW_EVIDENCE.json,Application contract
+V393-2,Reviewer must be independent from producer owner and approver,TESTED,V393_EXTERNAL_REVIEW_EVIDENCE.json,Machine-checkable conflict guard
+V393-3,Review must cover package and every evidence item,TESTED,V393_EXTERNAL_REVIEW_EVIDENCE.json,Exact subject coverage
+V393-4,Review validity window and TTL enforced,TESTED,V393_EXTERNAL_REVIEW_EVIDENCE.json,Fail-closed expiry
+V393-5,Signature reference hash and externally-verified state required,TESTED,V393_EXTERNAL_REVIEW_EVIDENCE.json,Authenticity remains external
+V393-6,Review admission is durable idempotent and hash-chained,TESTED,V393_EXTERNAL_REVIEW_EVIDENCE.json,EventStore audit
+V393-7,Critical review payload contains no raw secret material,TESTED,V393_EXTERNAL_REVIEW_EVIDENCE.json,Machine-checkable
+V393-8,Actual independent external review evidence,NOT_VERIFIED,V393_EXTERNAL_REVIEW_PACKAGE.md,External evidence absent
+V393-9,Actual cryptographic signature verification,NOT_VERIFIED,V393_EXTERNAL_REVIEW_PACKAGE.md,Runtime does not possess external PKI proof

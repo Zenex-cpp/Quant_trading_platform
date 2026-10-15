@@ -1,0 +1,8 @@
+requirement_id,requirement,evidence,status
+V311-01,"trading_allowed is enforced at final risk-increasing submit boundary",trading_platform/v311/dispatch_guard.py,PASS
+V311-02,"denied runtime produces zero gateway calls",tests/v311/test_dispatch_guard.py,PASS
+V311-03,"recovery_required blocks external submit",tests/v311/test_dispatch_guard.py,PASS
+V311-04,"UNKNOWN lifecycle blocks blind retry",tests/v311/test_dispatch_guard.py,PASS
+V311-05,"exact committed OrderRequest reaches gateway",tests/v311/test_dispatch_guard.py,PASS
+V311-06,"no production/Testnet network I/O in tests",V311_VERIFICATION_REPORT.md,PASS
+V311-07,"production readiness remains false without live evidence",V311_VERIFICATION_REPORT.md,PASS

@@ -1,0 +1,20 @@
+{
+  "event_chain_verified": true,
+  "evidence_class": "INTERNAL_TEST_EVIDENCE",
+  "expected_event_chain_hash": "f95139d03f59f91bf278b63c7df8b13269b88399699ca9372dded3aded36aa38",
+  "expected_state_hash": "2329c1e2617f62706413ba30531f55140b484302f4b38401aa91b0dd3be63b9f",
+  "guards_pass": true,
+  "invariants_pass": true,
+  "no_unresolved_critical_issue": true,
+  "phase": "RECOVERED",
+  "reason": "DISASTER_RECOVERY_RESTORE_REPLAY_VERIFIED",
+  "recovered_event_chain_hash": "f95139d03f59f91bf278b63c7df8b13269b88399699ca9372dded3aded36aa38",
+  "recovered_state_hash": "2329c1e2617f62706413ba30531f55140b484302f4b38401aa91b0dd3be63b9f",
+  "recovery_id": "DR72-001",
+  "recovery_verified": true,
+  "replay_verified": true,
+  "rpo_seconds": 1e-07,
+  "rto_seconds": 1e-07,
+  "snapshot_verified": true,
+  "trading_allowed": true
+}

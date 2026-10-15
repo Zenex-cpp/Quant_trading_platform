@@ -1,0 +1,19 @@
+{
+  "release": "v4.9",
+  "status": "NOT_VERIFIED",
+  "production_ready": false,
+  "application_contract": "VERIFIED",
+  "full_regression": "991/991 PASS",
+  "external_operational_evidence": "PENDING",
+  "blockers": [
+    "independent security assessment",
+    "production monitoring/paging/on-call drill",
+    "infrastructure network segmentation evidence",
+    "deployed secret-store/rotation evidence",
+    "backup/restore/failover/failback evidence",
+    "authenticated Testnet mutation evidence",
+    "independent human approval operation",
+    "production rollback exercise",
+    "production operational/security sign-off"
+  ]
+}

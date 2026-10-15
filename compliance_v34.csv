@@ -1,0 +1,8 @@
+control,status,evidence
+execution_to_accounting_link,PASS,tests/test_v34_execution_bridge.py
+unknown_requires_reconciliation,PASS,tests/test_v34_execution_bridge.py
+fill_order_ownership,PASS,trading_platform/v34/execution_bridge.py
+fill_idempotency,PASS,trading_platform/accounting/ledger.py
+position_from_fill,PASS,trading_platform/accounting/position.py
+pnl_attribution,PASS,trading_platform/v24/pnl.py
+no_network_in_bridge,PASS,trading_platform/v34/execution_bridge.py

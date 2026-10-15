@@ -1,0 +1,9 @@
+control_id,requirement,implementation,evidence,status
+V32-01,No risk without canonical authority,CapabilityAuthority+ExecutionRouter,V32_VERIFICATION_REPORT.md,PASS
+V32-02,Close authorization/dispatch TOCTOU,one-shot TradeCapability+commit revalidation,V32_VERIFICATION_REPORT.md,PASS
+V32-03,Exact intent binding,input fingerprint,V32_VERIFICATION_REPORT.md,PASS
+V32-04,Truth integrity binding,state_hash check,V32_VERIFICATION_REPORT.md,PASS
+V32-05,Decision freshness and risk bounds,RuntimeAuthority precondition,V32_VERIFICATION_REPORT.md,PASS
+V32-06,No duplicate dispatch,capability consume-once,V32_VERIFICATION_REPORT.md,PASS
+V32-07,Fail-closed on expiry,capability expiry gate,V32_VERIFICATION_REPORT.md,PASS
+V32-08,No live mutation during verification,tests network-free,V32_VERIFICATION_REPORT.md,PASS

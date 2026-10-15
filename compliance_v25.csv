@@ -1,0 +1,7 @@
+control_id,requirement,implementation,evidence,status
+V25-DRIFT-01,Versioned drift detector,DetectorConfig + fingerprint,v25_health_drift_registry.csv,PASS
+V25-DRIFT-02,Critical drift must freeze,FreezeController,tests/v25/test_drift_health.py,PASS
+V25-HEALTH-01,Evidence TTL, EvidenceFreshness + assess_health,tests/v25/test_drift_health.py,PASS
+V25-HEALTH-02,Unhealthy stream blocks trading,assess_health stream gate,tests/v25/test_drift_health.py,PASS
+V25-RISK-01,Freeze risk cap must be zero,FreezeDecision risk_cap,tests/v25/test_drift_health.py,PASS
+V25-SAFETY-01,No live credentials or live mutations in verification,offline-only suite,V25_VERIFICATION_REPORT.md,PASS

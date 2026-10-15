@@ -1,0 +1,14 @@
+control,status,evidence
+DURABLE_ACCOUNTING,PASS,trading_platform/v315/durable_accounting.py
+PERSISTENT_POSITION_STATE,PASS,DurableAccountingLedger.reconstruct
+PERSISTENT_PNL_COMPONENTS,PASS,PositionProjection
+DETERMINISTIC_REPLAY,PASS,DurableAccountingLedger.reconstruct
+IDEMPOTENCY,PASS,EventStore event-id contract + append_fill
+CORRUPTION_FAIL_CLOSED,PASS,Hash-chain verification before replay
+RESTART_RECOVERY,PASS,RestartSafeAccountingRegistry.restore
+RECOVERY_PROOF,PASS,prove_recovery
+EXCHANGE_RECONCILIATION,PASS,AccountingReconciliation
+NO_SECRET_PERSISTENCE,PASS,Module stores accounting metadata only
+NO_NETWORK_IO,PASS,Module contains no exchange transport
+NO_LIVE_EXCHANGE_CALLS,PASS,V315_VERIFICATION_REPORT.md
+PRODUCTION_READY,FALSE,Explicitly not production-ready

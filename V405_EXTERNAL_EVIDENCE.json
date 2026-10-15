@@ -1,0 +1,18 @@
+{
+  "release": "v4.5",
+  "status": "NOT_VERIFIED",
+  "production_ready": false,
+  "external_operational_evidence_executed": false,
+  "revocation_dependency_bridge": "APPLICATION_CONTRACT_TESTED",
+  "remaining_external_gaps": [
+    "independent security assessment",
+    "production monitoring/paging/on-call drill",
+    "infrastructure network segmentation",
+    "secret-store deployment and rotation",
+    "backup/restore/failover/failback",
+    "authenticated Testnet mutation",
+    "independent human approval",
+    "production rollback exercise",
+    "production operational/security sign-off"
+  ]
+}

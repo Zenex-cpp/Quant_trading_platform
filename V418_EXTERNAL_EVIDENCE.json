@@ -1,0 +1,27 @@
+{
+  "release": "V4.18",
+  "master_prompt_section": "177",
+  "mandatory_machine_checks": ["M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9", "M10", "M11", "M12", "M13", "M14", "M15", "M16", "M17", "M18", "M19", "M20", "M21", "M22", "M23", "M24", "M25", "M26", "M27", "M28", "M29", "M30"],
+  "machine_check_count": 30,
+  "matrix_status_counts": {
+    "TESTED": 27,
+    "IMPLEMENTED": 2,
+    "PARTIAL": 1,
+    "VERIFIED": 0
+  },
+  "external_m1_m30_review": "NOT_PROVIDED",
+  "v393_external_review_acceptance": "NOT_VERIFIED_FOR_CURRENT_RELEASE_PACKAGE",
+  "v413_crypto_review_for_current_release_package": "NOT_VERIFIED_FOR_CURRENT_RELEASE_PACKAGE",
+  "real_trust_anchor_custody_and_pki_hsm": "NOT_VERIFIED",
+  "authenticated_testnet_mutation": "NOT_VERIFIED",
+  "production_monitoring_oncall": "NOT_VERIFIED",
+  "production_network_segmentation": "NOT_VERIFIED",
+  "deployed_secret_store_rotation": "NOT_VERIFIED",
+  "backup_restore_failover_failback": "NOT_VERIFIED",
+  "independent_security_assessment": "NOT_VERIFIED",
+  "independent_human_production_approval": "NOT_VERIFIED",
+  "production_rollback_exercise": "NOT_VERIFIED",
+  "production_operational_security_signoff": "NOT_VERIFIED",
+  "production_ready": false,
+  "note": "Automated tests prove application behavior only. Test fixtures are not external operational evidence or an independent review."
+}

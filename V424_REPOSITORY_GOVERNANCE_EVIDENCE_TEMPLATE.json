@@ -1,0 +1,47 @@
+{
+  "attestation": null,
+  "branch_protection": {
+    "allow_deletions": null,
+    "allow_force_pushes": null,
+    "bypass_actors": null,
+    "enabled": null,
+    "enforce_admins": null,
+    "required_pull_request_reviews": {
+      "dismiss_stale_reviews": null,
+      "require_code_owner_reviews": null,
+      "required_approving_review_count": null
+    },
+    "required_status_checks": {
+      "contexts": [],
+      "strict": null
+    }
+  },
+  "captured_at_ms": null,
+  "change_author_ids": [],
+  "expires_at_ms": null,
+  "hosted_workflow_run": {
+    "artifacts": [],
+    "branch": null,
+    "conclusion": null,
+    "event": null,
+    "head_sha": null,
+    "job_name": "controlled-milestone-validation",
+    "repository": null,
+    "run_attempt": null,
+    "run_id": null,
+    "run_url": null,
+    "status": null,
+    "status_check_conclusion": null,
+    "status_check_context": "controlled-milestone-validation",
+    "workflow_path": ".github/workflows/ci.yml"
+  },
+  "merge_actor_ids": [],
+  "protected_branch": "main",
+  "protected_head_sha": null,
+  "provider": "github",
+  "repository": null,
+  "schema_version": "V4.24",
+  "snapshot_id": null,
+  "source_refs": [],
+  "workflow_author_ids": []
+}

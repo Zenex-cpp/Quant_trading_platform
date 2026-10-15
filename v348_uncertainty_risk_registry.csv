@@ -1,0 +1,2 @@
+method,version,definition,min_uncertainty,max_uncertainty,action,monitoring
+CONSERVATIVE_LINEAR,1,"max(floor, 1-min(1, uncertainty/max_uncertainty))",0,1,HIGHER_UNCERTAINTY_REDUCES_OR_PRESERVES_RISK,MONOTONICITY_ABLATION_REQUIRED

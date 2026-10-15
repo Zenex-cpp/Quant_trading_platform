@@ -1,0 +1,4 @@
+requirement_id,status,code_reference,test_reference,evidence_reference,notes
+M30,TESTED,trading_platform/v357/downstream_dependency.py,tests/test_v357_m30_downstream_dependency.py,V357_VERIFICATION_REPORT.md,Downstream dependency authority fail-closed
+§176,TESTED,trading_platform/v360/readiness_evidence.py,tests/test_v360_readiness_evidence.py,V360_VERIFICATION_REPORT.md,Production readiness requires current external verified evidence
+§186,TESTED,trading_platform/v359/human_review.py;trading_platform/v361/evidence_package.py,tests/test_v359_human_review.py;tests/test_v361_evidence_package.py,V361_VERIFICATION_REPORT.md,Human review remains a separate approval boundary; package import does not approve

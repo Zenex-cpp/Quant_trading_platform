@@ -1,0 +1,12 @@
+scenario_id,name,required,live_network_required
+TN-01,authenticated_connectivity,true,true
+TN-02,exchange_rules_snapshot,true,true
+TN-03,order_acknowledgement,true,true
+TN-04,cancellation_acknowledgement,true,true
+TN-05,partial_fill,true,true
+TN-06,full_fill,true,true
+TN-07,unknown_order_reconciliation,true,true
+TN-08,restart_reconnect,true,true
+TN-09,account_position_reconciliation,true,true
+TN-10,fee_funding_reconciliation,true,true
+TN-11,failure_injection_recovery,true,false

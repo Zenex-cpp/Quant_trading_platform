@@ -1,0 +1,12 @@
+control_id,requirement,implementation,status
+V18-001,TESTNET-only environment,WorkflowConfig + NetworkPolicy,PASS
+V18-002,explicit mutation approval,MutationApproval + SafetyGate,PASS
+V18-003,risk cap monotonicity,OrderIntent.validate,PASS
+V18-004,decision freshness,mutation_gate decision_fresh,PASS
+V18-005,reconciliation before mutation,workflow reconciliation gate,PASS
+V18-006,no blind retry,query/cancel require explicit order identifier,PASS
+V18-007,durable evidence,DurableEvidenceStore + EvidenceArtifact,PASS
+V18-008,runtime credentials only,CLI RuntimeSignedTransport,PASS
+V18-009,Mainnet denial,TESTNET_POLICY,PASS
+V18-010,verified Binance order-test endpoint,/fapi/v1/order/test reference,PASS
+V18-011,production readiness,remains NOT_READY,PASS

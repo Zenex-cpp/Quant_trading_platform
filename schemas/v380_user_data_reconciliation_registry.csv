@@ -1,0 +1,8 @@
+record_type,record_id,version,scope,status,owner,revalidation_condition
+ORDER_REQUEST_CONTRACT,V380_ORDER_REQUEST_PRICE_TIF_1,V380_1,ORDER_INTENT_TO_ORDER_REQUEST,VERIFIED,platform,Any change to OrderRequest schema or venue order semantics
+LIMIT_ADAPTER,V380_LIMIT_ORDER_ADAPTER_1,V380_1,BINANCE_USDM_TESTNET,VERIFIED,platform,Any change to Binance order endpoint semantics or request signing
+PRIVATE_WS_ROUTING,V380_BINANCE_PRIVATE_WS_1,V380_1,BINANCE_USDM_USER_DATA,VERIFIED,platform,Any Binance WebSocket URL migration or stream contract change
+USER_EVENT_PROJECTION,V380_USER_DATA_PROJECTION_1,V380_1,BINANCE_USDM_USER_DATA,VERIFIED,platform,Any user event schema or ordering-semantics change
+REST_WS_RECONCILIATION,V380_REST_WS_RECON_1,V380_1,BINANCE_USDM_ACCOUNT_TRUTH,VERIFIED,platform,Any reconciliation invariant or account schema change
+LIVE_TESTNET_CONNECTIVITY,V380_TESTNET_CONNECTIVITY_1,V380_1,BINANCE_USDM_TESTNET,NOT_VERIFIED,platform,Successful live DNS/TCP/TLS/HTTP verification in runtime
+PRODUCTION_DEPLOYMENT,V380_PRODUCTION_READINESS_1,V380_1,PRODUCTION,BLOCKED,platform,All production readiness gates verified

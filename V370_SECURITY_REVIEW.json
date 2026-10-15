@@ -1,0 +1,9 @@
+{
+  "finding_count": 0,
+  "findings": [],
+  "root": ".",
+  "schema_version": "V370_SECURITY_DRILL_1",
+  "scope": "REPOSITORY_RELEASE_ARTIFACT",
+  "source_kind": "INTERNAL",
+  "status": "PASS"
+}

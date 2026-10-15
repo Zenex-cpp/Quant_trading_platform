@@ -1,0 +1,7 @@
+control_id,requirement,status,evidence
+V313-C01,"Persist intent/client/exchange correlation durably",PASS,"trading_platform/v313/durable_correlation.py"
+V313-C02,"Prevent conflicting exchange-order rebinding",PASS,"tests/v313/test_durable_correlation.py"
+V313-C03,"Persist event evidence idempotently",PASS,"trading_platform/v313/durable_correlation.py"
+V313-C04,"Restart must reconstruct correlation",PASS,"tests/v313/test_durable_correlation.py"
+V313-C05,"Unknown evidence must not fabricate intent/fill",PASS,"tests/v313/test_durable_correlation.py"
+V313-C06,"Credentials/socket state excluded from durable store",PASS,"design contract in V313_RELEASE_NOTES.md"

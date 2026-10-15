@@ -1,0 +1,34 @@
+{
+  "activation_flag": "NOT_SET",
+  "allowed": true,
+  "baseline_sha256": "85d47b572c0a0d6108cb7d32a202fb241a0d91002ecc1356712db02e19ad3515",
+  "baseline_version": "V4.25-RECOVERY",
+  "blocking_reasons": [],
+  "decision_id": "V427-RECOVERY-PREFLIGHT-0001",
+  "event_store": "V427_IMPLEMENTATION_PREFLIGHT.sqlite3",
+  "external_evidence": false,
+  "impacted_ids": [
+    "CI-PREFLIGHT-01",
+    "REPO-GOV-CAPTURE-01",
+    "REPO-GOV-CAPTURE-BOUNDS-01",
+    "REPO-GOV-CAPTURE-STRICT-01"
+  ],
+  "input_hashes": {
+    ".github/workflows/ci.yml": "34f4c02dea43d0569c8b2ef5653d897993151a89f3b5538413ae7fa68114ea6e",
+    "V427_BASELINE_ARCHIVE_SHA256.txt": "2fabe37f5371f083db7e6d79a274047584f78d18aa85dfad4505ca74a763ddd1",
+    "compliance_v427.csv": "55242611b2e3f29e130d083656d1ef74f4a87dbdaacbed2c0bc960a381d57d5d",
+    "scripts/capture_github_governance.py": "dcd7b47ae96ea50565514cc87dd4ed4ce66404d4b6fe008e0e5a6b6cfd696de2",
+    "scripts/run_milestone_validation.py": "9333fee5a9918365ccce243668e050ee63803b1de22b73c4777e3a3268ec1729",
+    "scripts/validate_release_hygiene.py": "44a435be14830e5789b527f4e524828a74f7a9563b3e11511a77c70d3f102b93",
+    "src/trading_platform/v425/github_capture.py": "82aeba4e6ec1645a2b3e41d4a04e7446ff3ff56fb9582a054754fcf08871b77e",
+    "src/trading_platform/v427/capture_hardening.py": "430c1e7ab532b414a8c6283eedb5f940090164df2522183078a8070ee3bc162f",
+    "tests/v425/test_github_capture.py": "8dec260569124db3eefae44fae40af22514278fe1023c0ef4182eddcf80cbc82",
+    "tests/v427/test_capture_hardening_v427.py": "b1e2e93f1d93b0cbd2a7dddc00d3df89f14d759d87f3206b248b5859b3bd0bd1"
+  },
+  "matrix_hash": "e22317e77cdf9b495bc9406e004f9504535a70e5d891a122fb5669689a9b4b47",
+  "milestone_id": "V4.27-RECOVERY-STRICT-CAPTURE",
+  "preflight_event_hash": "861357f767fdc1ada5fdade4f42852090240ab9f328000a75365d217373a8daa",
+  "production_ready": false,
+  "schema_version": "V4.27-IMPLEMENTATION-PREFLIGHT",
+  "status": "READY_FOR_MILESTONE"
+}

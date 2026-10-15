@@ -1,0 +1,89 @@
+{
+  "activation_flag": "NOT_SET",
+  "allowed": true,
+  "audit_only": false,
+  "baseline_sha256": "5ad06a5cf86efda3d2c9046c9cbea1374967fefb19826148b472acd294dcbfba",
+  "baseline_version": "V4.24-RECOVERY",
+  "blocking_reasons": [],
+  "decision_id": "V427-FINAL-VALIDATION-0001",
+  "event_store": "/tmp/v427-final-validation.sqlite3",
+  "external_evidence": false,
+  "impacted_ids": [
+    "CI-PREFLIGHT-01",
+    "REPO-GOV-01",
+    "REPO-GOV-02",
+    "REPO-GOV-03",
+    "REPO-GOV-CAPTURE-01",
+    "REPO-GOV-SIGN-01"
+  ],
+  "input_hashes": {
+    ".github/workflows/ci.yml": "34f4c02dea43d0569c8b2ef5653d897993151a89f3b5538413ae7fa68114ea6e",
+    "V424_RECONSTRUCTION_NOTE.md": "9d3ca6f92b8c5538a111d33b8a95406f628db4dfe4ef2d6f93d16dfbf9c85121",
+    "V424_REPOSITORY_GOVERNANCE_EVIDENCE_TEMPLATE.json": "ab7fd946dbb5a9051ea97d326b7b54cd390552a665dd97604536c68f0727ccd4",
+    "V425_BASELINE_ARCHIVE_SHA256.txt": "205e6b864f420cc3f9c49b556d053ded7dc34bb4790e133b4b397a8fa8912ddc",
+    "V425_EXTERNAL_EVIDENCE.json": "7289c8de4d4e153d4367d4d454e38d672c065a08dd684889c8d53faf3e05725a",
+    "V425_RECONSTRUCTION_NOTE.md": "e8c28fefbadc0bcb5f97616c5f8cd0b604bf62452307eb1e6e4895d041dc1531",
+    "compliance_v425.csv": "d3de982bded2d9fd003007a11286467623a4d8d4e22657e61d91fde851d319f3",
+    "config/repository_governance_trust_v424.json": "e63f4ca6a5f2bad0401658b8d32760c1ae959156bf87a686bc6acff12053d249",
+    "docs/V425_REPOSITORY_GOVERNANCE_CAPTURE.md": "82f697cb928c65620944b715f2c9c4452fec4aca0c762993e4ad3b32e4654c9b",
+    "requirements-ci.txt": "8bb319bb1772022fa1aedafc21915ae2dfbd90f7a192ef7a23b974cc2d2b7704",
+    "schemas/v424_milestone_preflight.schema.json": "6a3e0dd3443e499253e392ccc2c00ec20bb4ea63a42be7353be21e04f3141c57",
+    "schemas/v424_repository_governance_evidence.schema.json": "78eea09f16e365318140bbdc17c3d7f9001463ccfe7e6f079f71ab41f2906ee5",
+    "scripts/capture_github_governance.py": "dcd7b47ae96ea50565514cc87dd4ed4ce66404d4b6fe008e0e5a6b6cfd696de2",
+    "scripts/run_milestone_validation.py": "9333fee5a9918365ccce243668e050ee63803b1de22b73c4777e3a3268ec1729",
+    "scripts/sign_github_governance_evidence.py": "60aaffad093c73b207f3602ea4c5ba30e729c849538247872865cec545f33722",
+    "scripts/validate_release_hygiene.py": "44a435be14830e5789b527f4e524828a74f7a9563b3e11511a77c70d3f102b93",
+    "scripts/verify_repository_governance.py": "b963dc6058d55f4bf0ba3c84a4e43d7371da1635be173a2cea5b9737e6118e9e",
+    "src/trading_platform/v422/milestone_compliance_preflight.py": "625250bca7f6eeea19be2f3ebde160117812ecf4b6b9382022213063bbf71251",
+    "src/trading_platform/v424/repository_governance.py": "0e903b9cd63789ce6141d7b43328a75d5c2f88a6609be58ca5eb4d417069bdc7",
+    "src/trading_platform/v425/github_capture.py": "82aeba4e6ec1645a2b3e41d4a04e7446ff3ff56fb9582a054754fcf08871b77e",
+    "src/trading_platform/v427/capture_hardening.py": "430c1e7ab532b414a8c6283eedb5f940090164df2522183078a8070ee3bc162f",
+    "tests/v422/test_milestone_compliance_preflight.py": "b2525e0a10c3db4f989f89fb1da1d24c801a7bd8d4f9263c39c441d610906078",
+    "tests/v423/test_milestone_entrypoint.py": "a7dd583999d008e1e8b80e1816e405b33b88d6f377b19565341fc12c1609c9f6",
+    "tests/v424/test_repository_governance.py": "14de4835efd71d374fd7c94c64433a555de8e5967cfd0afe537a75024d3d9361",
+    "tests/v425/test_github_capture.py": "8dec260569124db3eefae44fae40af22514278fe1023c0ef4182eddcf80cbc82",
+    "tests/v425/test_milestone_pipeline_v425.py": "936900c57381c2c326ef30520003774db4d40c822b0cdceb0ef34df9ea5a7c2f",
+    "tests/v427/test_capture_hardening_v427.py": "b1e2e93f1d93b0cbd2a7dddc00d3df89f14d759d87f3206b248b5859b3bd0bd1"
+  },
+  "matrix_hash": "852e72ea69401980369628b2139de175aee9e4cf6464510a91b8cdd82f1a12ff",
+  "milestone_id": "V4.25-RECOVERY",
+  "owner": "Platform Engineering",
+  "pipeline_status": "PASS",
+  "preflight_event_hash": "516a799250389730bb26b6f98dd375a7ebe428bd66306311aa8b49ae7bc947eb",
+  "production_ready": false,
+  "release_hygiene": "PASS",
+  "schema_version": "V4.25",
+  "source_lineage": "RECOVERY_BUILD_FROM_V4.24_RECOVERY_ARCHIVE; ORIGINAL_CANONICAL_V4.23_LINEAGE_NOT_ESTABLISHED",
+  "status": "READY_FOR_MILESTONE",
+  "steps": [
+    {
+      "command": [
+        "/opt/pyvenv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "-p",
+        "no:cacheprovider",
+        "--disable-warnings",
+        "--maxfail=1"
+      ],
+      "finished_at_ms": 1791888879241,
+      "name": "full_regression",
+      "return_code": 0,
+      "started_at_ms": 1791888865971,
+      "status": "PASS"
+    },
+    {
+      "command": [
+        "/opt/pyvenv/bin/python",
+        "scripts/validate_release_hygiene.py",
+        "/mnt/data/v427_work/base"
+      ],
+      "finished_at_ms": 1791888879987,
+      "name": "release_hygiene",
+      "return_code": 0,
+      "started_at_ms": 1791888879244,
+      "status": "PASS"
+    }
+  ]
+}

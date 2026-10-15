@@ -1,0 +1,17 @@
+{
+  "allowed_live": {
+    "lifecycle": ["APPROVED"],
+    "mode": ["LIVE", "CLOSING_ONLY"],
+    "health": ["HEALTHY", "DEGRADED", "FROZEN"],
+    "approval": ["APPROVED"],
+    "deployment": ["ACTIVE"],
+    "role": ["CHAMPION"]
+  },
+  "hard_blocks": [
+    ["EXPERIMENTAL", "LIVE"],
+    ["RETIRED", "LIVE"],
+    ["FAILED", "LIVE"],
+    ["EXPIRED", "LIVE"],
+    ["CHAMPION", "NOT_DEPLOYED"]
+  ]
+}

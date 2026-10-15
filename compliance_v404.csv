@@ -1,0 +1,5 @@
+requirement_id,requirement_text,implementation_status,verification,evidence_status,notes
+M15,External evidence invalidation/revalidation,TESTED,961/961 PASS,NOT_VERIFIED,V4.4 adds durable signed revocation and fail-closed reuse blocking
+M17,Evidence dependency invalidation,PARTIAL,961/961 PASS,NOT_VERIFIED,V4.4 covers witness-level revocation; real operational dependency exercise remains open
+M25,Operational readiness,PARTIAL,961/961 PASS,NOT_VERIFIED,External operational evidence still required
+M30,Production deployment readiness,PARTIAL,961/961 PASS,NOT_VERIFIED,Production readiness remains blocked by external evidence and approvals

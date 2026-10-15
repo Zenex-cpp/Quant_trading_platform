@@ -1,0 +1,27 @@
+{
+  "artifact_type": "EXECUTION_SEAM_PARITY_EVIDENCE",
+  "checks": {
+    "adapter_observation_hash_equals_expected": true,
+    "backtest_event_count": 2,
+    "backtest_state_hash": "6c4ae470c6d5304d30150ae3b291c3ec816a62c41c10e80e07f772aca8e1afc0",
+    "compared_intents": 2,
+    "decision_trace_event_count": 2,
+    "decision_trace_parity": true,
+    "intent_mismatch_offsets": [],
+    "shadow_adapter_state_hash": "783c826b5832d6a9f47f1c648d526ac161750697fe1427ed76e5c4aabc6db79b",
+    "testnet_market_order_request_contract": true,
+    "testnet_market_order_request_contract_error": null
+  },
+  "evidence_boundary": [
+    "Shared decision-stage parity is proven for the tested venue-event set.",
+    "Execution-adapter seam normalization is proven with injected observations.",
+    "No real order was submitted by this evidence runner.",
+    "Testnet public connectivity remains a separate read-only probe.",
+    "This artifact does not prove production exchange matching or latency parity."
+  ],
+  "evidence_hash": "f6b90584a97d48fa0d81fc563f9c3f4e5a5e90c341c57d6cece83163c77c0df1",
+  "production_ready": false,
+  "retrieved_at": "2026-10-03T08:03:39.033198+00:00",
+  "schema_version": "V379_EXECUTION_SEAM_PARITY_1",
+  "status": "PASS"
+}

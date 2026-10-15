@@ -1,0 +1,34 @@
+V3.86 FIRST TESTNET MUTATION CHECKLIST
+
+[ ] TESTNET environment only
+[ ] REST time preflight VERIFIED
+[ ] clock skew within limit
+[ ] private user-data control healthy
+[ ] private user-data WebSocket healthy
+[ ] listen key/session present
+[ ] latest user-data event fresh
+[ ] REST/WS reconciliation GREEN
+[ ] V3.84 activation ACTIVE
+[ ] operator approval scope = TESTNET_ORDER_MUTATION
+[ ] runtime credentials present, not persisted
+[ ] BTCUSDT allowlisted
+[ ] hard notional ceiling PASS
+[ ] pre-trade snapshot immutable + hash recorded
+[ ] durable dispatch attempt created before transport
+[ ] one and only one external submit attempt
+[ ] ORDER_TRADE_UPDATE observed
+[ ] ACCOUNT_UPDATE observed
+[ ] REST/WS reconciliation GREEN after mutation
+[ ] accounting reconciled
+[ ] session closed / credentials released
+
+FAIL-CLOSED CONDITIONS:
+- UNKNOWN submit outcome
+- stale user-data
+- reconciliation mismatch
+- unknown position/accounting state
+- activation expired/halts
+- production endpoint selected
+- credential persistence detected
+
+NO LIVE PRODUCTION TRADING.

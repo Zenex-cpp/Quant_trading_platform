@@ -1,0 +1,11 @@
+control_id,control,implementation,evidence,status
+C01,TESTNET-only environment,Denies non-TESTNET execution configuration,tests/v35/test_binance_execution.py,PASS
+C02,Runtime-only credentials,Credentials passed per call and not persisted by gateway,tests/v35/test_binance_execution.py,PASS
+C03,Client-order correlation,clientOrderId uniquely maps to intent,tests/v36/test_user_execution.py,PASS
+C04,Exchange-order correlation,exchangeOrderId uniquely maps to intent,tests/v36/test_user_execution.py,PASS
+C05,Correlation conflict fail-closed,conflicting client/exchange mapping raises,tests/v36/test_user_execution.py,PASS
+C06,User-event deduplication,trade/event key deduplication prevents double accounting,tests/v36/test_user_execution.py,PASS
+C07,Ambiguous submit safety,transport ambiguity triggers query and forbids blind POST retry,tests/v36/test_user_execution.py,PASS
+C08,REST fill conservatism,FILLED without trade-level evidence stays UNKNOWN,tests/v36/test_user_execution.py,PASS
+C09,Live mutation avoidance,No live/Testnet exchange calls executed during verification,V36_VERIFICATION_REPORT.md,PASS
+C10,Production gate,production_ready remains FALSE,V36_VERIFICATION_REPORT.md,PASS

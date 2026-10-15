@@ -1,0 +1,11 @@
+check_id,category,requirement,blocking,verification_method
+PF-ENV,environment,TESTNET environment only,true,automated
+PF-TLS,security,TLS required,true,automated
+PF-NO-PROD,security,production host denied,true,automated
+PF-CREDS,security,credentials runtime-only,true,automated+review
+DR-RPO,disaster_recovery,backup frequency <= RPO,true,automated
+DR-RESTORE,disaster_recovery,restore test evidence required,true,operational
+REC-PROOF,recovery,state+invariants+guards+critical-clear,true,automated+evidence
+NET-ALLOWLIST,network,allowlisted testnet hosts only,true,automated
+OBS-AUDIT,observability,evidence hashes and audit trail,true,automated
+READY-GATE,governance,blocking checks all PASS,true,automated+human_review

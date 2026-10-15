@@ -1,0 +1,7 @@
+requirement_id,requirement_text,priority,implementation_status,code_reference,test_reference,evidence_reference,owner,unresolved_gap
+V11-01,Durable idempotency prevents duplicate side effects on restart,CRITICAL,TESTED,verification/durable.py,tests/verification/test_v11_verification.py,,CORE,HA storage and crash consistency evidence pending
+V11-02,Backup restore integrity is machine-checkable,CRITICAL,TESTED,verification/backup.py,tests/verification/test_v11_verification.py,,OPS,Production backup target and restore drill pending
+V11-03,Failure injection scenarios are enumerable and default-blocking,CRITICAL,TESTED,verification/failure_injection.py,tests/verification/test_v11_verification.py,,OPS,Runtime fault injection pending
+V11-04,Research network cannot reach production trading endpoints,CRITICAL,TESTED,verification/security.py,tests/verification/test_v11_verification.py,,SECURITY,Network-level enforcement evidence pending
+V11-05,Credential-like secrets absent from repository,CRITICAL,TESTED,verification/security.py,tests/verification/test_v11_verification.py,,SECURITY,External secret-store integration pending
+V11-06,Verification report distinguishes PASS/FAIL/NOT_VERIFIED,CRITICAL,TESTED,verification/readiness.py,tests/verification/test_v11_verification.py,,GOVERNANCE,Independent human review pending

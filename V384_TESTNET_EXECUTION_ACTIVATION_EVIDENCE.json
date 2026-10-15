@@ -1,0 +1,53 @@
+{
+  "activation_status_after_kill": "HALTED",
+  "artifact_type": "V384_TESTNET_EXECUTION_ACTIVATION_EVIDENCE",
+  "audit_event_count": 2,
+  "credentials_in_evidence": false,
+  "evidence_hash": "704e5b56888fc949d87b9952199c1149820ed5753109d8a8d06afc9886dda9ab",
+  "generated_at": "2026-10-05T10:20:53.801663+00:00",
+  "live_connectivity_reason": "DNS_RESOLUTION_FAILED:gaierror",
+  "live_connectivity_status": "NOT_VERIFIED",
+  "local_checks": [
+    {
+      "check": "unverified_connectivity_blocks_activation",
+      "pass": true
+    },
+    {
+      "check": "verified_connectivity_approval_reconciliation_activate",
+      "pass": true
+    },
+    {
+      "check": "activation_ttl_bound",
+      "pass": true
+    },
+    {
+      "check": "symbol_allowlist",
+      "pass": true
+    },
+    {
+      "check": "notional_hard_ceiling",
+      "pass": true
+    },
+    {
+      "check": "valid_intent_authorized",
+      "pass": true
+    },
+    {
+      "check": "adapter_requires_and_uses_active_activation",
+      "pass": true
+    },
+    {
+      "check": "credentials_not_retained_by_authority",
+      "pass": true
+    },
+    {
+      "check": "kill_switch_blocks_new_risk",
+      "pass": true
+    }
+  ],
+  "local_status": "PASS",
+  "mutating_testnet_api_called": false,
+  "production_endpoint_accepted": false,
+  "production_ready": false,
+  "schema_version": "V384_EXECUTION_ACTIVATION_1"
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": "V4.25-RECOVERY",
+  "external_evidence": false,
+  "repository_governance_capture": "NOT_RUN",
+  "hosted_github_actions": "NOT_RUN",
+  "remote_branch_protection": "NOT_VERIFIED",
+  "repository_rulesets": "NOT_VERIFIED",
+  "codeowners_owner_resolution": "NOT_VERIFIED",
+  "independent_signer": "NOT_CONFIGURED",
+  "trust_anchor": "NOT_CONFIGURED",
+  "production_ready": false,
+  "activation_flag": "NOT_SET"
+}

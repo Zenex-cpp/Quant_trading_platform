@@ -1,0 +1,9 @@
+requirement_id,requirement_text,priority,implementation_status,code_reference,test_reference,evidence_reference,owner,unresolved_gap
+V415-01,Final readiness seal requires V4.14 crypto gate,HIGH,IMPLEMENTED,src/trading_platform/v415/production_readiness_seal.py,tests/v415/test_production_readiness_seal.py,V415_VERIFICATION_REPORT.md,governance,
+V415-02,Final readiness seal requires V3.98 critical promotion readiness,CRITICAL,IMPLEMENTED,src/trading_platform/v415/production_readiness_seal.py,tests/v415/test_production_readiness_seal.py,V415_VERIFICATION_REPORT.md,governance,
+V415-03,Readiness seal binds predecessor event hashes,HIGH,IMPLEMENTED,src/trading_platform/v415/production_readiness_seal.py,tests/v415/test_production_readiness_seal.py,V415_VERIFICATION_REPORT.md,governance,
+V415-04,Final readiness seal does not set production_ready,CRITICAL,TESTED,src/trading_platform/v415/production_readiness_seal.py,tests/v415/test_production_readiness_seal.py,V415_VERIFICATION_REPORT.md,governance,
+V415-05,Crypto failure blocks external review bridge,CRITICAL,TESTED,src/trading_platform/v414/promotion_crypto_gate.py,tests/v414/test_promotion_crypto_gate.py,V415_VERIFICATION_REPORT.md,governance,
+V415-06,Retry/revalidation is idempotent and fail-closed,HIGH,TESTED,src/trading_platform/v414/promotion_crypto_gate.py,tests/v414/test_promotion_crypto_gate.py,V415_VERIFICATION_REPORT.md,governance,
+V415-07,No network/process egress introduced,HIGH,TESTED,V415_COMPONENT_SHA256.txt,tests/v414/test_promotion_crypto_gate.py,V415_VERIFICATION_REPORT.md,governance,
+V415-08,Real external operational evidence remains required,CRITICAL,PARTIAL,src/trading_platform/v415/production_readiness_seal.py,tests/v415/test_production_readiness_seal.py,V415_OPEN_GAPS_DELTA.md,governance,See V415_OPEN_GAPS_DELTA.md

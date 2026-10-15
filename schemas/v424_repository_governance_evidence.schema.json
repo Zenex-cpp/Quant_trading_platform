@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "branch_protection": {
+      "type": "object"
+    },
+    "captured_at_ms": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "change_author_ids": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "codeowners_file": {
+      "additionalProperties": false,
+      "properties": {
+        "owner_mappings": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "handle": {
+                "pattern": "^@[A-Za-z0-9-]+(?:/[A-Za-z0-9-]+)?$",
+                "type": "string"
+              },
+              "id": {
+                "pattern": "^[1-9][0-9]*$",
+                "type": "string"
+              },
+              "kind": {
+                "enum": [
+                  "user",
+                  "team"
+                ]
+              },
+              "source_ref": {
+                "format": "uri",
+                "type": "string"
+              }
+            },
+            "required": [
+              "handle",
+              "kind",
+              "id",
+              "source_ref"
+            ],
+            "type": "object"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "path": {
+          "const": ".github/CODEOWNERS"
+        },
+        "self_ownership_rule": {
+          "additionalProperties": false,
+          "properties": {
+            "owners": {
+              "items": {
+                "pattern": "^@[A-Za-z0-9-]+(?:/[A-Za-z0-9-]+)?$",
+                "type": "string"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            "pattern": {
+              "const": "/.github/CODEOWNERS"
+            }
+          },
+          "required": [
+            "pattern",
+            "owners"
+          ],
+          "type": "object"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "source_ref": {
+          "format": "uri",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "source_ref",
+        "owner_mappings",
+        "self_ownership_rule"
+      ],
+      "type": "object"
+    },
+    "expires_at_ms": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "hosted_workflow_run": {
+      "type": "object"
+    },
+    "merge_actor_ids": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "protected_branch": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "protected_head_sha": {
+      "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$",
+      "type": "string"
+    },
+    "provider": {
+      "const": "github"
+    },
+    "repository": {
+      "pattern": "^[^/]+/[^/]+$",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "V4.24"
+    },
+    "snapshot_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "source_refs": {
+      "items": {
+        "format": "uri",
+        "type": "string"
+      },
+      "minItems": 2,
+      "type": "array"
+    },
+    "workflow_author_ids": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "workflow_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "snapshot_id",
+    "provider",
+    "repository",
+    "protected_branch",
+    "protected_head_sha",
+    "workflow_sha256",
+    "codeowners_file",
+    "captured_at_ms",
+    "expires_at_ms",
+    "branch_protection",
+    "hosted_workflow_run",
+    "source_refs",
+    "workflow_author_ids",
+    "change_author_ids",
+    "merge_actor_ids"
+  ],
+  "title": "V4.24/V4.25 Remote Repository Governance Evidence",
+  "type": "object"
+}

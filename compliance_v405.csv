@@ -1,0 +1,5 @@
+requirement_id,requirement_text,implementation_status,verification,evidence_status,notes
+M15,External evidence invalidation/revalidation,TESTED,967/967 PASS,NOT_VERIFIED,V4.5 integrates signed revalidation revocation with dependency invalidation
+M17,Evidence dependency invalidation,TESTED,967/967 PASS,NOT_VERIFIED,V4.5 propagates revoked-witness impact through the existing evidence dependency graph when the witness is registered as a graph root
+M25,Operational readiness,PARTIAL,967/967 PASS,NOT_VERIFIED,External operational evidence still required
+M30,Production deployment readiness,PARTIAL,967/967 PASS,NOT_VERIFIED,Production readiness remains blocked by external evidence and approvals

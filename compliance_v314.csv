@@ -1,0 +1,10 @@
+control,status,evidence
+PERSISTENT_LIFECYCLE,PASS,trading_platform/v314/durable_lifecycle.py
+DETERMINISTIC_REPLAY,PASS,DurableOrderLifecycleStore.replay
+IDEMPOTENCY,PASS,DurableOrderLifecycleStore.apply
+RESTART_RECOVERY,PASS,DurableExecutionRecovery.restore
+UNKNOWN_REMAINS_BLOCKING,PASS,DurableExecutionRecovery.assert_consistent
+CORRELATION_CROSSCHECK,PASS,DurableExecutionRecovery.restore
+NO_SECRET_PERSISTENCE,PASS,Module persists execution metadata only
+NO_LIVE_EXCHANGE_CALLS,PASS,Verification report
+PRODUCTION_READY,PASS,Explicitly FALSE

@@ -1,0 +1,46 @@
+{
+  "checks": [
+    {
+      "all_rejections_are_liquidity_cap": true,
+      "cap_per_bar": "2",
+      "check": "liquidity_participation_cap",
+      "fills": 0,
+      "pass": true,
+      "rejections": 5,
+      "requested_per_bar": "4"
+    },
+    {
+      "check": "stress_rejection_probability_seeded",
+      "different_seed_free_to_diverge": true,
+      "event_count": 40,
+      "not_vacuous_mix_of_fills_and_rejections": true,
+      "pass": true,
+      "same_seed_reproducible": true,
+      "seed_21_fill_count": 19,
+      "seed_21_run_1_hash": "a471d541dff3ff03b2448f50540f5aef50f145b5ea3e10542eb8cae454653ab8",
+      "seed_21_run_2_hash": "a471d541dff3ff03b2448f50540f5aef50f145b5ea3e10542eb8cae454653ab8",
+      "seed_22_run_hash": "7142860d2db7ad367b77ba9e32cc4895e4f234b2932caf953cd9a1c4df2ce7b0"
+    },
+    {
+      "check": "slippage_multiplier_monotonic_with_price_paid",
+      "pass": true,
+      "prices_by_multiplier": {
+        "multiplier_1": "100.1",
+        "multiplier_2": "100.2",
+        "multiplier_5": "100.5"
+      }
+    }
+  ],
+  "evidence_boundary": [
+    "Proves the three stress mechanisms behave as declared and are seeded, not that they are calibrated to any real market's adverse conditions.",
+    "Does not close \u00a785 backtest/live parity.",
+    "Does not model order-book depth or partial fills; liquidity cap rejects the whole order rather than partially filling it.",
+    "A plain ExecutionModelConfig with mode=STRESS run through the base BacktestEngine is still silently accepted with no adverse behavior -- see V374 release notes."
+  ],
+  "evidence_hash": "b8d5933b64b96310bec0ddb9f37e1710599f1d698bce2c6c01bb7a10ac2b0257",
+  "production_ready": false,
+  "schema_version": "V374_STRESS_EXECUTION_MODEL_1",
+  "scope": "APPLICATION_BACKTEST_STRESS_MODE",
+  "source_kind": "INTERNAL",
+  "status": "PASS"
+}

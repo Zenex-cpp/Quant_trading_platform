@@ -1,0 +1,10 @@
+{
+  "release": "v4.6",
+  "status": "NOT_VERIFIED",
+  "production_ready": false,
+  "testnet_mutation_executed": false,
+  "application_tests": {"focused": "6/6 PASS", "full_regression": "973/973 PASS"},
+  "external_operational_evidence": "PENDING",
+  "reason": "Application-level gate revalidation controls are tested, but real external operational evidence and independent approvals remain outstanding.",
+  "evidence_integrity": "APPLICATION_CONTRACT_TESTED_EXTERNAL_EVIDENCE_PENDING"
+}

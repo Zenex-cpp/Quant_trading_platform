@@ -1,0 +1,289 @@
+{
+  "acceptance": {
+    "items": [
+      {
+        "blocking": true,
+        "evidence_ref": "DATASET-E2E-001",
+        "requirement_id": "DETERMINISTIC_IDENTIFIERS",
+        "status": "PASS"
+      },
+      {
+        "blocking": true,
+        "evidence_ref": "SNAPSHOT-E2E-001",
+        "requirement_id": "PROVENANCE",
+        "status": "PASS"
+      },
+      {
+        "blocking": true,
+        "evidence_ref": "REPLAY-E2E-001",
+        "requirement_id": "REPRODUCIBILITY",
+        "status": "PASS"
+      },
+      {
+        "blocking": true,
+        "evidence_ref": "FILL-E2E-001",
+        "requirement_id": "FAILURE_INJECTION",
+        "status": "PASS"
+      },
+      {
+        "blocking": true,
+        "evidence_ref": "INTENT-E2E-001",
+        "requirement_id": "RECOVERY",
+        "status": "PASS"
+      },
+      {
+        "blocking": true,
+        "evidence_ref": "GATE-E2E-001",
+        "requirement_id": "ROLLBACK",
+        "status": "PASS"
+      },
+      {
+        "blocking": true,
+        "evidence_ref": "GATE-E2E-001",
+        "requirement_id": "END_TO_END_CHAIN",
+        "status": "PASS"
+      }
+    ],
+    "production_ready": true
+  },
+  "evidence_id": "EVIDENCE-E2E-001",
+  "evidence_snapshot_id": "SNAPSHOT-E2E-001",
+  "gate_id": "GATE-E2E-001",
+  "replay_checkpoint": {
+    "event_offset": 3,
+    "snapshot_version": "E2E-V358-1",
+    "state_hash": "6ccda66d9dee3525180dd4d3de347614819395c516541fc9bf2bba27c6c327b6"
+  },
+  "report_hash": "f9dd6d169720986a1229f550ca14d76d91780a181a7552bc6b6340f19fbd6698",
+  "run_id": "E2E-ACCEPTANCE-V358-001",
+  "stages": [
+    {
+      "artifact_id": "DATASET-E2E-001",
+      "output_hash": "f41313570b970c91af36848cc32ad5a1aab472408e7ebe29ed6dc6dffa53ceb5",
+      "provenance": [
+        "DATA_SOURCE:SIMULATED"
+      ],
+      "stage": "Historical Data",
+      "upstream": []
+    },
+    {
+      "artifact_id": "FEATURE-E2E-001",
+      "output_hash": "3b8beaab25a6f597e51389ac3ac98567e3d118526e85a5cab4ec161348ddd63c",
+      "provenance": [
+        "PIT_VALID",
+        "F1"
+      ],
+      "stage": "Feature",
+      "upstream": [
+        "DATASET-E2E-001"
+      ]
+    },
+    {
+      "artifact_id": "TARGET-E2E-001",
+      "output_hash": "5638cfb530f46feecea402abf767a2f94a228dd02a54f35fa0b2f8631608f4b7",
+      "provenance": [
+        "TARGET-E2E-001",
+        "T1"
+      ],
+      "stage": "Target",
+      "upstream": [
+        "DATASET-E2E-001",
+        "FEATURE-E2E-001"
+      ]
+    },
+    {
+      "artifact_id": "BASELINE-E2E-001",
+      "output_hash": "24c29d660a12d0719afd7115db38f3b3905d892b7cffa841be262bd9511231b3",
+      "provenance": [
+        "TRAIN_ONLY",
+        "12"
+      ],
+      "stage": "Baseline",
+      "upstream": [
+        "TARGET-E2E-001"
+      ]
+    },
+    {
+      "artifact_id": "PREDICTION-E2E-001",
+      "output_hash": "09f6609cf089e6ad72d0e27feaa7cb04f002a39901819cf142a224ab052f4f34",
+      "provenance": [
+        "MODEL:LOGISTIC",
+        "FEATURE:F1",
+        "TARGET:T1"
+      ],
+      "stage": "Prediction",
+      "upstream": [
+        "BASELINE-E2E-001",
+        "FEATURE-E2E-001",
+        "TARGET-E2E-001"
+      ]
+    },
+    {
+      "artifact_id": "SIGNAL-E2E-001",
+      "output_hash": "67d5a9093e3a045d2ceb5eeec88bce78ed645e9704f82f6f46cd77049c3c3ebb",
+      "provenance": [
+        "THRESHOLD:0.5"
+      ],
+      "stage": "Signal",
+      "upstream": [
+        "PREDICTION-E2E-001"
+      ]
+    },
+    {
+      "artifact_id": "OPPORTUNITY-E2E-001",
+      "output_hash": "c6193c87350bdb981df494324cb52a9310ba08e98b6577f0ef8797951ca1377a",
+      "provenance": [
+        "OPP_RULE:LONG"
+      ],
+      "stage": "Opportunity",
+      "upstream": [
+        "SIGNAL-E2E-001"
+      ]
+    },
+    {
+      "artifact_id": "PORTFOLIO-E2E-001",
+      "output_hash": "663f652da1bf16396d562e9f29c6dc51c5b8669ccb24331e76afdd148eba49a6",
+      "provenance": [
+        "ALLOCATION:EQUAL_WEIGHT",
+        "CONSTRAINTS:STRICT"
+      ],
+      "stage": "Portfolio",
+      "upstream": [
+        "OPPORTUNITY-E2E-001"
+      ]
+    },
+    {
+      "artifact_id": "RISK-E2E-001",
+      "output_hash": "979ea02f64275d0756db067a7ba595a7009c61503a96dd256f124597de8a94b6",
+      "provenance": [
+        "RISK_DECISION_DURABLE",
+        "RES-E2E-001"
+      ],
+      "stage": "Risk",
+      "upstream": [
+        "PORTFOLIO-E2E-001"
+      ]
+    },
+    {
+      "artifact_id": "INTENT-E2E-001",
+      "output_hash": "acafc9841d76bdce181df32d384e51a00e802409f0b4f61608caa2e38f5aa59d",
+      "provenance": [
+        "RISK-E2E-001",
+        "PORTFOLIO-E2E-001",
+        "RES-E2E-001"
+      ],
+      "stage": "Intent",
+      "upstream": [
+        "RISK-E2E-001"
+      ]
+    },
+    {
+      "artifact_id": "ORDER-SIM-E2E-001",
+      "output_hash": "766b869b4a54460d4260ce0ce93128402235c4364113e11b848dff9f2facc33f",
+      "provenance": [
+        "TESTNET_ONLY",
+        "SIMULATED_TRANSPORT"
+      ],
+      "stage": "Order Simulation",
+      "upstream": [
+        "INTENT-E2E-001"
+      ]
+    },
+    {
+      "artifact_id": "EXECUTION-E2E-001",
+      "output_hash": "46ebe289638bf0d782ffd8e6457c32d1331e98cccb2e5f57f4918cdc887ae439",
+      "provenance": [
+        "TRANSPORT:SIMULATION"
+      ],
+      "stage": "Execution",
+      "upstream": [
+        "ORDER-SIM-E2E-001"
+      ]
+    },
+    {
+      "artifact_id": "FILL-E2E-001",
+      "output_hash": "967721b780760568c0b487f4c9f15b02c6c03d8e0edacf38c43eb27322cf6c5d",
+      "provenance": [
+        "DUPLICATE_GUARD:PASS",
+        "LIFECYCLE:FILLED"
+      ],
+      "stage": "Fill",
+      "upstream": [
+        "EXECUTION-E2E-001"
+      ]
+    },
+    {
+      "artifact_id": "POSITION-E2E-001",
+      "output_hash": "fe4eac3db69730d0fe101c6480d8b09405876568480579da07631d90398de448",
+      "provenance": [
+        "STATE:OPEN"
+      ],
+      "stage": "Position",
+      "upstream": [
+        "FILL-E2E-001"
+      ]
+    },
+    {
+      "artifact_id": "ACCOUNTING-E2E-001",
+      "output_hash": "49ef2fee10532e589756c6b12a79432320fea63007511a050247147f9233a9da",
+      "provenance": [
+        "RECONCILIATION:EXPECTED"
+      ],
+      "stage": "Accounting / P&L",
+      "upstream": [
+        "POSITION-E2E-001"
+      ]
+    },
+    {
+      "artifact_id": "AUDIT-E2E-001",
+      "output_hash": "610a604ba30fc8aa248d8f2c720a0d3398377b854339fe5a4793f85924d29741",
+      "provenance": [
+        "E2E_ACCEPTANCE_COMPLETED"
+      ],
+      "stage": "Audit",
+      "upstream": [
+        "ACCOUNTING-E2E-001"
+      ]
+    },
+    {
+      "artifact_id": "REPLAY-E2E-001",
+      "output_hash": "4d32ca0c56381686da6be91977e744f6c872b561aedfe0833a59ed8f69d281ac",
+      "provenance": [
+        "E2E-V358-1"
+      ],
+      "stage": "Replay",
+      "upstream": [
+        "AUDIT-E2E-001",
+        "ACCOUNTING-E2E-001"
+      ]
+    },
+    {
+      "artifact_id": "SNAPSHOT-E2E-001",
+      "output_hash": "54ffde1289d8fdb5b940a20b3f844ee593c91f2b124dd8c2260a47c8115d3fbe",
+      "provenance": [
+        "EVIDENCE-E2E-001",
+        "e2647c5931b01a0ed8194040c19a28c7e3ba992269f0f1ed974b4cb7cd5612b5"
+      ],
+      "stage": "Evidence",
+      "upstream": [
+        "REPLAY-E2E-001"
+      ]
+    },
+    {
+      "artifact_id": "GATE-E2E-001",
+      "output_hash": "3da7db2f26927e943cf796b5dc0825bcc683a8388cc7de11ac5dd9fd8cd52d4d",
+      "provenance": [
+        "DETERMINISTIC_IDENTIFIERS",
+        "PROVENANCE",
+        "REPRODUCIBILITY",
+        "FAILURE_INJECTION",
+        "RECOVERY",
+        "ROLLBACK"
+      ],
+      "stage": "Gate",
+      "upstream": [
+        "SNAPSHOT-E2E-001"
+      ]
+    }
+  ]
+}

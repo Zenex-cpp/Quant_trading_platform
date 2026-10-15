@@ -1,0 +1,11 @@
+requirement,implementation,verification,status
+release_manifest_integrity,trading_platform.v29.provenance.ReleaseManifest.fingerprint,tests/v29/test_provenance.py,PASS
+approval_binding,ProvenanceLedger.attach_approval,tests/v29/test_provenance.py,PASS
+evidence_binding,ProvenanceLedger.attach_evidence,tests/v29/test_provenance.py,PASS
+config_binding,ProvenanceLedger.verify_config,tests/v29/test_provenance.py,PASS
+deployment_binding,ProvenanceLedger.link_deployment,tests/v29/test_provenance.py,PASS
+revocation_fail_closed,ProvenanceLedger.revoke,tests/v29/test_provenance.py,PASS
+append_only_chain,ProvenanceChain.append_verify,tests/v29/test_provenance.py,PASS
+tamper_detection,ProvenanceChain.verify,tests/v29/test_provenance.py,PASS
+live_mutation,Not executed,offline release verification,N/A
+production_ready,False,release verification,FALSE

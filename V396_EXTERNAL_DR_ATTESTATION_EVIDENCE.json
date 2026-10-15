@@ -1,0 +1,24 @@
+{
+  "artifact_type": "EXTERNAL_DR_ATTESTATION_EVIDENCE",
+  "version": "3.96",
+  "status": "NOT_VERIFIED",
+  "reason": "No external production backup/restore/failover/failback evidence has been supplied or independently reviewed in this runtime.",
+  "required_scope": "PRODUCTION_DR_READINESS",
+  "required_fields": [
+    "policy_version",
+    "policy_hash",
+    "backup_artifact_hash",
+    "restore_evidence_hash",
+    "observed_rpo_seconds",
+    "observed_rto_seconds",
+    "failover_evidence_ref",
+    "failback_evidence_ref",
+    "recovery_proof_ref",
+    "operator_id",
+    "custodian_id",
+    "reviewer_id",
+    "reviewer_key_id",
+    "signature_hash"
+  ],
+  "secrets_present": false
+}

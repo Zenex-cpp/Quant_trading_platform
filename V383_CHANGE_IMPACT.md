@@ -1,0 +1,6 @@
+# v3.83 Change Impact
+
+changed_component,affected_components,invalidated_artifacts,required_retests,production_impact
+TestnetConnectivityPreflightV383,TestnetSession|NetworkPolicy|Evidence,none,full_suite_plus_v383,none
+DNS/clock preflight,AuthenticatedTestnetSession|Execution,none,preflight_contract_tests,live_activation remains blocked until VERIFIED
+Endpoint validation,NetworkPolicy|Testnet adapters,none,network policy tests,production endpoints remain denied

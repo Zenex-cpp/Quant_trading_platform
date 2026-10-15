@@ -1,0 +1,9 @@
+requirement_id,requirement_text,priority,implementation_status,test_reference,evidence_reference,owner,unresolved_gap
+33,Revision-aware data preserved and used as-of availability,CRITICAL,TESTED,test_v03_data.py::test_revision_is_asof_safe,docs/16_V03_DATA_INTEGRITY.md,DataEngine,Full historical revision store pending
+32,Data availability vector,CRITICAL,TESTED,test_v03_data.py::test_pit_accepts_known_information,docs/16_V03_DATA_INTEGRITY.md,DataEngine,Feed adapters pending
+34,Data quality states,CRITICAL,IMPLEMENTED,,docs/16_V03_DATA_INTEGRITY.md,DataEngine,Full OHLC/order-book validators pending
+35,Unknown semantics distinct,HIGH,TESTED,test_v03_data.py::test_unknown_semantics_distinct,docs/16_V03_DATA_INTEGRITY.md,DataEngine,Propagation policy matrix pending
+36,Dataset contract hashes/lineage,CRITICAL,TESTED,test_v03_data.py::test_dataset_contract_hashes_and_coverage,docs/16_V03_DATA_INTEGRITY.md,DataEngine,Raw ingestion adapters pending
+95,Leakage taxonomy and detection,CRITICAL,PARTIAL,test_v03_data.py::test_duplicate_scan,docs/16_V03_DATA_INTEGRITY.md,ResearchIntegrity,Full leakage engine pending
+160,Data/evidence lineage,CRITICAL,PARTIAL,,docs/16_V03_DATA_INTEGRITY.md,Governance,Graph persistence pending
+177.4,No future information through PIT,CRITICAL,TESTED,test_v03_data.py::test_pit_rejects_feature_not_yet_available,docs/17_V03_ACCEPTANCE.md,Governance,Automated pipeline integration pending

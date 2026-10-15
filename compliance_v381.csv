@@ -1,0 +1,8 @@
+requirement_id,requirement_text,priority,implementation_status,code_reference,test_reference,evidence_reference,owner,unresolved_gap
+S381a,"Full local causal execution chain must be machine-checkable from OrderIntent through Accounting",CRITICAL,VERIFIED,src/trading_platform/v381/testnet_e2e.py,tests/test_v381_testnet_e2e.py,V381_TESTNET_E2E_EVIDENCE.json,platform,None within local contract
+S381b,"Duplicate exchange trade events must not double-count fills or positions",CRITICAL,VERIFIED,src/trading_platform/v381/testnet_e2e.py,tests/test_v381_testnet_e2e.py,V381_TESTNET_E2E_EVIDENCE.json,platform,None within local contract
+S381c,"REST/WS reconciliation mismatch must block trading",CRITICAL,VERIFIED,src/trading_platform/v381/testnet_e2e.py,tests/test_v381_testnet_e2e.py,V381_TESTNET_E2E_EVIDENCE.json,platform,None within local contract
+S381d,"Accounting invariants must hold after projected fills and positions",CRITICAL,VERIFIED,src/trading_platform/v381/testnet_e2e.py,tests/test_v381_testnet_e2e.py,V381_TESTNET_E2E_EVIDENCE.json,platform,None within local contract
+S381e,"Live preflight must be read-only and must not imply live execution evidence",HIGH,VERIFIED,src/trading_platform/v381/testnet_e2e.py,tests/test_v381_testnet_e2e.py,V381_TESTNET_E2E_EVIDENCE.json,platform,Live authenticated execution remains unverified
+S381f,"Real Testnet mutation requires an explicit separate gate",CRITICAL,VERIFIED,src/trading_platform/v379/execution_parity.py;src/trading_platform/v380/order_adapter.py,tests/test_v381_testnet_e2e.py,V381_TESTNET_E2E_EVIDENCE.json,platform,Operator approval still required
+S381g,"Production readiness remains false",CRITICAL,VERIFIED,V381_RELEASE_NOTES.md,tests/test_v381_testnet_e2e.py,V381_TESTNET_E2E_EVIDENCE.json,platform,None

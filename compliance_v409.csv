@@ -1,0 +1,3 @@
+requirement_id,requirement_text,implementation_status,verification,evidence_status,notes
+M25,Operational readiness,TESTED,985/985 PASS + V4.9 contract tests,NOT_VERIFIED,V4.9 binds all nine V3.60 readiness classes and human review but real external evidence remains pending
+M30,Production deployment readiness,PARTIAL,application-contract gate implemented and tested,NOT_VERIFIED,Production readiness remains blocked until external evidence and approval operation exist

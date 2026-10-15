@@ -1,0 +1,11 @@
+V3.69 release measurements
+
+source_archive_sha256=e8191e54d3617028a8438d626ad4a73855182c33c0ee22bdc313bdd0a29a8db8
+wheel_sha256=3bbd4e2236676a360ce2d78ec55794bebe28e495a7948f0c466b8081c0a16900
+manifest_entries=985
+wheel_python_files=279
+full_suite_tests=669
+wheel_reproducible=true
+source_archive_reproducible=true
+production_ready=false
+external_monitoring_evidence_required=true

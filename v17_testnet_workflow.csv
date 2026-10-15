@@ -1,0 +1,11 @@
+scenario_id,stage,mutation,gate_required,default_status
+TN-01,connectivity,false,false,NOT_VERIFIED
+TN-02,exchange_rules,false,false,NOT_VERIFIED
+TN-03,account,true,false,NOT_VERIFIED
+TN-04,order_test,true,true,NOT_VERIFIED
+TN-05,controlled_order,true,true,NOT_VERIFIED
+TN-06,cancel,true,true,NOT_VERIFIED
+TN-07,unknown_order_reconciliation,true,true,NOT_VERIFIED
+TN-08,account_position_reconciliation,false,false,NOT_VERIFIED
+TN-09,restart_recovery,false,true,NOT_VERIFIED
+TN-10,failure_injection,false,true,NOT_VERIFIED

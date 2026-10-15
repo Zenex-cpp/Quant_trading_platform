@@ -1,0 +1,26 @@
+{
+  "release": "V4.16",
+  "production_ready": false,
+  "operational_evidence_mode": "EXTERNAL_REQUIRED",
+  "locally_verified": [
+    "V4.11 operational evidence manifest contract",
+    "V4.12 external review bridge contract",
+    "V4.15 readiness seal contract",
+    "V4.16 convergence contract",
+    "V4.11-V4.16 impacted-chain suite: 44/44"
+  ],
+  "not_verified": [
+    "real trust anchor / PKI / HSM",
+    "real independent reviewer operation",
+    "human approval operation",
+    "authenticated Testnet mutation",
+    "production monitoring/on-call",
+    "network segmentation",
+    "secret-store deployment/rotation",
+    "backup/restore/failover/failback",
+    "independent security assessment",
+    "production rollback",
+    "production sign-off"
+  ],
+  "full_repository_regression": "NOT_CLAIMED_TIMEOUT"
+}

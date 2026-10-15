@@ -1,0 +1,18 @@
+{
+  "evidence_id": "V393-EXTERNAL-REVIEW-001",
+  "schema_version": "V393_EXTERNAL_REVIEW_AUTHORITY_1",
+  "focused_tests": "13/13 PASS",
+  "full_regression": "881/881 PASS",
+  "durable_audit": true,
+  "reviewer_independence": true,
+  "subject_coverage": true,
+  "bounded_review_ttl": true,
+  "external_source_required": true,
+  "signature_reference_required": true,
+  "signature_state_required": "EXTERNALLY_VERIFIED",
+  "cryptographic_signature_authenticity": "NOT_VERIFIED",
+  "actual_independent_review": "NOT_VERIFIED",
+  "raw_secret_material_present": false,
+  "production_ready": false,
+  "notes": "Application admission contract only; no real reviewer or external signature system was accessed."
+}

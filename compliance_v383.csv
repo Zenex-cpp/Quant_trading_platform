@@ -1,0 +1,10 @@
+requirement_id,requirement,priority,status,evidence
+V383-001,Testnet-only connectivity policy,CRITICAL,VERIFIED,V383_VERIFICATION_REPORT.md
+V383-002,DNS resolution is a prerequisite for connectivity claim,HIGH,VERIFIED,V383_VERIFICATION_REPORT.md
+V383-003,Read-only server-time probe only,CRITICAL,VERIFIED,V383_VERIFICATION_REPORT.md
+V383-004,Clock skew guard,HIGH,VERIFIED,V383_VERIFICATION_REPORT.md
+V383-005,Production endpoint rejection,CRITICAL,VERIFIED,V383_VERIFICATION_REPORT.md
+V383-006,Preflight does not consume credentials,CRITICAL,VERIFIED,V383_VERIFICATION_REPORT.md
+V383-007,Preflight does not call mutating APIs,CRITICAL,VERIFIED,V383_VERIFICATION_REPORT.md
+V383-008,Real Testnet connectivity,CRITICAL,NOT_VERIFIED,V383_VERIFICATION_REPORT.md
+V383-009,Production readiness,CRITICAL,BLOCKED,V383_VERIFICATION_REPORT.md

@@ -1,0 +1,6 @@
+precedence,class,authority,production_rule
+50,SAFETY_OVERRIDE,hard safety control,cannot be weakened by lower precedence
+40,RUNTIME,scoped runtime control,audited and bounded
+30,ENVIRONMENT,environment variable,provenance captured
+20,CONFIG_FILE,versioned config,immutable by version
+10,DEFAULT,code default,baseline only

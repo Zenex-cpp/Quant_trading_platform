@@ -1,0 +1,8 @@
+{
+  "artifact_type": "BINANCE_TESTNET_PUBLIC_PROBE",
+  "endpoint": "https://testnet.binancefuture.com",
+  "error": "URLError:<urlopen error [Errno -3] Temporary failure in name resolution>",
+  "mutation": "NONE",
+  "status": "NOT_VERIFIED",
+  "symbol": "BTCUSDT"
+}

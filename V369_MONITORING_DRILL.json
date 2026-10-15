@@ -1,0 +1,52 @@
+{
+  "alerts": [
+    {
+      "action": "CLOSING_ONLY",
+      "alert_id": "alert:38ede56bc0e9d8bd176110160cdba919e03cba814d1cbbacf78f75f7bbd1f002",
+      "code": "STALE_MARKET_DATA",
+      "created_at_ms": 1800000000000,
+      "fingerprint": "38ede56bc0e9d8bd176110160cdba919e03cba814d1cbbacf78f75f7bbd1f002",
+      "scope": "GLOBAL",
+      "severity": "CRITICAL",
+      "signal_id": "S-1"
+    },
+    {
+      "action": "HALTED",
+      "alert_id": "alert:944805d3edc3c2fe004cfbd3f6b879c17d132a069a39cc9522e71cbd8b7256df",
+      "code": "RECONCILIATION_MISMATCH",
+      "created_at_ms": 1800000000000,
+      "fingerprint": "944805d3edc3c2fe004cfbd3f6b879c17d132a069a39cc9522e71cbd8b7256df",
+      "scope": "GLOBAL",
+      "severity": "EMERGENCY",
+      "signal_id": "S-2"
+    },
+    {
+      "action": "DEGRADED",
+      "alert_id": "alert:e92fa558c5f88e294ec6cd8101581b24928edbece8b79cf44d736b9da75eeeab",
+      "code": "MODEL_HEALTH_DEGRADED",
+      "created_at_ms": 1800000000000,
+      "fingerprint": "e92fa558c5f88e294ec6cd8101581b24928edbece8b79cf44d736b9da75eeeab",
+      "scope": "MODEL",
+      "severity": "WARNING",
+      "signal_id": "S-3"
+    }
+  ],
+  "drill_id": "DRILL-MON-1",
+  "duplicate_alerts": 1,
+  "evidence_class": "MONITORING",
+  "evidence_hash": "6d146f6b277c6802744eb71c29a4bd49f57fc8a5c6f72991de3b8ccdb458f3a5",
+  "evidence_id": "V369-MONITORING-DRILL-1",
+  "external_operational_evidence_required": true,
+  "final_action": "HALTED",
+  "monitoring_available": true,
+  "monitoring_unavailable_fail_closed": true,
+  "observed_at_ms": 1800000000000,
+  "pass": true,
+  "production_readiness_effect": "NONE",
+  "production_ready": false,
+  "scope": "APPLICATION",
+  "source_kind": "INTERNAL",
+  "source_ref": "internal://v369/monitoring-drill/1",
+  "source_system": "trading-platform-v369",
+  "unresolved_critical_alerts": 2
+}

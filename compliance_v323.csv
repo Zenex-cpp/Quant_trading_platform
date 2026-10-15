@@ -1,0 +1,13 @@
+priority,control,implementation,status
+SAFETY,durable commit cannot recreate a second OrderRequest after restart,DurableCommitLedger + CommitCoordinator durable duplicate gate,PASS
+STATE INTEGRITY,in-memory commit without its durable record fails closed,CommitCoordinator durable mode,PASS
+DATA INTEGRITY,exact commit fingerprint and authority/request identity persisted,ORDER_COMMIT_RECORDED,PASS
+EVIDENCE INTEGRITY,EventStore hash chain verified before durable reuse,DurableCommitLedger,PASS
+RISK CONTROL,no new capability consumed on durable duplicate,duplicate path returns stored consumed capability,PASS
+EXECUTION INTEGRITY,durable claim precedes capability consumption,CommitCoordinator,PASS
+FAIL SAFE,corrupt durable chain blocks reuse,DurableCommitReplayError,PASS
+CONCURRENCY,second claim cannot create a second record,unique durable event id + race handling,PASS
+SECURITY,no credentials/sockets/raw transport persisted,normalized authority and request fields only,PASS
+RESTART,fresh coordinator returns exact prior request,DurableCommitLedger restore/get,PASS
+LIVE IO,no exchange/network call in V3.23 tests,local deterministic tests only,PASS
+PRODUCTION,production readiness is not asserted,release control,FALSE

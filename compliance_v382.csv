@@ -1,0 +1,9 @@
+requirement_id,requirement_text,status,evidence
+V382-01,Authenticated Testnet control plane isolated from order mutation,VERIFIED,V382_AUTHENTICATED_TESTNET_PREFLIGHT.json
+V382-02,Start/Ping/Stop control operations require explicit TESTNET endpoint,VERIFIED,tests/test_v382_authenticated_testnet.py
+V382-03,Production WebSocket API host is rejected,VERIFIED,tests/test_v382_authenticated_testnet.py
+V382-04,Keepalive failure blocks trading,VERIFIED,tests/test_v382_authenticated_testnet.py
+V382-05,Listen-key rotation reconnects private stream,VERIFIED,tests/test_v382_authenticated_testnet.py
+V382-06,listenKeyExpired blocks trading,VERIFIED,tests/test_v382_authenticated_testnet.py
+V382-07,No credentials persisted into evidence,VERIFIED,V382_VERIFICATION_REPORT.md
+V382-08,Real authenticated Testnet connectivity,NOT_VERIFIED,external network and operator credentials required

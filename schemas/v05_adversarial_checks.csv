@@ -1,0 +1,10 @@
+check_id,category,severity,required,scope,methodology_version
+ADV-001,LEAKAGE,HIGH,true,candidate,ADV_V1
+ADV-002,OVERFIT,HIGH,true,candidate,ADV_V1
+ADV-003,FRAGILE_PARAMETERS,HIGH,true,candidate,ADV_V1
+ADV-004,REGIME_DEPENDENCE,HIGH,true,candidate,ADV_V1
+ADV-005,COST_DEPENDENCE,HIGH,true,candidate,ADV_V1
+ADV-006,CAPACITY,HIGH,true,candidate,ADV_V1
+ADV-007,LUCKY_SEQUENCE,MEDIUM,true,candidate,ADV_V1
+ADV-008,SUSPICIOUS_FEATURE_DEPENDENCE,HIGH,true,candidate,ADV_V1
+ADV-009,TEMPORAL_INSTABILITY,HIGH,true,candidate,ADV_V1

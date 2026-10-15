@@ -1,0 +1,2 @@
+method_id,version,applicability,limitations
+empirical_diagnostic,1.0,binary_probability,"requires independent calibration/evaluation sample; thresholds configurable"

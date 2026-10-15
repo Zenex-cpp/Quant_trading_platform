@@ -1,0 +1,32 @@
+{
+  "artifact_type": "V386_OPERATOR_TESTNET_SESSION_EVIDENCE",
+  "checks": [
+    {
+      "check": "operational_gate_ready",
+      "pass": true
+    },
+    {
+      "check": "required_user_data_fresh",
+      "pass": true
+    },
+    {
+      "check": "activation_bound",
+      "pass": true
+    },
+    {
+      "check": "controlled_submit_acknowledged",
+      "pass": true
+    },
+    {
+      "check": "single_external_side_effect",
+      "pass": true
+    }
+  ],
+  "evidence_hash": "4bf8a3b732bba1fd9cf56c526cbfd2aa35a990cd53e5858552403c2e7f685371",
+  "gateway_calls": 1,
+  "local_status": "PASS",
+  "mutating_live_testnet_called": false,
+  "production_ready": false,
+  "runtime_connectivity_status": "NOT_VERIFIED",
+  "state": "SUBMITTED"
+}

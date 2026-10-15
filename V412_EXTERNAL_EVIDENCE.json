@@ -1,0 +1,20 @@
+{
+  "release": "v4.12",
+  "status": "NOT_VERIFIED",
+  "production_ready": false,
+  "application_contract": "COMPOSITE_1022_1022_PASS",
+  "changes": [
+    "V4.11 manifest to V3.61 package normalization",
+    "V3.93 external review admission before evidence verification",
+    "durable manifest/review/evidence fingerprint binding",
+    "fail-closed revalidation"
+  ],
+  "external_requirements_not_satisfied": [
+    "actual operational evidence",
+    "actual cryptographic trust-anchor verification",
+    "independent production security assessment",
+    "independent human approval operation",
+    "production recovery and rollback exercises",
+    "production operational/security sign-off"
+  ]
+}

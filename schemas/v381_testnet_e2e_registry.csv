@@ -1,0 +1,11 @@
+field_id,description,class,required,validation,source
+TN381-01,OrderIntent to OrderRequest correlation,INVARIANT,TRUE,intent_id and risk_decision_id preserved,local
+TN381-02,LIMIT request preserves price and timeInForce,INVARIANT,TRUE,price>0 and TIF non-empty,local
+TN381-03,ORDER_TRADE_UPDATE sequence projection,INVARIANT,TRUE,same-event ordering and duplicate trade idempotency,Binance event contract
+TN381-04,ACCOUNT_UPDATE position projection,INVARIANT,TRUE,projected position reconciles to REST snapshot,Binance event contract
+TN381-05,FillLedger exactly-once application,INVARIANT,TRUE,trade identity cannot consume twice,local
+TN381-06,PositionLedger fill consistency,INVARIANT,TRUE,position equals accepted unique fills,local
+TN381-07,Accounting reconciliation,INVARIANT,TRUE,local=exchange=reconstructed in deterministic harness,local
+TN381-08,REST/WS divergence blocks trading,GUARD,TRUE,reconciliation GREEN required for trading,local
+TN381-09,Live preflight is read-only,GUARD,TRUE,mutation=NONE,local
+TN381-10,Production activation forbidden in V3.81,GUARD,TRUE,production_ready=FALSE,MASTER_PROMPT

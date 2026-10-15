@@ -1,0 +1,18 @@
+{
+  "artifact_type": "V383_TESTNET_CONNECTIVITY_PREFLIGHT",
+  "client_time_ms": 1791196344395,
+  "clock_skew_ms": null,
+  "credentials_consumed": false,
+  "evidence_hash": "2161da2de51e35cd8c01d64a796e919dd6792f1a4064ce0dc6fdc29125515bfa",
+  "generated_at": "2026-10-05T10:32:24.396496+00:00",
+  "mutating_api_called": false,
+  "production_ready": false,
+  "reason": "DNS_RESOLUTION_FAILED:gaierror",
+  "rest_dns": "UNRESOLVED",
+  "rest_endpoint": "https://testnet.binancefuture.com",
+  "rest_server_time_ms": null,
+  "schema_version": "V383_CONNECTIVITY_1",
+  "status": "NOT_VERIFIED",
+  "ws_api_endpoint": "",
+  "ws_private_endpoint": ""
+}

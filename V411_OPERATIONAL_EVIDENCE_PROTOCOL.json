@@ -1,0 +1,32 @@
+{
+  "protocol_version": "V4.11-OPERATIONAL-EVIDENCE-1",
+  "status": "APPLICATION_CONTRACT_TESTED",
+  "production_ready": false,
+  "admission_status": "READY_FOR_EXTERNAL_REVIEW_ONLY",
+  "required_evidence_classes": [
+    "LIVE_VENUE",
+    "NETWORK_SEGMENTATION",
+    "SECRET_STORE",
+    "BACKUP_RESTORE",
+    "DISASTER_RECOVERY",
+    "SECURITY_REVIEW",
+    "MONITORING",
+    "ROLLBACK",
+    "INDEPENDENT_REVIEW"
+  ],
+  "verification_boundary": [
+    "manifest completeness",
+    "provenance declaration",
+    "class-specific field completeness",
+    "time-window validity",
+    "manifest hash integrity",
+    "idempotent package identity"
+  ],
+  "external_requirements_not_satisfied": [
+    "actual production/testnet operational evidence",
+    "independent external review",
+    "independent cryptographic/trust-anchor validation where required",
+    "human approval operation",
+    "production security and recovery sign-off"
+  ]
+}

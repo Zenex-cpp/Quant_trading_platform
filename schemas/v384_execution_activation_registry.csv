@@ -1,0 +1,7 @@
+component,version,status,hard_guards,ttl,scope
+CONNECTIVITY_PROOF,V384-1,VERIFIED,status=VERIFIED;hash_present;window_valid;TESTNET_endpoint;clock_skew<=1000ms,source_window,READ_ONLY
+OPERATOR_APPROVAL,V384-1,VERIFIED,scope=TESTNET_ORDER_MUTATION;window_valid,approval_window,TESTNET_MUTATION
+RECONCILIATION_GATE,V384-1,VERIFIED,state=GREEN,activation_window,NEW_RISK
+ACTIVATION,V384-1,VERIFIED,TESTNET;approval;connectivity;reconciliation;notional;symbol,<=900s,TESTNET_MUTATION
+KILL_SWITCH,V384-1,VERIFIED,halt_or_expire_blocks_new_risk,immediate,NEW_RISK
+CREDENTIAL_BOUNDARY,V384-1,VERIFIED,per-call_only;no_persistence;no_audit_serialization,N/A,SECRET

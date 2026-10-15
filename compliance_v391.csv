@@ -1,0 +1,9 @@
+control_id,requirement,status,evidence,notes
+V391-1,Deny-by-default segmentation,VERIFIED,V391_NETWORK_SEGMENTATION_EVIDENCE.json,Application policy contract
+V391-2,Research cannot reach production endpoints,VERIFIED,V391_NETWORK_SEGMENTATION_EVIDENCE.json,Machine-checkable application contract
+V391-3,Research cannot reach Testnet execution endpoints,VERIFIED,V391_NETWORK_SEGMENTATION_EVIDENCE.json,Machine-checkable application contract
+V391-4,Testnet execution cannot reach production endpoints,VERIFIED,V391_NETWORK_SEGMENTATION_EVIDENCE.json,Machine-checkable application contract
+V391-5,Production trading cannot reach Testnet endpoints,VERIFIED,V391_NETWORK_SEGMENTATION_EVIDENCE.json,Machine-checkable application contract
+V391-6,Infrastructure firewall/VPC/container proof,NOT_VERIFIED,V391_INFRASTRUCTURE_REVIEW_PACKAGE.md,External deployment evidence required
+V391-7,Independent review of infrastructure controls,NOT_VERIFIED,V391_INFRASTRUCTURE_REVIEW_PACKAGE.md,Human evidence required
+V391-8,Real venue mutation,NOT_PERFORMED,V391_VERIFICATION_REPORT.md,No network mutation performed

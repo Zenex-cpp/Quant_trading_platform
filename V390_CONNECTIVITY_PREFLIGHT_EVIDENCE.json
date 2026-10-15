@@ -1,0 +1,12 @@
+{
+  "artifact_type": "V390_TESTNET_CONNECTIVITY_PREFLIGHT",
+  "status": "NOT_VERIFIED",
+  "external_testnet_execution": "NOT_VERIFIED",
+  "mutating_api_called": false,
+  "production_ready": false,
+  "rest_endpoint": "https://testnet.binancefuture.com",
+  "dns_status": "UNRESOLVED",
+  "reason": "DNS_RESOLUTION_FAILED:gaierror",
+  "rest_server_time_ms": null,
+  "clock_skew_ms": null
+}

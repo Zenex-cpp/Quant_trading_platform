@@ -1,0 +1,5 @@
+record_type,record_id,version,scope,status,owner,revalidation_condition
+PARITY_CONTRACT,V379_EXECUTION_SEAM_1,V379_1,BACKTEST_TO_LIVE_SHADOW,VERIFIED,platform,Any change to stage interface or adapter normalization
+TESTNET_PROBE,V379_TESTNET_PUBLIC_READONLY_1,V379_1,BINANCE_USDM_TESTNET,VERIFIED,platform,Any venue endpoint or network policy change
+MUTATION_GATE,V379_TESTNET_MUTATION_GATE_1,V379_1,BINANCE_USDM_TESTNET,VERIFIED,platform,Any change to testnet order authority or max-notional enforcement
+LIMIT_ORDER_ADAPTER,V379_LIMIT_ORDER_GAP_1,V379_1,BINANCE_USDM_TESTNET,OPEN,platform,Add venue-complete OrderRequest representation with price/timeInForce

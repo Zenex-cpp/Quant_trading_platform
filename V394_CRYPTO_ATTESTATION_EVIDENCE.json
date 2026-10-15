@@ -1,0 +1,20 @@
+{
+  "version": "3.94",
+  "test_suite": "tests/test_v394_cryptographic_attestation.py",
+  "focused_tests": 12,
+  "focused_status": "PASS",
+  "full_regression_tests": 893,
+  "full_regression_status": "PASS",
+  "verification_scope": "APPLICATION_CRYPTOGRAPHIC_OPERATION",
+  "algorithm": "ED25519",
+  "signing_binding": ["package_id", "package_hash", "review_id", "review_hash", "scope"],
+  "trust_anchor_checks": ["fingerprint", "validity", "status", "scope", "registry_version"],
+  "durability": "EVENTSTORE_HASH_CHAIN",
+  "idempotency": "TESTED",
+  "restart_recovery": "TESTED",
+  "secret_material_persisted": false,
+  "external_trust_anchor_attestation": "NOT_VERIFIED",
+  "pki_hsm_ceremony_evidence": "NOT_VERIFIED",
+  "production_mutation": "NOT_PERFORMED",
+  "production_ready": false
+}

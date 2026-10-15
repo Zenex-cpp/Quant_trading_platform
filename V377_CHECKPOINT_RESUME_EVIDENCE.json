@@ -1,0 +1,20 @@
+{
+  "checkpoint_event_offset": 1,
+  "checkpoint_id": "CP-V377-EVIDENCE",
+  "checkpoint_state_hash": "cc8b6ede6c77862c73e5bd323953cde9ce52ea6895642bd7853ac9ce4f22f6ee",
+  "checkpoint_verified": true,
+  "evidence_version": "V377_CHECKPOINT_RESUME_EVIDENCE_1",
+  "fills": [
+    "2.0",
+    "2.0",
+    "1.0"
+  ],
+  "full_state_hash": "dc502f80d397befeeff175a9d4a9ac66da14fd6b7feb9efca9602ba30f1bba0c",
+  "open_orders": [],
+  "prefix_state_hash": "4e58b98a66d936b48097e1b300e3b13dcf8c2674b6c6f786f89f37153b191531",
+  "production_ready": false,
+  "resume_next_event_offset": 2,
+  "resumed_matches_full": true,
+  "resumed_state_hash": "dc502f80d397befeeff175a9d4a9ac66da14fd6b7feb9efca9602ba30f1bba0c",
+  "snapshot_version": "V377_BACKTEST_CHECKPOINT_1"
+}

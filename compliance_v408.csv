@@ -1,0 +1,6 @@
+requirement_id,requirement_text,implementation_status,verification,evidence_status,notes
+M15,External evidence invalidation/revalidation,TESTED,985/985 PASS,NOT_VERIFIED,V4.8 binds critical-promotion gates to durable checkpoints and fail-closed revalidation
+M17,Evidence dependency invalidation,TESTED,985/985 PASS,NOT_VERIFIED,Gate reuse is blocked after active or post-checkpoint invalidation
+M19,Critical promotion integrity,TESTED,985/985 PASS,NOT_VERIFIED,V3.98 critical promotion directly consumes V4.8 gate authorization
+M25,Operational readiness,PARTIAL,985/985 PASS,NOT_VERIFIED,Real external operational evidence remains required
+M30,Production deployment readiness,PARTIAL,985/985 PASS,NOT_VERIFIED,V4.8 does not authorize deployment

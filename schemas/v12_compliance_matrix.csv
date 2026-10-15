@@ -1,0 +1,13 @@
+requirement_id,requirement_text,priority,implementation_status,evidence_reference,unresolved_gap
+V12-01,Testnet environment must be explicit and non-production,HIGH,TESTED,docs/36_V12_TESTNET_EVIDENCE.md,Live account evidence required
+V12-02,No credential values stored by client object,CRITICAL,TESTED,tests/test_v12_testnet.py,External secret-store integration
+V12-03,Authenticated connectivity evidence,Critical,PARTIAL,docs/36_V12_TESTNET_EVIDENCE.md,Live testnet execution required
+V12-04,Exchange rule snapshot and hash,HIGH,PARTIAL,docs/36_V12_TESTNET_EVIDENCE.md,Live exchangeInfo capture required
+V12-05,Order acknowledgement evidence,HIGH,PARTIAL,docs/36_V12_TESTNET_EVIDENCE.md,Live testnet execution required
+V12-06,Cancellation acknowledgement evidence,HIGH,PARTIAL,docs/36_V12_TESTNET_EVIDENCE.md,Live testnet execution required
+V12-07,Partial and full fill evidence,HIGH,PARTIAL,docs/36_V12_TESTNET_EVIDENCE.md,Live testnet execution required
+V12-08,Unknown order reconciliation,Critical,PARTIAL,docs/36_V12_TESTNET_EVIDENCE.md,Live testnet execution required
+V12-09,Restart/reconnect evidence,HIGH,PARTIAL,docs/36_V12_TESTNET_EVIDENCE.md,Runtime testnet evidence required
+V12-10,Accounting/reconciliation evidence,Critical,PARTIAL,docs/36_V12_TESTNET_EVIDENCE.md,Live account/position evidence required
+V12-11,Failure injection and recovery proof,CRITICAL,TESTED,tests/test_v12_testnet.py,None for offline semantics; runtime evidence still required for VERIFIED
+V12-12,No automatic live promotion from testnet evidence,Critical,TESTED,tests/test_v12_testnet.py,Human approval evidence required

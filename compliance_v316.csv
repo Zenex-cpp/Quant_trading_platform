@@ -1,0 +1,7 @@
+requirement_id,requirement_text,priority,implementation_status,code_reference,test_reference,evidence_reference,owner,unresolved_gap
+M12,No double-counted fill,CRITICAL,TESTED,trading_platform/v315/durable_accounting.py,tests/v315/test_durable_accounting.py,V315_VERIFICATION_REPORT.md,engineering,
+M3,No Order when Position = UNKNOWN,CRITICAL,PARTIAL,trading_platform/v34/execution_bridge.py,tests/v311/test_dispatch_guard.py,V316_VERIFICATION_REPORT.md,engineering,position authority integration remains separate
+M28,Post-recovery state cannot be READY/LIVE without recovery proof,CRITICAL,PARTIAL,trading_platform/v315/durable_accounting.py;trading_platform/v316/accounting_gate.py,tests/v315/test_durable_accounting.py;tests/v316/test_accounting_gate.py,V316_VERIFICATION_REPORT.md,engineering,full cross-axis recovery proof remains required
+M29,Risk budget cannot increase solely because state worsened,CRITICAL,TESTED,trading_platform/v30/truth.py,tests/v316/test_accounting_gate.py,V316_VERIFICATION_REPORT.md,engineering,
+78,Accounting UNKNOWN blocks new risk,CRITICAL,TESTED,trading_platform/v316/accounting_gate.py;trading_platform/v311/dispatch_guard.py,tests/v316/test_accounting_gate.py;tests/v311/test_dispatch_guard.py,V316_VERIFICATION_REPORT.md,engineering,
+152,No fill without position update,CRITICAL,PARTIAL,trading_platform/v34/execution_bridge.py;trading_platform/v315/durable_accounting.py,tests/v315/test_durable_accounting.py,V316_VERIFICATION_REPORT.md,engineering,durable projection and runtime bridge are not yet one transaction

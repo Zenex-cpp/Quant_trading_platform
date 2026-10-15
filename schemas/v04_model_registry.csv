@@ -1,0 +1,3 @@
+model_id,version,type,status,feature_schema,target_schema,role,validity_scope
+baseline_logistic,1.0,LOGISTIC,EXPERIMENTAL,features_v1,target_direction_v1,NONE,"BTCUSDT_PERP|BINANCE|1m|research"
+baseline_tree,1.0,TREE,EXPERIMENTAL,features_v1,target_direction_v1,NONE,"BTCUSDT_PERP|BINANCE|1m|research"
