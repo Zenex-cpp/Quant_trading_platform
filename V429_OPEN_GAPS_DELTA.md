@@ -7,6 +7,8 @@
 - Reviewer output paths reject symlinked ancestors, traversal, paths inside the checkout, and existing targets.
 - Signed output is created exclusively with mode `0600`; pre-existing content cannot be overwritten.
 - V4.29 milestone runner/matrix/baseline and workflow contract are aligned, while V4.28 audit artifact names remain compatible with the existing provider snapshot schema.
+- Chronological target intervals are purged at the train/validation, validation/OOS, and OOS/final-holdout boundaries; purged splits require event timestamps, and an empty post-purge split fails closed.
+- The offline §178 acceptance path trains only on training targets, tests duplicate/conflicting fills and expired risk after restart, reconstructs accounting from SQLite, and requires the deployment rollback drill artifacts in its evidence snapshot and gate.
 
 ## Still open
 

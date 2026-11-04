@@ -34,8 +34,70 @@ def test_leakage_future_event_blocks():
 
 def test_chronological_split_purges_and_holdout_exists():
     ends=[dt(0)+timedelta(minutes=i+2) for i in range(100)]
-    s=chronological_split(100,label_end=ends,embargo=timedelta(minutes=1))
+    times=[dt(0)+timedelta(minutes=i) for i in range(100)]
+    s=chronological_split(100,label_end=ends,event_time=times,embargo=timedelta(minutes=1))
     assert s.train and s.validation and s.oos and s.final_holdout
+
+
+def test_purges_target_intervals_at_all_split_boundaries():
+    times=[dt(0)+timedelta(minutes=i) for i in range(20)]
+    ends=[times[min(i+1, len(times)-1)] for i in range(len(times))]
+
+    split=chronological_split(20,label_end=ends,event_time=times)
+
+    assert split.train == tuple(range(0,11))
+    assert split.validation == tuple(range(12,14))
+    assert split.oos == tuple(range(15,17))
+    assert split.final_holdout == (18,19)
+    assert split.purged == (11,14,17)
+
+
+def test_purged_split_requires_event_times():
+    ends=[dt(0)+timedelta(minutes=i+1) for i in range(20)]
+
+    with pytest.raises(ValueError,match="EVENT_TIME_REQUIRED_FOR_PURGED_SPLIT"):
+        chronological_split(20,label_end=ends)
+
+
+def test_embargo_is_applied_between_each_split():
+    times=[dt(0)+timedelta(minutes=i) for i in range(20)]
+    ends=[times[min(i+1, len(times)-1)] for i in range(len(times))]
+
+    split=chronological_split(20,label_end=ends,event_time=times,embargo=timedelta(minutes=1))
+
+    assert split.train == tuple(range(0,11))
+    assert split.validation == (13,)
+    assert split.oos == (16,)
+    assert split.final_holdout == (19,)
+    assert split.embargoed == (12,15,18)
+
+
+def test_rejects_non_chronological_event_times():
+    times=[dt(0)+timedelta(minutes=i) for i in range(20)]
+    times[10],times[11]=times[11],times[10]
+    ends=[dt(0)+timedelta(minutes=i+1) for i in range(20)]
+
+    with pytest.raises(ValueError,match="EVENT_TIME_NOT_CHRONOLOGICAL"):
+        chronological_split(20,label_end=ends,event_time=times)
+
+
+def test_rejects_target_interval_ending_before_its_event():
+    times=[dt(0)+timedelta(minutes=i) for i in range(20)]
+    ends=[dt(0)+timedelta(minutes=max(i-1,0)) for i in range(20)]
+
+    with pytest.raises(ValueError,match="LABEL_END_BEFORE_EVENT_TIME"):
+        chronological_split(20,label_end=ends,event_time=times)
+
+
+def test_rejects_split_emptied_by_target_purge():
+    times=[dt(0)+timedelta(minutes=i) for i in range(8)]
+    ends=[time+timedelta(days=1) for time in times]
+
+    with pytest.raises(ValueError,match="PURGE_OR_EMBARGO_EMPTIED_SPLIT"):
+        chronological_split(
+            8,train_frac=.25,validation_frac=.25,oos_frac=.25,holdout_frac=.25,
+            label_end=ends,event_time=times,
+        )
 
 def test_holdout_tuning_forbidden():
     store=EventStore()
