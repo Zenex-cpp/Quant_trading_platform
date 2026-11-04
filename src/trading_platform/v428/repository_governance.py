@@ -13,7 +13,7 @@ from hashlib import sha256
 import json
 import re
 from typing import Any, Mapping, Sequence
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit, urlunsplit
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
@@ -34,6 +34,27 @@ REQUIRED_PREFLIGHT_ARTIFACTS_V428 = {
 }
 SHA256_PATTERN_V428 = re.compile(r"^[0-9a-f]{64}$")
 GIT_SHA_PATTERN_V428 = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
+
+
+def _normalize_github_reference_v428(value: str) -> str:
+    """Normalize GitHub's case-insensitive account/repository URL segments only."""
+    parsed = urlsplit(value)
+    parts = parsed.path.split("/")
+    host = parsed.netloc.casefold()
+    if host == "api.github.com":
+        if len(parts) > 3 and parts[1] == "repos":
+            parts[2] = parts[2].casefold()
+            parts[3] = parts[3].casefold()
+        elif len(parts) > 2 and parts[1] == "users":
+            parts[2] = parts[2].casefold()
+        elif len(parts) > 4 and parts[1] == "orgs":
+            parts[2] = parts[2].casefold()
+            if parts[3] == "teams":
+                parts[4] = parts[4].casefold()
+    elif host == "github.com" and len(parts) > 2:
+        parts[1] = parts[1].casefold()
+        parts[2] = parts[2].casefold()
+    return urlunsplit((parsed.scheme.casefold(), host, "/".join(parts), parsed.query, parsed.fragment))
 
 
 def canonical_hash_v428(value: Any) -> str:
@@ -223,7 +244,7 @@ class RemoteRepositoryGovernanceEvidenceAuthorityV428:
         else:
             owner, repo_name = self.expected_repository.split("/", 1)
             required_codeowners_ref = f"https://api.github.com/repos/{owner}/{repo_name}/contents/.github/CODEOWNERS?ref={payload.get('protected_head_sha', '')}"
-            if str(codeowners.get("source_ref", "")) != required_codeowners_ref:
+            if _normalize_github_reference_v428(str(codeowners.get("source_ref", ""))) != _normalize_github_reference_v428(required_codeowners_ref):
                 reasons.append("CODEOWNERS_PROVIDER_SOURCE_REF_REQUIRED")
             mappings = codeowners.get("owner_mappings")
             if not isinstance(mappings, Sequence) or isinstance(mappings, (str, bytes)) or not mappings:
@@ -245,7 +266,10 @@ class RemoteRepositoryGovernanceEvidenceAuthorityV428:
                     expected_mapping_ref = f"https://api.github.com/users/{user_match.group(1)}"
                 elif team_match and kind == "team":
                     expected_mapping_ref = f"https://api.github.com/orgs/{team_match.group(1)}/teams/{team_match.group(2)}"
-                if expected_mapping_ref is None or not owner_id.isdigit() or int(owner_id) <= 0 or source_ref != expected_mapping_ref:
+                if (
+                    expected_mapping_ref is None or not owner_id.isdigit() or int(owner_id) <= 0
+                    or _normalize_github_reference_v428(source_ref) != _normalize_github_reference_v428(expected_mapping_ref)
+                ):
                     reasons.append("CODEOWNERS_OWNER_MAPPING_INVALID")
                 if handle in mapped_handles:
                     reasons.append("CODEOWNERS_OWNER_MAPPING_DUPLICATE")
@@ -344,7 +368,8 @@ class RemoteRepositoryGovernanceEvidenceAuthorityV428:
                 run_id = 0
                 reasons.append("HOSTED_RUN_ID_INVALID")
             run_url = str(run.get("run_url", ""))
-            if run_url != f"https://github.com/{self.expected_repository}/actions/runs/{run_id}":
+            expected_run_url = f"https://github.com/{self.expected_repository}/actions/runs/{run_id}"
+            if _normalize_github_reference_v428(run_url) != _normalize_github_reference_v428(expected_run_url):
                 reasons.append("HOSTED_RUN_URL_INVALID")
             artifacts = run.get("artifacts")
             if not isinstance(artifacts, Sequence) or isinstance(artifacts, (str, bytes)):
@@ -366,7 +391,8 @@ class RemoteRepositoryGovernanceEvidenceAuthorityV428:
             f"https://api.github.com/repos/{owner}/{repo_name}/actions/runs/",
             f"https://api.github.com/repos/{owner}/{repo_name}/rulesets?includes_parents=true&per_page=100",
         )
-        refs_text = [str(value) for value in source_refs]
+        refs_text = [_normalize_github_reference_v428(str(value)) for value in source_refs]
+        required_ref_prefixes = tuple(_normalize_github_reference_v428(ref) for ref in required_ref_prefixes)
         if not any(ref.startswith(required_ref_prefixes[0]) for ref in refs_text):
             reasons.append("BRANCH_PROTECTION_API_SOURCE_REF_REQUIRED")
         if not any(ref.startswith(required_ref_prefixes[1]) for ref in refs_text):
