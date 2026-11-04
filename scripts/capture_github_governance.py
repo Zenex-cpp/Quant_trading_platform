@@ -38,7 +38,6 @@ _REPO_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 # The V4.24 payload requires merge_commit_sha, which the 2026-03-10 GitHub
 # REST API version removes from pull-request responses. Pin the supported
 # 2022-11-28 version until the evidence schema has an equivalent replacement.
-_GITHUB_API_VERSION = "2022-11-28"
 
 
 def _run(args: list[str], *, cwd: Path = ROOT, timeout: int = 60) -> subprocess.CompletedProcess[str]:
@@ -59,7 +58,7 @@ def _api(route: str) -> object:
     result = _run([
         "gh", "api", route,
         "-H", "Accept: application/vnd.github+json",
-        "-H", f"X-GitHub-Api-Version: {_GITHUB_API_VERSION}",
+        "-H", "X-GitHub-Api-Version: 2022-11-28",
     ])
     try:
         return json.loads(result.stdout)
