@@ -334,11 +334,30 @@ def build_github_governance_payload_v428(
     for pr in associated_prs:
         if not isinstance(pr, Mapping):
             continue
-        merged_at = pr.get("merged_at")
         merge_sha = str(pr.get("merge_commit_sha", "")).lower()
+        if merge_sha != commit_sha:
+            continue
+        merged_at = pr.get("merged_at")
         merged_by = pr.get("merged_by")
-        if merged_at and merge_sha == commit_sha and isinstance(merged_by, Mapping):
+        if merged_at and isinstance(merged_by, Mapping):
             merge_actor_values.append(merged_by.get("id"))
+            continue
+        try:
+            pr_number = int(pr.get("number", 0))
+        except (TypeError, ValueError):
+            pr_number = 0
+        if pr_number <= 0:
+            continue
+        detail_route = f"{prefix}/pulls/{pr_number}"
+        pr_detail = api(detail_route)
+        if not isinstance(pr_detail, Mapping):
+            raise GitHubGovernanceCaptureErrorV428("MERGED_PULL_REQUEST_DETAILS_INVALID")
+        detail_merge_sha = str(pr_detail.get("merge_commit_sha", "")).lower()
+        merged_at = pr_detail.get("merged_at")
+        merged_by = pr_detail.get("merged_by")
+        if merged_at and detail_merge_sha == commit_sha and isinstance(merged_by, Mapping):
+            merge_actor_values.append(merged_by.get("id"))
+            source_refs.append(f"https://api.github.com/{detail_route}")
     merge_actor_ids = _unique_ids(merge_actor_values, "MERGE_ACTOR")
     source_refs.append(f"https://api.github.com/{associated_route}")
 
