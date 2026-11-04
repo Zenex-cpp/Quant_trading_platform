@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path, PureWindowsPath
+import stat
 from typing import Mapping
 
 
@@ -154,6 +155,54 @@ def write_audit_text_v428(root: str | os.PathLike[str], path: Path, text: str) -
     parts = checked.relative_to(base).parts
     if len(parts) < 2 or parts[0] != ".audit":
         raise PathSafetyErrorV428("AUDIT_WRITE_OUTPUT_SCOPE_VIOLATION")
+    if os.name == "nt":
+        # Windows does not support the descriptor-relative directory walk used
+        # below. Recheck each component with lstat before opening the scoped file.
+        current = base
+        try:
+            for component in parts[:-1]:
+                current = current / component
+                try:
+                    current.mkdir(mode=0o700)
+                except FileExistsError:
+                    pass
+                info = os.lstat(current)
+                attributes = getattr(info, "st_file_attributes", 0)
+                reparse_point = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+                if stat.S_ISLNK(info.st_mode) or attributes & reparse_point:
+                    raise PathSafetyErrorV428("AUDIT_WRITE_SYMLINK_REJECTED")
+                if not stat.S_ISDIR(info.st_mode):
+                    raise PathSafetyErrorV428("AUDIT_WRITE_DIRECTORY_INVALID")
+
+            target = current / parts[-1]
+            try:
+                info = os.lstat(target)
+            except FileNotFoundError:
+                pass
+            else:
+                attributes = getattr(info, "st_file_attributes", 0)
+                reparse_point = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+                if stat.S_ISLNK(info.st_mode) or attributes & reparse_point:
+                    raise PathSafetyErrorV428("AUDIT_WRITE_SYMLINK_REJECTED")
+                if not stat.S_ISREG(info.st_mode):
+                    raise PathSafetyErrorV428("AUDIT_WRITE_OUTPUT_NOT_REGULAR_FILE")
+
+            checked_again = resolve_repository_path_v428(
+                base, checked.relative_to(base).as_posix(), label="AUDIT_WRITE", output_scope=".audit"
+            )
+            if checked_again != checked:
+                raise PathSafetyErrorV428("AUDIT_WRITE_PATH_CHANGED")
+            file_flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+            file_flags |= getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
+            fd = os.open(str(checked_again), file_flags, 0o600)
+            with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as stream:
+                stream.write(text)
+            return
+        except PathSafetyErrorV428:
+            raise
+        except OSError:
+            raise PathSafetyErrorV428("AUDIT_WRITE_FAILED_OR_SYMLINK_REJECTED") from None
+
     directory_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
     file_flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
     current_fd = os.open(str(base), directory_flags)
