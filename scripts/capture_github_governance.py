@@ -63,6 +63,21 @@ def _api(route: str) -> object:
         raise GitHubGovernanceCaptureErrorV428("GITHUB_API_JSON_INVALID") from None
 
 
+def _git_blob_bytes(path: Path, revision: str) -> bytes:
+    """Read committed bytes so Windows newline conversion cannot alter hashes."""
+    try:
+        relative = path.relative_to(ROOT).as_posix()
+        completed = subprocess.run(
+            ["git", "cat-file", "blob", f"{revision}:{relative}"],
+            cwd=ROOT, shell=False, check=False, capture_output=True, timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired, ValueError):
+        raise GitHubGovernanceCaptureErrorV428("GIT_BLOB_READ_FAILED") from None
+    if completed.returncode != 0:
+        raise GitHubGovernanceCaptureErrorV428("GIT_BLOB_READ_FAILED")
+    return completed.stdout
+
+
 def _download(run_id: int, artifact_name: str, repository: str) -> list[tuple[str, bytes]]:
     with tempfile.TemporaryDirectory(prefix="v425-gh-artifact-") as temp:
         dest = Path(temp).resolve()
@@ -128,7 +143,7 @@ def main(argv: list[str] | None = None) -> int:
         parser.error(f"PATH_POLICY_REJECTED:{exc}")
     _run(["gh", "auth", "status"], timeout=20)
     head = _run(["git", "rev-parse", "HEAD"], cwd=ROOT, timeout=10).stdout.strip().lower()
-    workflow_bytes = workflow_path.read_bytes()
+    workflow_bytes = _git_blob_bytes(workflow_path, "HEAD")
     captured_at_ms = args.captured_at_ms if args.captured_at_ms is not None else time.time_ns() // 1_000_000
     try:
         payload = build_github_governance_payload_v428(
