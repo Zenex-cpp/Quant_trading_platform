@@ -241,7 +241,7 @@ def test_v428_scripts_use_fixed_argv_and_do_not_modify_remote_provider_state():
     assert '"gh", "api"' in source
     assert '"gh", "run", "download"' in source
     assert '"gh", "auth", "status"' in source
-    assert "X-GitHub-Api-Version: 2026-03-10" in source
+    assert "X-GitHub-Api-Version: 2022-11-28" in source
     assert "--method", "POST" not in source
     assert "--method", "PATCH" not in source
     assert "--method", "DELETE" not in source
