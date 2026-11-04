@@ -13,7 +13,26 @@ from trading_platform.v429.external_file_safety import (
     write_external_new_file_v429,
 )
 
+POSIX_EXTERNAL_FILE_ACCESS = (
+    os.name == "posix" and hasattr(os, "O_NOFOLLOW") and hasattr(os, "O_DIRECTORY")
+)
+POSIX_FILE_ACCESS_TEST = pytest.mark.skipif(
+    not POSIX_EXTERNAL_FILE_ACCESS,
+    reason="V4.29 strict external file access requires POSIX openat/O_NOFOLLOW primitives",
+)
 
+
+@pytest.mark.skipif(POSIX_EXTERNAL_FILE_ACCESS, reason="requires an unsupported platform")
+def test_v429_external_reader_fails_closed_when_platform_lacks_safe_primitives(tmp_path: Path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    evidence = tmp_path / "evidence.json"
+    evidence.write_text("{}", encoding="utf-8")
+    with pytest.raises(ExternalFileSafetyErrorV429, match="UNSUPPORTED"):
+        read_external_regular_file_v429(root, evidence, label="EVIDENCE", max_bytes=128)
+
+
+@POSIX_FILE_ACCESS_TEST
 def test_v429_external_reader_reads_regular_bounded_file_and_returns_opened_metadata(tmp_path: Path):
     root = tmp_path / "repo"
     root.mkdir()
@@ -30,6 +49,7 @@ def test_v429_external_reader_reads_regular_bounded_file_and_returns_opened_meta
     assert stat.S_ISREG(metadata.st_mode)
 
 
+@POSIX_FILE_ACCESS_TEST
 def test_v429_external_reader_rejects_input_inside_repository(tmp_path: Path):
     root = tmp_path / "repo"
     root.mkdir()
@@ -39,6 +59,7 @@ def test_v429_external_reader_rejects_input_inside_repository(tmp_path: Path):
         read_external_regular_file_v429(root, item, label="EVIDENCE", max_bytes=128)
 
 
+@POSIX_FILE_ACCESS_TEST
 @pytest.mark.parametrize("raw", ["../private.pem", "review/../private.pem", "C:\\keys\\review.pem", "//server/share/key.pem", ""])
 def test_v429_external_reader_rejects_traversal_and_non_posix_paths(tmp_path: Path, raw: str):
     root = tmp_path / "repo"
@@ -47,6 +68,7 @@ def test_v429_external_reader_rejects_traversal_and_non_posix_paths(tmp_path: Pa
         read_external_regular_file_v429(root, raw, label="KEY", max_bytes=128)
 
 
+@POSIX_FILE_ACCESS_TEST
 def test_v429_external_reader_rejects_symlinked_parent_and_final_symlink(tmp_path: Path):
     root = tmp_path / "repo"
     root.mkdir()
@@ -65,6 +87,7 @@ def test_v429_external_reader_rejects_symlinked_parent_and_final_symlink(tmp_pat
         read_external_regular_file_v429(root, final_link, label="KEY", max_bytes=128)
 
 
+@POSIX_FILE_ACCESS_TEST
 def test_v429_external_reader_rejects_non_regular_and_oversized_files(tmp_path: Path):
     root = tmp_path / "repo"
     root.mkdir()
@@ -81,6 +104,7 @@ def test_v429_external_reader_rejects_non_regular_and_oversized_files(tmp_path: 
         read_external_regular_file_v429(root, fifo, label="EVIDENCE", max_bytes=128)
 
 
+@POSIX_FILE_ACCESS_TEST
 def test_v429_output_rejects_symlinked_parent_before_creating_file(tmp_path: Path):
     root = tmp_path / "repo"
     root.mkdir()
@@ -99,6 +123,7 @@ def test_v429_output_rejects_symlinked_parent_before_creating_file(tmp_path: Pat
     assert not (real_parent / "signed.json").exists()
 
 
+@POSIX_FILE_ACCESS_TEST
 def test_v429_output_is_exclusive_mode_0600_and_never_overwrites(tmp_path: Path):
     root = tmp_path / "repo"
     root.mkdir()
@@ -124,6 +149,7 @@ def test_v429_output_is_exclusive_mode_0600_and_never_overwrites(tmp_path: Path)
     assert target.read_text(encoding="utf-8") == '{"signed":true}\n'
 
 
+@POSIX_FILE_ACCESS_TEST
 def test_v429_output_rejects_existing_target_hardlinked_to_protected_input(tmp_path: Path):
     root = tmp_path / "repo"
     root.mkdir()
@@ -148,6 +174,7 @@ def test_v429_output_refuses_unavailable_parent_race_primitives(monkeypatch, tmp
         module.resolve_external_output_v429(tmp_path / "repo", tmp_path / "out.json", label="SIGNED", protected_inputs={})
 
 
+@POSIX_FILE_ACCESS_TEST
 def test_v429_output_revalidates_parent_chain_after_preflight(tmp_path: Path):
     root = tmp_path / "repo"
     root.mkdir()

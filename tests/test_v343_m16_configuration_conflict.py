@@ -114,16 +114,23 @@ def test_configuration_authority_resolved_path_is_live_safe():
 
 def test_configuration_authority_survives_restart():
     import tempfile
-    with tempfile.NamedTemporaryFile(suffix=".sqlite") as f:
-        first = ConfigurationAuthorityLedger(__import__('trading_platform.v21.event_store', fromlist=['EventStore']).EventStore(f.name))
-        record, _ = first.record(
-            resolution_id="cfg-restart-1", config_name="max_position", values=resolved_values(),
-            valid_from=NOW, expires_at=NOW + timedelta(minutes=5), recorded_at_ms=3,
-        )
-        second = ConfigurationAuthorityLedger(__import__('trading_platform.v21.event_store', fromlist=['EventStore']).EventStore(f.name))
-        restored = second.get(record.resolution_id)
-        assert restored is not None
-        assert restored.fingerprint == record.fingerprint
+    from pathlib import Path
+    from trading_platform.v21.event_store import EventStore
+
+    with tempfile.TemporaryDirectory() as directory:
+        database_path = str(Path(directory) / "configuration.sqlite")
+        with EventStore(database_path) as store:
+            first = ConfigurationAuthorityLedger(store)
+            record, _ = first.record(
+                resolution_id="cfg-restart-1", config_name="max_position", values=resolved_values(),
+                valid_from=NOW, expires_at=NOW + timedelta(minutes=5), recorded_at_ms=3,
+            )
+
+        with EventStore(database_path) as store:
+            second = ConfigurationAuthorityLedger(store)
+            restored = second.get(record.resolution_id)
+            assert restored is not None
+            assert restored.fingerprint == record.fingerprint
 
 def test_execution_router_blocks_live_order_on_config_conflict():
     intent = OrderIntent(

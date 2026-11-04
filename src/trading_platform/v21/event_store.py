@@ -65,6 +65,16 @@ class EventStore:
         """)
         self._db.commit()
 
+    def close(self) -> None:
+        """Close the SQLite connection so the store can be cleanly reopened."""
+        self._db.close()
+
+    def __enter__(self) -> "EventStore":
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        self.close()
+
     def append(self, *, event_id: str, occurred_at_ms: int, event_type: str,
                aggregate_id: str, payload: Mapping[str, Any]) -> AppendResult:
         existing = self._db.execute(

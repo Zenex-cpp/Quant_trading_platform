@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 from hashlib import sha256
 from pathlib import Path
 import subprocess
@@ -26,6 +27,13 @@ from trading_platform.v425.github_capture import (
 )
 
 REPO = "acme/trading-platform"
+POSIX_SIGNER_SUPPORTED = (
+    os.name == "posix" and hasattr(os, "O_NOFOLLOW") and hasattr(os, "O_DIRECTORY")
+)
+POSIX_SIGNER_TEST = pytest.mark.skipif(
+    not POSIX_SIGNER_SUPPORTED,
+    reason="strict external signer requires POSIX openat/O_NOFOLLOW primitives",
+)
 BRANCH = "main"
 HEAD = "a" * 40
 NOW = 1_850_000_000_000
@@ -76,7 +84,9 @@ def _fixtures(workflow_bytes: bytes, *, job_conclusion="success", codeowners=COD
 
 
 def _payload(*, job_conclusion="success", codeowners=CODEOWNERS, rulesets=None, workflow_head=HEAD):
-    workflow = (ROOT / ".github/workflows/ci.yml").read_bytes()
+    # Model the canonical Git blob returned by GitHub. Windows checkouts may
+    # use CRLF locally even though the repository blob is LF-normalized.
+    workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8").encode("utf-8")
     routes = _fixtures(workflow, job_conclusion=job_conclusion, codeowners=codeowners, rulesets=rulesets, workflow_head=workflow_head)
     queried = []
     def api(route):
@@ -211,6 +221,7 @@ def test_v425_signed_capture_payload_is_accepted_only_with_v24_trust_contract():
     assert decision.allowed
 
 
+@POSIX_SIGNER_TEST
 def test_v425_signer_requires_external_key_path_and_signs_metadata(tmp_path):
     private = Ed25519PrivateKey.generate()
     private_path = tmp_path / "review-key.pem"
@@ -287,6 +298,7 @@ def test_v425_reads_inherited_organization_ruleset_from_organization_endpoint():
     assert payload["branch_protection"]["bypass_actors"] == []
 
 
+@POSIX_SIGNER_TEST
 def test_v425_signer_rejects_overly_open_external_private_key(tmp_path):
     private = Ed25519PrivateKey.generate()
     private_path = tmp_path / "insecure-review-key.pem"
