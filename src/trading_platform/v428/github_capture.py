@@ -337,6 +337,11 @@ def build_github_governance_payload_v428(
         merge_sha = str(pr.get("merge_commit_sha", "")).lower()
         if merge_sha != commit_sha:
             continue
+        merged_at = pr.get("merged_at")
+        merged_by = pr.get("merged_by")
+        if merged_at and isinstance(merged_by, Mapping):
+            merge_actor_values.append(merged_by.get("id"))
+            continue
         try:
             pr_number = int(pr.get("number", 0))
         except (TypeError, ValueError):
