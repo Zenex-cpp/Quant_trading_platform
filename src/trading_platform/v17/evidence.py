@@ -1,4 +1,5 @@
 from __future__ import annotations
+from contextlib import closing
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -50,7 +51,7 @@ class DurableEvidenceStore:
         self._init_db()
 
     def _init_db(self) -> None:
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db:
             db.execute('''CREATE TABLE IF NOT EXISTS evidence (
                 evidence_id TEXT PRIMARY KEY,
                 scenario_id TEXT NOT NULL,
@@ -73,7 +74,7 @@ class DurableEvidenceStore:
     def append(self, artifact: EvidenceArtifact) -> EvidenceArtifact:
         if artifact.artifact_hash is None:
             artifact = artifact.sealed()
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db:
             row = db.execute('SELECT payload, artifact_hash FROM evidence WHERE evidence_id=?', (artifact.evidence_id,)).fetchone()
             payload = artifact.canonical_body()
             if row:
@@ -88,7 +89,7 @@ class DurableEvidenceStore:
 
     def verify(self) -> tuple[str, ...]:
         failures=[]
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db:
             for evidence_id, payload, artifact_hash in db.execute('SELECT evidence_id,payload,artifact_hash FROM evidence'):
                 if hashlib.sha256(payload).hexdigest() != artifact_hash:
                     failures.append(evidence_id)

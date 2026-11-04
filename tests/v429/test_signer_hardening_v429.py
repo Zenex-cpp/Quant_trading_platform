@@ -7,10 +7,19 @@ from pathlib import Path
 import subprocess
 import sys
 
+import pytest
+
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 ROOT = Path(__file__).resolve().parents[2]
+POSIX_SIGNING_SUPPORTED = (
+    os.name == "posix" and hasattr(os, "O_NOFOLLOW") and hasattr(os, "O_DIRECTORY")
+)
+POSIX_SIGNING_TEST = pytest.mark.skipif(
+    not POSIX_SIGNING_SUPPORTED,
+    reason="V4.29 strict signer requires POSIX openat/O_NOFOLLOW primitives",
+)
 
 
 def _payload() -> dict:
@@ -48,6 +57,7 @@ def _run(evidence: Path, key: Path, output: Path, *, now: int = 1_850_000_010_00
     )
 
 
+@POSIX_SIGNING_TEST
 def test_v429_signer_rejects_key_in_symlinked_parent_before_signing(tmp_path: Path):
     review = tmp_path / "review"
     review.mkdir(mode=0o700)
@@ -65,6 +75,7 @@ def test_v429_signer_rejects_key_in_symlinked_parent_before_signing(tmp_path: Pa
     assert not output.exists()
 
 
+@POSIX_SIGNING_TEST
 def test_v429_signer_rejects_evidence_in_symlinked_parent(tmp_path: Path):
     review = tmp_path / "review"
     review.mkdir(mode=0o700)
@@ -82,6 +93,7 @@ def test_v429_signer_rejects_evidence_in_symlinked_parent(tmp_path: Path):
     assert not output.exists()
 
 
+@POSIX_SIGNING_TEST
 def test_v429_signer_never_overwrites_existing_output(tmp_path: Path):
     key = tmp_path / "key.pem"
     _key_file(key)
@@ -96,6 +108,7 @@ def test_v429_signer_never_overwrites_existing_output(tmp_path: Path):
     assert output.read_text(encoding="utf-8") == "preserve-original\n"
 
 
+@POSIX_SIGNING_TEST
 def test_v429_signer_success_creates_exclusive_output_mode_0600_and_valid_signature(tmp_path: Path):
     key = tmp_path / "key.pem"
     private = _key_file(key)
@@ -113,6 +126,7 @@ def test_v429_signer_success_creates_exclusive_output_mode_0600_and_valid_signat
     public.verify(signature, canonical_json({"payload": signed, "attestation": attestation}))
 
 
+@POSIX_SIGNING_TEST
 def test_v429_signer_bounds_unsigned_evidence_before_json_parse(tmp_path: Path):
     key = tmp_path / "key.pem"
     _key_file(key)
@@ -122,4 +136,25 @@ def test_v429_signer_bounds_unsigned_evidence_before_json_parse(tmp_path: Path):
     result = _run(evidence, key, output)
     assert result.returncode != 0
     assert "EVIDENCE_FILE_SIZE_LIMIT_EXCEEDED" in result.stderr
+    assert not output.exists()
+
+
+@pytest.mark.skipif(POSIX_SIGNING_SUPPORTED, reason="supported POSIX signer is covered above")
+def test_v429_signer_fails_closed_when_platform_lacks_safe_primitives(tmp_path: Path, capsys):
+    key = tmp_path / "key.pem"
+    _key_file(key)
+    evidence = tmp_path / "unsigned.json"
+    evidence.write_text(json.dumps(_payload()), encoding="utf-8")
+    output = tmp_path / "signed.json"
+
+    from scripts.sign_github_governance_evidence import main as signer_main
+
+    with pytest.raises(SystemExit) as error:
+        signer_main([
+            "--evidence", str(evidence), "--private-key-pem", str(key),
+            "--key-id", "independent-key-1", "--signer-id", "independent-reviewer-1",
+            "--output", str(output), "--now-ms", "1850000010000",
+        ])
+    assert error.value.code == 2
+    assert "STRICT_EXTERNAL_FILE_ACCESS_UNSUPPORTED_ON_THIS_PLATFORM" in capsys.readouterr().err
     assert not output.exists()

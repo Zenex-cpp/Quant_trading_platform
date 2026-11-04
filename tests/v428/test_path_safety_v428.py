@@ -21,6 +21,13 @@ from trading_platform.v428.path_safety import (
 )
 
 
+def _symlink_or_skip(link: Path, target: Path, *, target_is_directory: bool = False) -> None:
+    try:
+        link.symlink_to(target, target_is_directory=target_is_directory)
+    except (OSError, NotImplementedError) as exc:
+        pytest.skip(f"symlink creation is unavailable in this environment: {exc}")
+
+
 def test_v428_repository_relative_paths_accept_regular_internal_file(tmp_path: Path):
     root = tmp_path / "repo"
     (root / ".audit").mkdir(parents=True)
@@ -43,8 +50,8 @@ def test_v428_resolver_rejects_symlink_component_and_broken_symlink(tmp_path: Pa
     outside = tmp_path / "outside"
     outside.mkdir()
     (outside / "payload.json").write_text("secret", encoding="utf-8")
-    (root / "linked-dir").symlink_to(outside, target_is_directory=True)
-    (root / "broken-link").symlink_to(outside / "missing.json")
+    _symlink_or_skip(root / "linked-dir", outside, target_is_directory=True)
+    _symlink_or_skip(root / "broken-link", outside / "missing.json")
     with pytest.raises(PathSafetyErrorV428, match="SYMLINK"):
         resolve_repository_path_v428(root, "linked-dir/payload.json", label="INPUT")
     with pytest.raises(PathSafetyErrorV428, match="SYMLINK"):
@@ -71,7 +78,7 @@ def test_v428_audit_writer_refuses_symlinked_final_component(tmp_path: Path):
     (root / ".audit").mkdir(parents=True)
     outside = tmp_path / "outside.txt"
     outside.write_text("do not overwrite", encoding="utf-8")
-    (root / ".audit/report.json").symlink_to(outside)
+    _symlink_or_skip(root / ".audit/report.json", outside)
     with pytest.raises(PathSafetyErrorV428):
         write_audit_text_v428(root, root / ".audit/report.json", "tampered")
     assert outside.read_text(encoding="utf-8") == "do not overwrite"
@@ -150,7 +157,7 @@ def test_v428_external_writer_refuses_final_symlink(tmp_path: Path):
     target = tmp_path / "real.json"
     target.write_text("preserve", encoding="utf-8")
     link = tmp_path / "signed.json"
-    link.symlink_to(target)
+    _symlink_or_skip(link, target)
     from trading_platform.v428.path_safety import write_external_text_v428
     with pytest.raises(PathSafetyErrorV428, match="SYMLINK"):
         write_external_text_v428(link, "overwrite")

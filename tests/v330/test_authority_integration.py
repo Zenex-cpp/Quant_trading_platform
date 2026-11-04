@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 from datetime import datetime, timezone, timedelta
+from pathlib import Path
 import pytest
 
 from trading_platform.v21.event_store import EventStore
@@ -71,12 +72,18 @@ def test_holdout_access_without_context_fails_closed():
 def test_holdout_violation_survives_restart():
     import tempfile
     with tempfile.TemporaryDirectory() as d:
-        path=d+'/events.db'
-        s=EventStore(path); ctx=auth_for(store=s); HoldoutPolicy('H1')
-        with pytest.raises(PermissionError):
-            HoldoutPolicy('H1').authorize(Workflow.TUNING, context=ctx, access_id='ACCESS-3', actor='research', attempted_at_ms=4)
-        restored=EventStore(path); ledger=DependencyInvalidationLedger(restored)
-        with pytest.raises(DependencyInvalidationBlocked): ledger.assert_clear(('H1','EV1','G1','C1','B1'))
+        path = str(Path(d) / 'events.db')
+        with EventStore(path) as store:
+            ctx = auth_for(store=store)
+            HoldoutPolicy('H1')
+            with pytest.raises(PermissionError):
+                HoldoutPolicy('H1').authorize(
+                    Workflow.TUNING, context=ctx, access_id='ACCESS-3', actor='research', attempted_at_ms=4
+                )
+        with EventStore(path) as restored:
+            ledger = DependencyInvalidationLedger(restored)
+            with pytest.raises(DependencyInvalidationBlocked):
+                ledger.assert_clear(('H1', 'EV1', 'G1', 'C1', 'B1'))
 
 
 def deployment_request(store=None, authorize_snapshot=True):

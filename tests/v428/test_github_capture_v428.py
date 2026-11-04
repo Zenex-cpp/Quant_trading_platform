@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 from hashlib import sha256
 from pathlib import Path
 import subprocess
@@ -15,6 +16,14 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "src"
 sys.path.insert(0, str(SRC))
+
+POSIX_SIGNER_SUPPORTED = (
+    os.name == "posix" and hasattr(os, "O_NOFOLLOW") and hasattr(os, "O_DIRECTORY")
+)
+POSIX_SIGNER_TEST = pytest.mark.skipif(
+    not POSIX_SIGNER_SUPPORTED,
+    reason="strict external signer requires POSIX openat/O_NOFOLLOW primitives",
+)
 
 from trading_platform.v21.event_store import EventStore, canonical_json
 from trading_platform.v428.repository_governance import RemoteRepositoryGovernanceEvidenceAuthorityV428
@@ -30,6 +39,12 @@ BRANCH = "main"
 HEAD = "a" * 40
 NOW = 1_850_000_000_000
 CODEOWNERS = b"/.github/CODEOWNERS @acme/platform-maintainers\n* @configured-maintainers\n"
+
+
+def _workflow_bytes() -> bytes:
+    # GitHub serves the canonical LF-normalized blob even when a Windows
+    # checkout materializes the working-tree file with CRLF line endings.
+    return (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8").encode("utf-8")
 
 
 def _file(path: str, body: bytes):
@@ -76,7 +91,7 @@ def _fixtures(workflow_bytes: bytes, *, job_conclusion="success", codeowners=COD
 
 
 def _payload(*, job_conclusion="success", codeowners=CODEOWNERS, rulesets=None, workflow_head=HEAD):
-    workflow = (ROOT / ".github/workflows/ci.yml").read_bytes()
+    workflow = _workflow_bytes()
     routes = _fixtures(workflow, job_conclusion=job_conclusion, codeowners=codeowners, rulesets=rulesets, workflow_head=workflow_head)
     queried = []
     def api(route):
@@ -112,7 +127,7 @@ def test_v428_capture_builds_provider_payload_from_realistic_read_only_responses
 
 
 def test_v428_rejects_local_checkout_that_does_not_match_protected_remote_head():
-    workflow = (ROOT / ".github/workflows/ci.yml").read_bytes()
+    workflow = _workflow_bytes()
     routes = _fixtures(workflow)
     with pytest.raises(GitHubGovernanceCaptureErrorV428, match="LOCAL_CHECKOUT_DOES_NOT_MATCH_REMOTE_PROTECTED_HEAD"):
         build_github_governance_payload_v428(
@@ -123,7 +138,7 @@ def test_v428_rejects_local_checkout_that_does_not_match_protected_remote_head()
 
 
 def test_v428_refuses_failed_or_missing_required_hosted_job():
-    workflow = (ROOT / ".github/workflows/ci.yml").read_bytes()
+    workflow = _workflow_bytes()
     routes = _fixtures(workflow, job_conclusion="failure")
     with pytest.raises(GitHubGovernanceCaptureErrorV428, match="REQUIRED_HOSTED_JOB_NOT_SUCCESSFUL"):
         build_github_governance_payload_v428(
@@ -134,7 +149,7 @@ def test_v428_refuses_failed_or_missing_required_hosted_job():
 
 
 def test_v428_refuses_missing_codeowners_self_ownership_rule():
-    workflow = (ROOT / ".github/workflows/ci.yml").read_bytes()
+    workflow = _workflow_bytes()
     routes = _fixtures(workflow, codeowners=b"* @configured-maintainers\n")
     with pytest.raises(GitHubGovernanceCaptureErrorV428, match="CODEOWNERS_SELF_OWNERSHIP_RULE_REQUIRED"):
         build_github_governance_payload_v428(
@@ -145,7 +160,7 @@ def test_v428_refuses_missing_codeowners_self_ownership_rule():
 
 
 def test_v428_conservatively_captures_active_ruleset_bypass_actors():
-    workflow = (ROOT / ".github/workflows/ci.yml").read_bytes()
+    workflow = _workflow_bytes()
     ruleset = {"id": 77, "enforcement": "active", "details": {"id": 77, "bypass_actors": [{"actor_id": 99, "actor_type": "Team", "bypass_mode": "always"}]}}
     routes = _fixtures(workflow, rulesets=[ruleset])
     routes["repos/acme/trading-platform/rulesets/77"] = ruleset["details"]
@@ -161,7 +176,7 @@ def test_v428_conservatively_captures_active_ruleset_bypass_actors():
 
 
 def test_v428_refuses_artifacts_with_missing_or_duplicate_preflight_files():
-    workflow = (ROOT / ".github/workflows/ci.yml").read_bytes()
+    workflow = _workflow_bytes()
     routes = _fixtures(workflow)
     with pytest.raises(GitHubGovernanceCaptureErrorV428, match="REQUIRED_PREFLIGHT_ARTIFACT_FILES_MISSING"):
         build_github_governance_payload_v428(
@@ -211,6 +226,7 @@ def test_v428_signed_capture_payload_is_accepted_only_with_v24_trust_contract():
     assert decision.allowed
 
 
+@POSIX_SIGNER_TEST
 def test_v428_signer_requires_external_key_path_and_signs_metadata(tmp_path):
     private = Ed25519PrivateKey.generate()
     private_path = tmp_path / "review-key.pem"
@@ -287,6 +303,7 @@ def test_v428_reads_inherited_organization_ruleset_from_organization_endpoint():
     assert payload["branch_protection"]["bypass_actors"] == []
 
 
+@POSIX_SIGNER_TEST
 def test_v428_signer_rejects_overly_open_external_private_key(tmp_path):
     private = Ed25519PrivateKey.generate()
     private_path = tmp_path / "insecure-review-key.pem"
