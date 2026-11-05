@@ -11,7 +11,7 @@ The current repository is a recovery extension based on the available V4.28 reco
 - The follow-up hardens chronological label purging at every split boundary and makes the offline §178 acceptance gate require real SQLite recovery, failure-injection, and deployment-rollback proofs. The E2E run uses training labels only and leaves final-holdout targets untouched.
 - Holdout incidents are reconciled from the durable event store at context startup, so an interrupted invalidation is completed before dependents can be used.
 - M16 configuration authority is enforced at final Testnet dispatch and deployment activation. Resolution ID, fingerprint, status and expiry are checked against the durable ledger; failures stop dispatch or activation before the external action.
-- Latest hosted baseline on main, PR #14: **1,191 passed, 2 skipped**, `RELEASE_HYGIENE=PASS` ([run 42039306544](https://github.com/Zenex-cpp/Quant_trading_platform/actions/runs/42039306544)).
+- Hosted regression for the previous main before this remediation, PR #14: **1,191 passed, 2 skipped**, `RELEASE_HYGIENE=PASS` ([run 42039306544](https://github.com/Zenex-cpp/Quant_trading_platform/actions/runs/42039306544)).
 - Current Windows/Python 3.14.7 validation: **1,174 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`. POSIX-only signer checks remain enabled in Linux CI; symlink checks skip only when the host cannot create symlinks.
 - Validation does not execute exchange orders or certify production readiness. `external_evidence=false`, `activation_flag=NOT_SET`, and `production_ready=false` remain in force.
 
