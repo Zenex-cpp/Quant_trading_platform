@@ -31,6 +31,7 @@ def validate_workflow_contract_v429(text: str) -> tuple[str, ...]:
         "WORKFLOW_BASELINE_HASH_FILE_MISSING": "V428_BASELINE_ARCHIVE_SHA256.txt",
         "WORKFLOW_PATH_HARDENING_CONTROLS_MISSING": "REPO-GOV-PATH-03",
         "WORKFLOW_EXCLUSIVE_OUTPUT_CONTROL_MISSING": "REPO-GOV-PATH-04",
+        "WORKFLOW_M1_IMPACT_MISSING": "--impacted-requirement M1",
     }
     for reason, needle in required.items():
         if needle not in normalized:

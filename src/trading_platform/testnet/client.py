@@ -3,6 +3,7 @@ import hashlib, hmac, time
 from dataclasses import dataclass
 from typing import Any, Mapping, Protocol
 from urllib.parse import urlencode
+from trading_platform.ops.network_policy import TESTNET_POLICY
 
 class HttpTransport(Protocol):
     def request(self, method: str, url: str, *, headers: Mapping[str,str] | None = None, params: Mapping[str,str] | None = None) -> Mapping[str,Any]: ...
@@ -25,6 +26,7 @@ class TestnetClientConfig:
             raise ValueError("SECRET_REFERENCE_REQUIRED")
         if self.recv_window_ms <= 0:
             raise ValueError("INVALID_RECV_WINDOW")
+        TESTNET_POLICY.assert_allowed(self.base_url)
 
 class BinanceTestnetSigner:
     @staticmethod

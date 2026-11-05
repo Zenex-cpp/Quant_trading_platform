@@ -9,16 +9,16 @@ def test_runner_requires_testnet_and_tls():
         RunnerConfig("http://testnet.invalid", None).validate()
     with pytest.raises(ValueError, match="MAINNET_HOST_BLOCKED"):
         RunnerConfig("https://fapi.binance.com", None).validate()
-    RunnerConfig("https://testnet.invalid", None).validate()
+    RunnerConfig("https://testnet.binancefuture.com", None).validate()
 
 
 def test_ws_mainnet_is_blocked():
     with pytest.raises(ValueError, match="MAINNET_WS_HOST_BLOCKED"):
-        RunnerConfig("https://testnet.invalid", "wss://ws-fapi.binance.com/ws").validate()
+        RunnerConfig("https://testnet.binancefuture.com", "wss://ws-fapi.binance.com/ws").validate()
 
 
 def test_result_hash_is_deterministic():
-    r = ScenarioResult("TN-03", "order", ScenarioStatus.PASS, "t1", "t2", "TESTNET", "https://testnet.invalid/fapi/v1/order", "req1", "abc", ("ok",), ("x=PASS",))
+    r = ScenarioResult("TN-03", "order", ScenarioStatus.PASS, "t1", "t2", "TESTNET", "https://testnet.binancefuture.com/fapi/v1/order", "req1", "abc", ("ok",), ("x=PASS",))
     assert len(r.artifact_hash) == 64
     assert r.artifact_hash == r.artifact_hash
 

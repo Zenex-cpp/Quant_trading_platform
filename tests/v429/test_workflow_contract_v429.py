@@ -16,13 +16,16 @@ def test_v429_ci_workflow_contract_passes_and_preserves_capture_artifact_compati
     assert validate_workflow_contract_v428(text) == ()
     assert "V428_MILESTONE_PREFLIGHT.json" in text
     assert "V428_MILESTONE_PREFLIGHT.sqlite3" in text
+    assert "--impacted-requirement M1" in text
 
 
 def test_v429_workflow_contract_rejects_legacy_entrypoint_or_warn_only_artifacts():
     text = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
     altered = text.replace("scripts/run_milestone_validation_v429.py", "scripts/run_milestone_validation.py")
     altered = altered.replace("if-no-files-found: error", "if-no-files-found: warn")
+    altered = altered.replace("--impacted-requirement M1", "--impacted-requirement M2")
     blockers = set(validate_workflow_contract_v429(altered))
     assert "WORKFLOW_CONTROLLED_ENTRYPOINT_MISSING" in blockers
     assert "WORKFLOW_ENTRYPOINT_INVOCATION_MISSING" in blockers
     assert "WORKFLOW_AUDIT_ARTIFACT_MISSING_MUST_FAIL" in blockers
+    assert "WORKFLOW_M1_IMPACT_MISSING" in blockers

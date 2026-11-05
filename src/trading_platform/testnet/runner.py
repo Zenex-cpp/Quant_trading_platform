@@ -8,6 +8,8 @@ import json, os, hashlib, urllib.request, urllib.parse
 from .client import BinanceTestnetClient, TestnetClientConfig
 from .evidence import TestnetEvidence, EvidenceStatus
 from .scenarios import SCENARIOS, ScenarioStatus
+from .read_only import normalize_read_only_request
+from trading_platform.ops.network_policy import TESTNET_POLICY
 
 class Transport(Protocol):
     def request(self, method: str, url: str, *, headers: Mapping[str, str] | None = None, params: Mapping[str, str] | None = None) -> Mapping[str, Any]: ...
@@ -45,11 +47,13 @@ class RunnerConfig:
             raise ValueError("TLS_REQUIRED")
         if "binance.com" in self.base_url and "testnet" not in self.base_url:
             raise ValueError("MAINNET_HOST_BLOCKED")
+        TESTNET_POLICY.assert_allowed(self.base_url)
         if self.websocket_url:
             if not self.websocket_url.startswith("wss://"):
                 raise ValueError("WEBSOCKET_TLS_REQUIRED")
             if "binance.com" in self.websocket_url and "testnet" not in self.websocket_url:
                 raise ValueError("MAINNET_WS_HOST_BLOCKED")
+            TESTNET_POLICY.assert_allowed(self.websocket_url)
         if not self.symbol or not self.symbol.isalnum():
             raise ValueError("INVALID_SYMBOL")
 
@@ -97,6 +101,7 @@ class LiveTestnetEvidenceRunner:
         (self.config.evidence_dir / f"{result.scenario_id}.sha256").write_text(result.artifact_hash + "  " + p.name + "\n")
 
     def run_signed_query(self, *, scenario_id: str, name: str, method: str, path: str, params: Mapping[str, str], request_ref: str) -> ScenarioResult:
+        method = normalize_read_only_request(method, path)
         started = datetime.now(timezone.utc).isoformat()
         status = ScenarioStatus.PASS
         failure = None

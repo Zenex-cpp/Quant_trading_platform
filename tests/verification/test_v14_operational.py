@@ -17,13 +17,13 @@ def test_session_requires_tls():
         SessionConfig(base_url='http://testnet.example').validate()
 
 def test_network_execution_is_explicit():
-    cfg=SessionConfig(base_url='https://testnet.example')
+    cfg=SessionConfig(base_url='https://testnet.binancefuture.com')
     s=LiveTestnetSession(cfg, api_key='K', secret=b'S', transport=DummyTransport())
     with pytest.raises(RuntimeError, match='NETWORK_EXECUTION_NOT_ENABLED'):
         READ_ONLY_PLAN.execute(s)
 
 def test_read_only_plan_produces_hashed_evidence(tmp_path):
-    cfg=SessionConfig(base_url='https://testnet.example', evidence_dir=tmp_path)
+    cfg=SessionConfig(base_url='https://testnet.binancefuture.com', evidence_dir=tmp_path)
     s=LiveTestnetSession(cfg, api_key='K', secret=b'S', transport=DummyTransport())
     results=READ_ONLY_PLAN.execute(s, allow_network=True)
     assert [r.scenario_id for r in results]==['TN-01','TN-02']
