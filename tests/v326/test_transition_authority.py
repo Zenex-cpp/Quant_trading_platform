@@ -17,6 +17,8 @@ from tests._m18_helpers import authorize_evidence_snapshot
 from trading_platform.v28.deployment import DeploymentOrchestrator, DeploymentPhase, DeploymentRequest
 from trading_platform.v28.deployment_authority import ActivationCapabilityError
 from trading_platform.v30.truth import AxisSnapshot, TruthComponent, TruthStatus, build_truth
+from trading_platform.portfolio.config import ConfigValue, Precedence
+from trading_platform.v343.config_authority import ConfigurationAuthorityLedger
 from trading_platform.v324.recovery_proof import RecoveryProofLedger
 from trading_platform.v325.deployment_activation import DeploymentActivationLedger, AuthorizedDeploymentController
 from trading_platform.v329.dependency_authority import DependencyInvalidationLedger
@@ -47,10 +49,21 @@ def gates():
     return GateSummary(("G1",), ("G1",), ())
 
 
-def truth():
+def truth(store: EventStore | None = None):
     axes = AxisSnapshot("APPROVED", "CANARY", "HEALTHY", "APPROVED", "ACTIVE", "CHALLENGER")
     components = tuple(TruthComponent(name, TruthStatus.VERIFIED, "OK", (f"E-{name}",)) for name in ("health", "provenance", "governance", "reconciliation", "accounting", "ledger"))
-    return build_truth(observed_at_ns=1, axes=axes, components=components, requested_risk=Decimal("10"), caps={k: Decimal("100") for k in ("health_cap", "deployment_cap", "accounting_cap", "reconciliation_cap", "provenance_cap", "operator_cap")})
+    values = (ConfigValue("activation_limit", Decimal("100"), Precedence.RUNTIME, "test-runtime", "v1"),)
+    configuration, _ = ConfigurationAuthorityLedger(store).record(
+        resolution_id="activation-test-config", config_name="activation_limit", values=values,
+        valid_from=NOW - timedelta(minutes=1), expires_at=NOW + timedelta(minutes=30),
+        operator="test", recorded_at_ms=1,
+    )
+    return build_truth(
+        observed_at_ns=1, axes=axes, components=components, requested_risk=Decimal("10"),
+        caps={k: Decimal("100") for k in ("health_cap", "deployment_cap", "accounting_cap", "reconciliation_cap", "provenance_cap", "operator_cap")},
+        configuration_fingerprint=configuration.candidates_fingerprint,
+        configuration_resolution_id=configuration.resolution_id,
+    )
 
 
 def promotion_fp():
@@ -75,7 +88,7 @@ def build_authorized(tmp_path: Path):
     activation, _ = DeploymentActivationLedger.authorize(
         deployment_id="D1", bundle=bundle(), approval=approval(), gates=gates(), scope=ScopeCheck(True, "ok"),
         evidence_valid=True, compatibility_valid=True, artifacts_integrity=True, readiness=readiness(), target_mode=OperationalMode.CANARY,
-        proof_ledger=proof_ledger, proof_id=proof.proof_id, current_state_fingerprint="state-1", truth=truth(),
+        proof_ledger=proof_ledger, proof_id=proof.proof_id, current_state_fingerprint="state-1", truth=truth(store),
         requested_risk=Decimal("10"), canary_exposure=Decimal("100"), runtime_state=runtime,
         rollout_policy=RolloutPolicy(Decimal("10"), Decimal("100")), operator="operator", decision_id="DDEC1",
         now=NOW, recorded_at_ms=2000, store=store, reconciliation_authorization_id=recon.authorization_id,

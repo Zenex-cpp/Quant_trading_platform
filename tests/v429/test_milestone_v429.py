@@ -57,7 +57,11 @@ def test_v429_m16_matrix_points_to_live_configuration_conflict_evidence():
     m16 = rows["M16"]
     assert m16["implementation_status"] == "TESTED"
     assert "src/trading_platform/v343/config_authority.py" in m16["code_reference"]
+    assert "src/trading_platform/v312/execution_runtime.py" in m16["code_reference"]
+    assert "src/trading_platform/v325/deployment_activation.py" in m16["code_reference"]
     assert "src/trading_platform/v31/authority.py" in m16["code_reference"]
     assert "tests/test_v343_m16_configuration_conflict.py" in m16["test_reference"]
-    assert m16["evidence_reference"] == "V343_VERIFICATION_REPORT.md"
+    assert "tests/v312/test_execution_runtime.py" in m16["test_reference"]
+    assert "tests/v325/test_deployment_activation.py" in m16["test_reference"]
+    assert m16["evidence_reference"] == "V429_M16_REMEDIATION_REPORT.md"
     assert "Independent" in m16["unresolved_gap"]

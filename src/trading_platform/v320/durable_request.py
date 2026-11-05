@@ -69,6 +69,8 @@ class DurableOrderRequestLedger:
                 "requested_risk": str(authority.requested_risk),
                 "observed_at_ns": authority.observed_at_ns,
                 "input_fingerprint": authority.input_fingerprint,
+                "configuration_resolution_id": authority.configuration_resolution_id,
+                "configuration_fingerprint": authority.configuration_fingerprint,
             },
             "request": {
                 "order_request_id": request.order_request_id,
@@ -255,6 +257,8 @@ class DurableOrderRequestLedger:
                 requested_risk=Decimal(str(a["requested_risk"])),
                 observed_at_ns=int(a["observed_at_ns"]),
                 input_fingerprint=str(a["input_fingerprint"]),
+                configuration_resolution_id=str(a.get("configuration_resolution_id", "")),
+                configuration_fingerprint=str(a.get("configuration_fingerprint", "")),
             )
             request = OrderRequest(
                 order_request_id=str(r["order_request_id"]),

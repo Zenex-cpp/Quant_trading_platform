@@ -30,6 +30,7 @@ from trading_platform.v334.champion_authority import ChampionGateAuthorityLedger
 from trading_platform.v340.reconciliation_authority import ReconciliationAuthorityLedger, ReconciliationAuthorityError
 from trading_platform.v341.compatibility_authority import CompatibilityAuthorityLedger, CompatibilityAuthorityError
 from trading_platform.v342.artifact_integrity import ArtifactIntegrityAuthorityLedger, ArtifactIntegrityAuthorityError
+from trading_platform.v343.config_authority import ConfigurationAuthorityLedger, ConfigurationAuthorityError
 from trading_platform.v346.promotion_bundle_authority import PromotionBundleAuthorityLedger, PromotionBundleAuthorityError
 from trading_platform.v355.recovery_readiness import RecoveryReadinessLedger, RecoveryReadinessAuthorityError
 from trading_platform.v359.human_review import HumanReviewAuthorityLedger, HumanReviewAuthorityError
@@ -67,6 +68,8 @@ class DeploymentActivationRecord:
     recovery_readiness_fingerprint: str
     promotion_fingerprint: str
     truth_hash: str
+    configuration_resolution_id: str
+    configuration_fingerprint: str
     authority_decision_id: str
     authority_reason: str
     requested_risk: Decimal
@@ -182,6 +185,8 @@ class DeploymentActivationLedger:
             "recovery_readiness_fingerprint": record.recovery_readiness_fingerprint,
             "promotion_fingerprint": record.promotion_fingerprint,
             "truth_hash": record.truth_hash,
+            "configuration_resolution_id": record.configuration_resolution_id,
+            "configuration_fingerprint": record.configuration_fingerprint,
             "authority_decision_id": record.authority_decision_id,
             "authority_reason": record.authority_reason,
             "requested_risk": str(record.requested_risk),
@@ -334,6 +339,18 @@ class DeploymentActivationLedger:
             evidence_valid=evidence_valid, compatibility_valid=compatibility_valid,
             artifacts_integrity=artifacts_integrity,
         )
+        if truth.configuration_status.value != "RESOLVED":
+            raise ActivationInvalid("CONFIGURATION_AUTHORITY_BLOCKED:CONFIG_CONFLICT")
+        if not truth.configuration_resolution_id or not truth.configuration_fingerprint:
+            raise ActivationInvalid("CONFIGURATION_AUTHORITY_REQUIRED")
+        try:
+            configuration = ConfigurationAuthorityLedger(store).assert_live_safe(
+                truth.configuration_resolution_id,
+                now=now,
+                expected_candidates_fingerprint=truth.configuration_fingerprint,
+            )
+        except ConfigurationAuthorityError as exc:
+            raise ActivationInvalid(f"CONFIGURATION_AUTHORITY_BLOCKED:{exc}") from exc
         runtime_authority = authority or RuntimeAuthority()
         deployment_decision = runtime_authority.evaluate(
             truth=truth,
@@ -437,6 +454,8 @@ class DeploymentActivationLedger:
             recovery_readiness_fingerprint=readiness_auth.fingerprint,
             promotion_fingerprint=promo_fp,
             truth_hash=truth.state_hash,
+            configuration_resolution_id=configuration.resolution_id,
+            configuration_fingerprint=configuration.candidates_fingerprint,
             authority_decision_id=deployment_decision.decision_id,
             authority_reason=deployment_decision.reason,
             requested_risk=requested_risk,
@@ -465,6 +484,11 @@ class DeploymentActivationLedger:
                 raise ActivationInvalid("ACTIVATION_EVENT_CHAIN_INVALID")
             return restored, False
         dependency_refs = [
+            DependencyReference(
+                event_id=f"configuration-resolution:{configuration.resolution_id}",
+                expected_event_type=ConfigurationAuthorityLedger.RECORDED_EVENT,
+                expected_aggregate_id=configuration.config_name,
+            ),
             DependencyReference(
                 event_id=readiness_auth and f"recovery-readiness:authorize:{readiness_auth.authorization_id}",
                 expected_event_type="RECOVERY_READINESS_AUTHORIZED",
@@ -574,6 +598,14 @@ class DeploymentActivationLedger:
         now_utc = now.astimezone(timezone.utc)
         if not (record.valid_from <= now_utc < record.expires_at):
             raise ActivationExpired("ACTIVATION_EXPIRED")
+        try:
+            configuration = ConfigurationAuthorityLedger(self.store).assert_live_safe(
+                record.configuration_resolution_id,
+                now=now,
+                expected_candidates_fingerprint=record.configuration_fingerprint,
+            )
+        except ConfigurationAuthorityError as exc:
+            raise ActivationInvalid(f"CONFIGURATION_AUTHORITY_BLOCKED:{exc}") from exc
         try:
             current_approval.validate(now)
         except ValueError as exc:
@@ -686,6 +718,8 @@ class DeploymentActivationLedger:
                 recovery_readiness_fingerprint=str(payload.get("recovery_readiness_fingerprint", "")),
                 promotion_fingerprint=str(payload["promotion_fingerprint"]),
                 truth_hash=str(payload["truth_hash"]),
+            configuration_resolution_id=str(payload.get("configuration_resolution_id", "")),
+            configuration_fingerprint=str(payload.get("configuration_fingerprint", "")),
                 authority_decision_id=str(payload["authority_decision_id"]),
                 authority_reason=str(payload["authority_reason"]),
                 requested_risk=Decimal(str(payload["requested_risk"])),
@@ -711,6 +745,8 @@ class DeploymentActivationLedger:
                 record.recovery_readiness_fingerprint,
                 record.promotion_fingerprint,
                 record.truth_hash,
+                record.configuration_resolution_id,
+                record.configuration_fingerprint,
                 record.authority_decision_id,
                 record.operator,
                 record.authority_reason,

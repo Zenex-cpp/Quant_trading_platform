@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable
+from datetime import datetime, timezone
+from typing import Callable, Iterable
 
 from trading_platform.execution.models import OrderIntent
 from trading_platform.v310.runtime_orchestrator import V310RuntimeOrchestrator, RuntimeCycleSnapshot
@@ -20,6 +21,12 @@ from trading_platform.v310.runtime_orchestrator import OrchestrationState
 from trading_platform.v331.position_authority import PositionAuthorityLedger, PositionAuthorityConflict
 from trading_platform.v332.market_authority import MarketDataAuthorityLedger
 from trading_platform.v333.causal_ttl import CausalTTLAuthorityLedger
+from trading_platform.portfolio.config import ConfigValue
+from trading_platform.v343.config_authority import (
+    ConfigurationAuthorityError,
+    ConfigurationAuthorityLedger,
+    candidate_fingerprint,
+)
 
 
 @dataclass(frozen=True)
@@ -54,6 +61,7 @@ class ExecutionRuntimeIntegration:
         position_authority: PositionAuthorityLedger | None = None,
         market_data_authority: MarketDataAuthorityLedger | None = None,
         causal_ttl_authority: CausalTTLAuthorityLedger | None = None,
+        configuration_authority: ConfigurationAuthorityLedger | None = None,
     ) -> None:
         self.orchestrator = orchestrator
         self.bridge = bridge
@@ -61,6 +69,7 @@ class ExecutionRuntimeIntegration:
         self.position_authority = position_authority or PositionAuthorityLedger()
         self.market_data_authority = market_data_authority or MarketDataAuthorityLedger()
         self.causal_ttl_authority = causal_ttl_authority or CausalTTLAuthorityLedger()
+        self.configuration_authority = configuration_authority
         self.dispatcher = GuardedExecutionDispatcher(
             bridge=bridge,
             gateway=self.gateway,
@@ -84,11 +93,38 @@ class ExecutionRuntimeIntegration:
         intent: OrderIntent,
         credentials: RuntimeCredentialValues,
         now_epoch: float,
+        configuration_resolution_id: str | None = None,
+        configuration_values: Iterable[ConfigValue] | None = None,
     ) -> V312DispatchResult:
         self.set_clock(now_epoch)
         before = self.orchestrator.snapshot(now_epoch)
         if not before.trading_allowed:
             return V312DispatchResult(None, before, False, False, True, "TRADING_NOT_ALLOWED")
+        if self.configuration_authority is None:
+            return V312DispatchResult(None, before, False, False, False, "CONFIGURATION_AUTHORITY_REQUIRED")
+        if not configuration_resolution_id or configuration_values is None:
+            return V312DispatchResult(None, before, False, False, False, "CONFIGURATION_RESOLUTION_BINDING_REQUIRED")
+        values = tuple(configuration_values)
+        if not values:
+            return V312DispatchResult(None, before, False, False, False, "CONFIGURATION_VALUES_REQUIRED")
+        try:
+            expected_candidates_fingerprint = candidate_fingerprint(values)
+            configuration = self.configuration_authority.assert_live_safe(
+                configuration_resolution_id,
+                now=datetime.fromtimestamp(now_epoch, tz=timezone.utc),
+                expected_candidates_fingerprint=expected_candidates_fingerprint,
+            )
+            committed = self.bridge.committed_request(intent.intent_id)
+            if (
+                committed.authority.configuration_resolution_id != configuration.resolution_id
+                or committed.authority.configuration_fingerprint != configuration.candidates_fingerprint
+            ):
+                raise ConfigurationAuthorityError("CONFIGURATION_RESOLUTION_BINDING_MISMATCH")
+        except (ConfigurationAuthorityError, ValueError, TypeError, OverflowError) as exc:
+            reason = str(exc) or "CONFIGURATION_AUTHORITY_INVALID"
+            return V312DispatchResult(
+                None, before, False, False, False, f"CONFIGURATION_AUTHORITY_DENIED:{reason}"
+            )
         try:
             receipt = self.dispatcher.dispatch_submit(intent=intent, credentials=credentials)
         except ExchangeUncertain:

@@ -35,6 +35,8 @@ def truth():
         caps={k: Decimal("10") for k in (
             "health_cap", "deployment_cap", "accounting_cap", "reconciliation_cap", "provenance_cap", "operator_cap"
         )},
+        configuration_resolution_id="cfg-durable-request",
+        configuration_fingerprint="cfg-fingerprint-320",
     )
 
 
@@ -86,6 +88,8 @@ def test_bridge_commit_records_durable_request(tmp_path: Path):
     assert rec is not None
     assert rec.request == b.committed_request(i.intent_id).request
     assert rec.request.client_order_id == f"cid:{i.intent_id}"
+    assert rec.authority.configuration_resolution_id == "cfg-durable-request"
+    assert rec.authority.configuration_fingerprint == "cfg-fingerprint-320"
 
 
 def test_final_dispatch_requires_durable_request(tmp_path: Path):

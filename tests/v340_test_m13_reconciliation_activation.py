@@ -18,6 +18,8 @@ from trading_platform.v324.recovery_proof import RecoveryProofLedger
 from trading_platform.v325.deployment_activation import ActivationInvalid, DeploymentActivationLedger, require_authorized_activation
 from trading_platform.v340.reconciliation_authority import ReconciliationAuthorityError, ReconciliationAuthorityLedger
 from trading_platform.v30.truth import AxisSnapshot, TruthComponent, TruthStatus, build_truth
+from trading_platform.portfolio.config import ConfigValue, Precedence
+from trading_platform.v343.config_authority import ConfigurationAuthorityLedger
 
 NOW = datetime(2026, 9, 23, 9, 0, tzinfo=timezone.utc)
 
@@ -37,11 +39,17 @@ def bundle():
     )
 
 
-def truth():
+def truth(store: EventStore | None = None):
     axes = AxisSnapshot("APPROVED", "CANARY", "HEALTHY", "APPROVED", "ACTIVE", "CHALLENGER")
     components = tuple(TruthComponent(name, TruthStatus.VERIFIED, "OK") for name in (
         "health", "provenance", "governance", "reconciliation", "accounting", "ledger"
     ))
+    values = (ConfigValue("activation_limit", Decimal("100"), Precedence.RUNTIME, "test-runtime", "v1"),)
+    configuration, _ = ConfigurationAuthorityLedger(store).record(
+        resolution_id="activation-test-config", config_name="activation_limit", values=values,
+        valid_from=NOW - timedelta(minutes=1), expires_at=NOW + timedelta(minutes=30),
+        operator="test", recorded_at_ms=1,
+    )
     return build_truth(
         observed_at_ns=1,
         axes=axes,
@@ -50,6 +58,8 @@ def truth():
         caps={k: Decimal("100") for k in (
             "health_cap", "deployment_cap", "accounting_cap", "reconciliation_cap", "provenance_cap", "operator_cap"
         )},
+        configuration_fingerprint=configuration.candidates_fingerprint,
+        configuration_resolution_id=configuration.resolution_id,
     )
 
 
@@ -74,7 +84,7 @@ def authorize(store, recon_id: str):
         deployment_id="D1", bundle=bundle(), approval=approval(), gates=GateSummary(("G1",), ("G1",), ()),
         scope=ScopeCheck(True, "ok"), evidence_valid=True, compatibility_valid=True, artifacts_integrity=True,
         readiness=readiness(), target_mode=OperationalMode.CANARY, proof_ledger=rp, proof_id=p.proof_id,
-        current_state_fingerprint="state-1", truth=truth(), requested_risk=Decimal("10"), canary_exposure=Decimal("100"),
+        current_state_fingerprint="state-1", truth=truth(store), requested_risk=Decimal("10"), canary_exposure=Decimal("100"),
         runtime_state=RuntimeBundleState(ModelRole.CHALLENGER, OperationalMode.CANARY, DeploymentState.ACTIVE, "HEALTHY", True),
         rollout_policy=RolloutPolicy(Decimal("10"), Decimal("100")), operator="operator", decision_id="DEC1",
         now=NOW, recorded_at_ms=10, store=store, reconciliation_authorization_id=recon_id, compatibility_authorization_id=compat.authorization_id, artifact_integrity_authorization_id=integrity.authorization_id, promotion_bundle_authorization_id=promotion_bundle.authorization_id,

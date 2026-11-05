@@ -85,6 +85,7 @@ class OperationalTruth:
     configuration_status: ConfigurationStatus = ConfigurationStatus.RESOLVED
     configuration_fingerprint: str = ""
     risk_state: str = "NORMAL"
+    configuration_resolution_id: str = ""
 
     def __post_init__(self) -> None:
         if self.observed_at_ns < 0:
@@ -124,7 +125,12 @@ class OperationalTruth:
     def deployment_allowed(self) -> bool:
         required = {"health", "provenance", "governance", "reconciliation", "accounting", "ledger"}
         c = self.component_map
-        return (not self.kill_switch and self.decision_fresh and all(c.get(k, TruthComponent(k, TruthStatus.UNKNOWN, "MISSING")).status is TruthStatus.VERIFIED for k in required))
+        return (
+            not self.kill_switch
+            and self.decision_fresh
+            and self.configuration_status is ConfigurationStatus.RESOLVED
+            and all(c.get(k, TruthComponent(k, TruthStatus.UNKNOWN, "MISSING")).status is TruthStatus.VERIFIED for k in required)
+        )
 
     def action_allowed(self, action: CanonicalAction) -> bool:
         if action is CanonicalAction.OBSERVE:
@@ -140,7 +146,7 @@ class OperationalTruth:
         return False
 
     def canonical_payload(self) -> dict:
-        return {
+        payload = {
             "observed_at_ns": self.observed_at_ns,
             "axes": {
                 "lifecycle": self.axes.lifecycle,
@@ -164,6 +170,8 @@ class OperationalTruth:
             "configuration_status": self.configuration_status.value,
             "configuration_fingerprint": self.configuration_fingerprint,
         }
+        if self.configuration_resolution_id:
+            payload["configuration_resolution_id"] = self.configuration_resolution_id
         if self.risk_state != "NORMAL":
             payload["risk_state"] = self.risk_state
         return payload
@@ -180,12 +188,17 @@ class OperationalTruth:
         if order[status] < order[current.status]:
             raise ValueError("NON_MONOTONIC_HEALTH_RESTORE")
         updated = tuple(TruthComponent(c.name, status, reason, c.evidence_ids) if c.name == component else c for c in self.components)
-        return OperationalTruth(self.observed_at_ns, self.axes, updated, self.risk, self.kill_switch, self.decision_fresh, self.configuration_status, self.configuration_fingerprint, self.risk_state)
+        return OperationalTruth(
+            self.observed_at_ns, self.axes, updated, self.risk, self.kill_switch,
+            self.decision_fresh, self.configuration_status, self.configuration_fingerprint,
+            self.risk_state, self.configuration_resolution_id,
+        )
 
 def build_truth(*, observed_at_ns: int, axes: AxisSnapshot, components: tuple[TruthComponent, ...],
                 requested_risk: Decimal, caps: Mapping[str, Decimal], kill_switch: bool = False,
                 decision_fresh: bool = True, configuration_status: ConfigurationStatus = ConfigurationStatus.RESOLVED,
-                configuration_fingerprint: str = "", risk_state: str = "NORMAL") -> OperationalTruth:
+                configuration_fingerprint: str = "", risk_state: str = "NORMAL",
+                configuration_resolution_id: str = "") -> OperationalTruth:
     required = {"health_cap", "deployment_cap", "accounting_cap", "reconciliation_cap", "provenance_cap", "operator_cap"}
     if not required.issubset(caps):
         raise ValueError("RISK_CAPS_INCOMPLETE")
@@ -199,4 +212,5 @@ def build_truth(*, observed_at_ns: int, axes: AxisSnapshot, components: tuple[Tr
         configuration_status=configuration_status,
         configuration_fingerprint=configuration_fingerprint,
         risk_state=risk_state,
+        configuration_resolution_id=configuration_resolution_id,
     )
