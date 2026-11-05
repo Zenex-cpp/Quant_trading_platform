@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from dataclasses import replace
 from decimal import Decimal
 from pathlib import Path
 
@@ -10,7 +11,7 @@ from trading_platform.promotion.rollout import RolloutPolicy, RuntimeBundleState
 from trading_platform.state.enums import OperationalMode
 from trading_platform.v21.event_store import EventStore
 from tests._immutable_test_helpers import tamper_event_store
-from trading_platform.v30.truth import AxisSnapshot, TruthComponent, TruthStatus, build_truth
+from trading_platform.v30.truth import AxisSnapshot, ConfigurationStatus, TruthComponent, TruthStatus, build_truth
 from trading_platform.v324.recovery_proof import RecoveryProofLedger
 from trading_platform.v329.dependency_authority import DependencyInvalidationLedger
 from tests._m13_helpers import green_reconciliation
@@ -18,6 +19,8 @@ from tests._m14_helpers import authorize_compatibility
 from tests._m15_helpers import authorize_artifact_integrity
 from tests._m18_helpers import authorize_evidence_snapshot
 from tests._m19_helpers import authorize_promotion_bundle
+from trading_platform.portfolio.config import ConfigValue, Precedence
+from trading_platform.v343.config_authority import ConfigurationAuthorityLedger
 from trading_platform.v325.deployment_activation import (
     AuthorizedDeploymentController,
     ActivationConflict,
@@ -74,11 +77,29 @@ def promotion_fp():
     )
 
 
-def truth():
+def truth(
+    store: EventStore | None = None,
+    *,
+    config_values: tuple[ConfigValue, ...] | None = None,
+    config_expires_at: datetime | None = None,
+    bind_configuration: bool = True,
+):
     axes = AxisSnapshot("APPROVED", "CANARY", "HEALTHY", "APPROVED", "ACTIVE", "CHALLENGER")
     components = tuple(TruthComponent(name, TruthStatus.VERIFIED, "OK", (f"E-{name}",)) for name in (
         "health", "provenance", "governance", "reconciliation", "accounting", "ledger"
     ))
+    configuration = None
+    if bind_configuration:
+        values = config_values or (ConfigValue("activation_limit", Decimal("100"), Precedence.RUNTIME, "test-runtime", "v1"),)
+        configuration, _ = ConfigurationAuthorityLedger(store).record(
+            resolution_id="activation-test-config",
+            config_name="activation_limit",
+            values=values,
+            valid_from=NOW - timedelta(minutes=1),
+            expires_at=config_expires_at or NOW + timedelta(minutes=30),
+            operator="test",
+            recorded_at_ms=1,
+        )
     return build_truth(
         observed_at_ns=1,
         axes=axes,
@@ -87,10 +108,24 @@ def truth():
         caps={k: Decimal("100") for k in (
             "health_cap", "deployment_cap", "accounting_cap", "reconciliation_cap", "provenance_cap", "operator_cap"
         )},
+        configuration_status=(
+            ConfigurationStatus.RESOLVED
+            if configuration is None or configuration.status.value == "RESOLVED"
+            else ConfigurationStatus.CONFLICT
+        ),
+        configuration_fingerprint="" if configuration is None else configuration.candidates_fingerprint,
+        configuration_resolution_id="" if configuration is None else configuration.resolution_id,
     )
 
 
-def common(tmp_path: Path):
+def common(
+    tmp_path: Path,
+    *,
+    truth_value=None,
+    config_values: tuple[ConfigValue, ...] | None = None,
+    config_expires_at: datetime | None = None,
+    config_fingerprint_override: str | None = None,
+):
     store = EventStore(str(tmp_path / "activation.db"))
     rp = RecoveryProofLedger(store)
     pr = proof(rp)
@@ -100,11 +135,14 @@ def common(tmp_path: Path):
     integrity = authorize_artifact_integrity(store, bundle())
     authorize_evidence_snapshot(store, bundle(), now=NOW)
     promotion_bundle = authorize_promotion_bundle(store, bundle(), now=NOW)
+    bound_truth = truth_value or truth(store, config_values=config_values, config_expires_at=config_expires_at)
+    if config_fingerprint_override is not None:
+        bound_truth = replace(bound_truth, configuration_fingerprint=config_fingerprint_override)
     rec, created = DeploymentActivationLedger.authorize(
         deployment_id="D1", bundle=bundle(), approval=approval(), gates=gates(), scope=ScopeCheck(True, "ok"),
         evidence_valid=True, compatibility_valid=True, artifacts_integrity=True,
         readiness=readiness(), target_mode=OperationalMode.CANARY, proof_ledger=rp, proof_id=pr.proof_id,
-        current_state_fingerprint="state-1", truth=truth(), requested_risk=Decimal("10"), canary_exposure=Decimal("100"),
+        current_state_fingerprint="state-1", truth=bound_truth, requested_risk=Decimal("10"), canary_exposure=Decimal("100"),
         runtime_state=runtime, rollout_policy=RolloutPolicy(Decimal("10"), Decimal("100")), operator="operator",
         decision_id="DDEC1", now=NOW, recorded_at_ms=1, store=store,
         reconciliation_authorization_id=recon.authorization_id,
@@ -124,6 +162,36 @@ def test_authorization_is_durable_and_restart_safe(tmp_path: Path):
         DeploymentActivationLedger(store), "D1", now=NOW + timedelta(seconds=1),
         current_state_fingerprint="state-1", current_truth_hash=truth().state_hash, current_promotion_fingerprint=promotion_fp(), current_approval=approval(), proof_ledger=rp, bundle=bundle(),
     ) == rec
+
+
+def test_configuration_conflict_blocks_activation(tmp_path: Path):
+    conflicting_values = (
+        ConfigValue("activation_limit", Decimal("100"), Precedence.RUNTIME, "runtime-a", "v1"),
+        ConfigValue("activation_limit", Decimal("200"), Precedence.RUNTIME, "runtime-b", "v1"),
+    )
+    with pytest.raises(ActivationInvalid, match="CONFIGURATION_AUTHORITY_BLOCKED:CONFIG_CONFLICT"):
+        common(tmp_path, config_values=conflicting_values)
+
+
+def test_missing_configuration_ledger_blocks_activation(tmp_path: Path):
+    with pytest.raises(ActivationInvalid, match="CONFIGURATION_AUTHORITY_BLOCKED:CONFIGURATION_RESOLUTION_NOT_FOUND"):
+        common(tmp_path, truth_value=truth())
+
+
+def test_configuration_fingerprint_mismatch_blocks_activation(tmp_path: Path):
+    with pytest.raises(ActivationInvalid, match="CONFIGURATION_FINGERPRINT_MISMATCH"):
+        common(tmp_path, config_fingerprint_override="tampered")
+
+
+def test_expired_configuration_invalidates_existing_activation(tmp_path: Path):
+    store, rp, rec = common(tmp_path, config_expires_at=NOW + timedelta(seconds=2))
+    with pytest.raises(ActivationInvalid, match="CONFIGURATION_AUTHORITY_BLOCKED:CONFIGURATION_RESOLUTION_EXPIRED"):
+        require_authorized_activation(
+            DeploymentActivationLedger(store), rec.deployment_id,
+            now=NOW + timedelta(seconds=3), current_state_fingerprint="state-1",
+            current_truth_hash=truth().state_hash, current_promotion_fingerprint=promotion_fp(),
+            current_approval=approval(), proof_ledger=rp, bundle=bundle(),
+        )
 
 
 def test_state_or_truth_change_fails_closed(tmp_path: Path):
@@ -149,7 +217,7 @@ def test_activation_expiry_is_fail_closed(tmp_path: Path):
         deployment_id="D2", bundle=bundle(), approval=approval(), gates=gates(), scope=ScopeCheck(True, "ok"),
         evidence_valid=True, compatibility_valid=True, artifacts_integrity=True, readiness=readiness(),
         target_mode=OperationalMode.CANARY, proof_ledger=rp, proof_id=p.proof_id, current_state_fingerprint="state-1",
-        truth=truth(), requested_risk=Decimal("10"), canary_exposure=Decimal("100"), runtime_state=runtime,
+        truth=truth(store), requested_risk=Decimal("10"), canary_exposure=Decimal("100"), runtime_state=runtime,
         rollout_policy=RolloutPolicy(Decimal("10"), Decimal("100")), operator="operator", decision_id="DDEC2",
         now=NOW, recorded_at_ms=1, store=store,
         reconciliation_authorization_id=recon.authorization_id,
@@ -194,7 +262,7 @@ def test_same_deployment_id_with_changed_request_conflicts(tmp_path: Path):
             deployment_id="D1", bundle=bundle(), approval=approval(), gates=gates(), scope=ScopeCheck(True, "ok"),
             evidence_valid=True, compatibility_valid=True, artifacts_integrity=True, readiness=readiness(),
             target_mode=OperationalMode.CANARY, proof_ledger=rp, proof_id=rec.proof_id, current_state_fingerprint="state-1",
-            truth=truth(), requested_risk=Decimal("9"), canary_exposure=Decimal("100"), runtime_state=runtime,
+            truth=truth(store), requested_risk=Decimal("9"), canary_exposure=Decimal("100"), runtime_state=runtime,
             rollout_policy=RolloutPolicy(Decimal("10"), Decimal("100")), operator="operator", decision_id="DDEC1",
             now=NOW, recorded_at_ms=2, store=store,
             reconciliation_authorization_id=rec.reconciliation_authorization_id,
@@ -239,13 +307,13 @@ def test_authorized_controller_is_required_for_final_canary_activation(tmp_path:
     o = DeploymentOrchestrator(policy=RolloutPolicy(Decimal("10"), Decimal("100")), dependency_authority=DependencyInvalidationLedger(store))
     state = o.start_canary(o.stage(o.prepare(request, now=NOW, now_ns=1), now_ns=2), now_ns=3)
     ctl = AuthorizedDeploymentController(orchestrator=o, activation_ledger=DeploymentActivationLedger(store), proof_ledger=rp)
-    activated = ctl.activate_canary(state, now=NOW + timedelta(seconds=1), now_ns=4, current_state_fingerprint="state-1", current_truth_hash=truth().state_hash)
+    activated = ctl.activate_canary(state, now=NOW + timedelta(seconds=1), now_ns=4, current_state_fingerprint="state-1", current_truth_hash=truth(store).state_hash)
     assert activated.phase.name == "ACTIVATED"
 
     from trading_platform.v325.deployment_activation import ActivationInvalid as _ActivationInvalid
     with pytest.raises(_ActivationInvalid, match="ACTIVATION_NOT_FOUND"):
         AuthorizedDeploymentController(orchestrator=o, activation_ledger=DeploymentActivationLedger(EventStore(str(tmp_path / "empty.db"))), proof_ledger=rp).activate_canary(
-            state, now=NOW, now_ns=5, current_state_fingerprint="state-1", current_truth_hash=truth().state_hash
+            state, now=NOW, now_ns=5, current_state_fingerprint="state-1", current_truth_hash=truth(store).state_hash
         )
 
 

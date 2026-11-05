@@ -59,6 +59,8 @@ class AuthorityDecision:
     risk_state: str = "NORMAL"
     risk_state_risk_factor: Decimal = Decimal("1")
     recovery_event_id: str | None = None
+    configuration_resolution_id: str = ""
+    configuration_fingerprint: str = ""
 
     @property
     def authorized(self) -> bool:
@@ -177,6 +179,8 @@ class AuthorityDecision:
             risk_state=str(truth.risk_state),
             risk_state_risk_factor=Decimal(str(risk_state_risk_factor)),
             recovery_event_id=recovery_event_id,
+            configuration_resolution_id=truth.configuration_resolution_id,
+            configuration_fingerprint=truth.configuration_fingerprint,
         )
 
 

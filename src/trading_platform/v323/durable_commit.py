@@ -94,6 +94,8 @@ class DurableCommitLedger:
                 "requested_risk": str(authority.requested_risk),
                 "observed_at_ns": authority.observed_at_ns,
                 "input_fingerprint": authority.input_fingerprint,
+                "configuration_resolution_id": authority.configuration_resolution_id,
+                "configuration_fingerprint": authority.configuration_fingerprint,
             },
             "request": {
                 "order_request_id": request.order_request_id,
@@ -291,6 +293,8 @@ class DurableCommitLedger:
                 requested_risk=Decimal(str(authority_data["requested_risk"])),
                 observed_at_ns=int(authority_data["observed_at_ns"]),
                 input_fingerprint=str(authority_data["input_fingerprint"]),
+                configuration_resolution_id=str(authority_data.get("configuration_resolution_id", "")),
+                configuration_fingerprint=str(authority_data.get("configuration_fingerprint", "")),
             )
             request = OrderRequest(
                 order_request_id=str(request_data["order_request_id"]),

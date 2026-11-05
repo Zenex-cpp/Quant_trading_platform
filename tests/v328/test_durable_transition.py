@@ -51,7 +51,7 @@ def setup_case(tmp_path: Path):
     activation, _ = DeploymentActivationLedger.authorize(
         deployment_id='D1', bundle=bundle(), approval=approval(), gates=gates(), scope=ScopeCheck(True, 'ok'),
         evidence_valid=True, compatibility_valid=True, artifacts_integrity=True, readiness=readiness(), target_mode=OperationalMode.CANARY,
-        proof_ledger=proof_ledger, proof_id=proof.proof_id, current_state_fingerprint='state-1', truth=truth(),
+        proof_ledger=proof_ledger, proof_id=proof.proof_id, current_state_fingerprint='state-1', truth=truth(store),
         requested_risk=Decimal('10'), canary_exposure=Decimal('100'), runtime_state=runtime,
         rollout_policy=RolloutPolicy(Decimal('10'), Decimal('100')), operator='operator', decision_id='DDEC1',
         now=NOW, recorded_at_ms=2000, store=store, reconciliation_authorization_id=recon.authorization_id,

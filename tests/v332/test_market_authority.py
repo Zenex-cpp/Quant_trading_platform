@@ -94,7 +94,7 @@ def test_processing_after_expiry_creates_expired_authority():
 def test_runtime_integration_blocks_stale_market_before_gateway(tmp_path):
     from datetime import datetime, timezone, timedelta
     from decimal import Decimal
-    from trading_platform.v30.truth import AxisSnapshot, TruthComponent, TruthStatus, build_truth
+    from trading_platform.v30.truth import AxisSnapshot, ConfigurationStatus, TruthComponent, TruthStatus, build_truth
     from trading_platform.v33.commit import CommitCoordinator
     from trading_platform.v34.execution_bridge import ExecutionBridge
     from trading_platform.v35.binance_execution import ExchangeOutcome, RuntimeCredentialValues, SubmitObservation
@@ -103,14 +103,27 @@ def test_runtime_integration_blocks_stale_market_before_gateway(tmp_path):
     from trading_platform.v331 import PositionAuthorityLedger
     from trading_platform.execution.models import OrderIntent, OrderAction, OrderType, PositionState, Side
     from trading_platform.core.ttl import ValidWindow
+    from trading_platform.portfolio.config import ConfigValue, Precedence
+    from trading_platform.v343.config_authority import ConfigurationAuthorityLedger
     from trading_platform.v20.reconciliation import ReconciliationDiff, ReconciliationResult, ReconciliationState
 
     now = datetime(2026, 9, 23, tzinfo=timezone.utc)
+    now_ms = int(now.timestamp() * 1000)
     win = ValidWindow(now - timedelta(seconds=1), now + timedelta(minutes=5))
     axes = AxisSnapshot("ACTIVE", "LIVE", "HEALTHY", "APPROVED", "ACTIVE", "CHAMPION")
-    truth = build_truth(observed_at_ns=1, axes=axes,
+    config_values = (ConfigValue("runtime_configuration", "cfg-v1", Precedence.RUNTIME, "runtime", "1"),)
+    config_ledger = ConfigurationAuthorityLedger()
+    config_record, _ = config_ledger.record(
+        resolution_id="m16-runtime-config", config_name="runtime_configuration", values=config_values,
+        valid_from=now - timedelta(seconds=1), expires_at=now + timedelta(minutes=5),
+        recorded_at_ms=now_ms, operator="test",
+    )
+    truth = build_truth(observed_at_ns=int(now.timestamp() * 1_000_000_000), axes=axes,
         components=tuple(TruthComponent(n, TruthStatus.VERIFIED, "OK") for n in ("health","provenance","governance","reconciliation","accounting","ledger")),
-        requested_risk=Decimal("100"), caps={k: Decimal("100") for k in ("health_cap","deployment_cap","accounting_cap","reconciliation_cap","provenance_cap","operator_cap")})
+        requested_risk=Decimal("100"), caps={k: Decimal("100") for k in ("health_cap","deployment_cap","accounting_cap","reconciliation_cap","provenance_cap","operator_cap")},
+        configuration_status=ConfigurationStatus.RESOLVED,
+        configuration_fingerprint=config_record.candidates_fingerprint,
+        configuration_resolution_id=config_record.resolution_id)
     intent = OrderIntent("IM4","DM4","PM4","RM4","SM4","MM4","EM4","BTCUSDT",Side.BUY,OrderAction.OPEN,Decimal("0.001"),OrderType.MARKET,win)
     payload = {"intent_id":"IM4","decision_id":"DM4","risk_decision_id":"RM4","portfolio_decision_id":"PM4","symbol":"BTCUSDT","side":"BUY","action":"OPEN","quantity":"0.001","order_type":"MARKET","price":None,"execution_version":"EM4"}
     cc = CommitCoordinator()
@@ -122,9 +135,9 @@ def test_runtime_integration_blocks_stale_market_before_gateway(tmp_path):
     pos = PositionAuthorityLedger()
     pos.record_reconciliation(symbol="BTCUSDT", local_quantity=Decimal("0"), exchange_quantity=Decimal("0"),
                               reconciliation=ReconciliationResult(ReconciliationState.GREEN, ReconciliationDiff(), "r", "s", "REST_WS_MATCH"),
-                              observed_at_ms=1000, ttl_ms=10000, position_state=PositionState.FLAT)
+                              observed_at_ms=now_ms, ttl_ms=10000, position_state=PositionState.FLAT)
     market = MarketDataAuthorityLedger()
-    market.record_observation(symbol="BTCUSDT", feed_id="primary", event_time_ms=0, receive_time_ms=0, processing_time_ms=0,
+    market.record_observation(symbol="BTCUSDT", feed_id="primary", event_time_ms=now_ms - 1000, receive_time_ms=now_ms - 1000, processing_time_ms=now_ms - 1000,
                               max_age_ms=100, source="test-feed", sequence_number=1)
 
     class O:
@@ -139,8 +152,12 @@ def test_runtime_integration_blocks_stale_market_before_gateway(tmp_path):
 
     gateway = G()
     runtime = ExecutionRuntimeIntegration(orchestrator=O(), bridge=bridge, gateway=gateway,
-                                          position_authority=pos, market_data_authority=market)
-    result = runtime.dispatch(intent=intent, credentials=RuntimeCredentialValues("API", b"SECRET"), now_epoch=1.0)
+                                          position_authority=pos, market_data_authority=market,
+                                          configuration_authority=config_ledger)
+    result = runtime.dispatch(
+        intent=intent, credentials=RuntimeCredentialValues("API", b"SECRET"), now_epoch=now.timestamp(),
+        configuration_resolution_id=config_record.resolution_id, configuration_values=config_values,
+    )
     assert result.submitted is False
     assert "MARKET_DATA_AUTHORITY_DENIED:MARKET_DATA_STALE" in result.reason
     assert gateway.calls == []

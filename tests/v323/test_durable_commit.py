@@ -32,6 +32,8 @@ def truth(observed=1):
         ),
         requested_risk=Decimal("100"),
         caps={k: Decimal("100") for k in ("health_cap", "deployment_cap", "accounting_cap", "reconciliation_cap", "provenance_cap", "operator_cap")},
+        configuration_resolution_id="cfg-durable-commit",
+        configuration_fingerprint="cfg-fingerprint-323",
     )
 
 
@@ -84,6 +86,10 @@ def test_restart_returns_same_durable_commit_without_new_consumption(tmp_path: P
     assert second.status is CommitStatus.DUPLICATE
     assert second.request == first.request
     assert second.capability is not None and second.capability.consumed
+    restored = DurableCommitLedger(EventStore(str(db))).get("I323")
+    assert restored is not None
+    assert restored.authority.configuration_resolution_id == "cfg-durable-commit"
+    assert restored.authority.configuration_fingerprint == "cfg-fingerprint-323"
 
 
 def test_same_intent_with_changed_truth_or_risk_conflicts(tmp_path: Path):
