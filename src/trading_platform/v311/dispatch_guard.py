@@ -111,14 +111,17 @@ class GuardedExecutionDispatcher:
             raise DispatchGuardDenied(f"TRADING_NOT_ALLOWED:{snap.state.value}:{snap.reason}")
         if snap.recovery_required:
             raise DispatchGuardDenied("RECOVERY_REQUIRED")
-        if self.position_authority is not None:
-            try:
-                self.position_authority.assert_orderable(
-                    symbol=intent.symbol, action=intent.action, now_ms=now_ms,
-                )
-            except PositionAuthorityConflict as exc:
-                raise DispatchGuardDenied(f"POSITION_AUTHORITY_DENIED:{exc}") from exc
-        if intent.action in {intent.action.OPEN, intent.action.INCREASE} and self.market_data_authority is not None:
+        if self.position_authority is None:
+            raise DispatchGuardDenied("POSITION_AUTHORITY_REQUIRED")
+        try:
+            self.position_authority.assert_orderable(
+                symbol=intent.symbol, action=intent.action, now_ms=now_ms,
+            )
+        except PositionAuthorityConflict as exc:
+            raise DispatchGuardDenied(f"POSITION_AUTHORITY_DENIED:{exc}") from exc
+        if intent.action in {intent.action.OPEN, intent.action.INCREASE}:
+            if self.market_data_authority is None:
+                raise DispatchGuardDenied("MARKET_DATA_AUTHORITY_REQUIRED")
             try:
                 self.market_data_authority.assert_fresh(symbol=intent.symbol, now_ms=now_ms, feed_id="primary")
             except MarketDataAuthorityConflict as exc:
@@ -140,7 +143,31 @@ class GuardedExecutionDispatcher:
                 )
             except OrderRequestConflict as exc:
                 raise DispatchGuardDenied(f"ORDER_REQUEST_DURABLE_DENIED:{exc}") from exc
-        if intent.action in {intent.action.OPEN, intent.action.INCREASE} and self.causal_ttl_authority is not None:
+        if self.risk_decision_ledger is None:
+            raise DispatchGuardDenied("RISK_DECISION_LEDGER_REQUIRED")
+        try:
+            intent.validate(now_dt)
+        except (ValueError, TypeError) as exc:
+            raise DispatchGuardDenied(f"ORDER_INTENT_NOT_FRESH:{exc}") from exc
+        deadline = req.request.deadline
+        if not isinstance(deadline, datetime) or deadline.tzinfo is None:
+            raise DispatchGuardDenied("ORDER_DEADLINE_INVALID")
+        if now_dt >= deadline:
+            raise DispatchGuardDenied("ORDER_REQUEST_EXPIRED")
+        try:
+            self.risk_decision_ledger.assert_valid_for_new_risk(
+                decision_id=intent.risk_decision_id,
+                now_ms=now_ms,
+                intent_id=intent.intent_id,
+                reservation_id=intent.risk_reservation_id,
+                requested_exposure=Decimal(str(req.authority.requested_risk)),
+                truth_hash=req.authority.truth_hash,
+            )
+        except RiskDecisionConflict as exc:
+            raise DispatchGuardDenied(f"RISK_DECISION_DENIED:{exc}") from exc
+        if intent.action in {intent.action.OPEN, intent.action.INCREASE}:
+            if self.causal_ttl_authority is None:
+                raise DispatchGuardDenied("CAUSAL_TTL_AUTHORITY_REQUIRED")
             try:
                 valid_from_ms = int(intent.window.valid_from.timestamp() * 1000)
                 expires_at_ms = int(intent.window.expires_at.timestamp() * 1000)
@@ -152,16 +179,6 @@ class GuardedExecutionDispatcher:
                 )
             except CausalTTLConflict as exc:
                 raise DispatchGuardDenied(f"CAUSAL_TTL_DENIED:{exc}") from exc
-        if self.risk_decision_ledger is not None:
-            try:
-                intent.validate(now_dt)
-            except (ValueError, TypeError) as exc:
-                raise DispatchGuardDenied(f"ORDER_INTENT_NOT_FRESH:{exc}") from exc
-            deadline = req.request.deadline
-            if not isinstance(deadline, datetime) or deadline.tzinfo is None:
-                raise DispatchGuardDenied("ORDER_DEADLINE_INVALID")
-            if now_dt >= deadline:
-                raise DispatchGuardDenied("ORDER_REQUEST_EXPIRED")
         attempt_intent_fp = (self.order_intent_ledger.fingerprint(intent)
                              if self.order_intent_ledger is not None
                              else DurableOrderIntentLedger.fingerprint(intent))
@@ -216,19 +233,6 @@ class GuardedExecutionDispatcher:
         accounting_hash = None
         if self.accounting_authority is not None:
             accounting_hash = self.accounting_authority.snapshot().projection_hash
-        if self.risk_decision_ledger is not None:
-            reservation_id = intent.risk_reservation_id
-            try:
-                self.risk_decision_ledger.assert_valid_for_new_risk(
-                    decision_id=intent.risk_decision_id,
-                    now_ms=now_ms,
-                    intent_id=intent.intent_id,
-                    reservation_id=reservation_id,
-                    requested_exposure=Decimal(str(req.authority.requested_risk)),
-                    truth_hash=req.authority.truth_hash,
-                )
-            except RiskDecisionConflict as exc:
-                raise DispatchGuardDenied(f"RISK_DECISION_DENIED:{exc}") from exc
         if self.dispatch_attempt_ledger is not None:
             try:
                 self.dispatch_attempt_ledger.prepare(

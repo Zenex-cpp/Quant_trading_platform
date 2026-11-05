@@ -2,6 +2,7 @@
 
 ## Closed locally
 
+- M1–M5 final submit gates are fail-closed for missing authorities. RiskDecision, intent, and request deadline freshness are rechecked before replay or transport; UNKNOWN/missing position blocks orders; missing/stale market data and invalid/missing causal-TTL chains block OPEN/INCREASE. Runtime passes the durable risk ledger into the same final dispatcher. See `V429_M2_REMEDIATION_REPORT.md`.
 - External reviewer key and unsigned evidence are read with POSIX directory descriptors and `O_NOFOLLOW` on every path component.
 - Input is required to be a regular file and bounded (1 MiB key, 16 MiB evidence); metadata is checked before and after the read.
 - Reviewer output paths reject symlinked ancestors, traversal, paths inside the checkout, and existing targets.

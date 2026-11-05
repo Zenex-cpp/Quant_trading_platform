@@ -11,6 +11,7 @@ from trading_platform.v21.event_store import EventStore
 from trading_platform.v30.truth import AxisSnapshot, TruthComponent, TruthStatus, build_truth
 from trading_platform.v311.dispatch_guard import DispatchGuardDenied, GuardedExecutionDispatcher
 from trading_platform.v32.capability import CapabilityAuthority
+from tests.dispatch_support import execution_authorities_for, risk_decision_ledger_for
 from trading_platform.v33.commit import CommitCoordinator
 from trading_platform.v34.execution_bridge import ExecutionBridge
 from trading_platform.v35.binance_execution import ExchangeOutcome, RuntimeCredentialValues, SubmitObservation
@@ -99,6 +100,7 @@ def test_final_dispatch_requires_durable_request(tmp_path: Path):
     guard = GuardedExecutionDispatcher(
         bridge=b, gateway=gateway, permission_snapshot=runtime,
         order_intent_ledger=intent_ledger, order_request_ledger=request_ledger,
+        **execution_authorities_for(i, now_ms=int(NOW.timestamp() * 1000)),
         clock_ms=lambda: int(NOW.timestamp() * 1000),
     )
     with pytest.raises(DispatchGuardDenied, match="ORDER_REQUEST_DURABLE_DENIED:ORDER_REQUEST_NOT_FOUND"):
@@ -117,6 +119,7 @@ def test_final_dispatch_rejects_tampered_durable_request(tmp_path: Path):
     guard = GuardedExecutionDispatcher(
         bridge=b, gateway=gateway, permission_snapshot=runtime,
         order_intent_ledger=intent_ledger, order_request_ledger=request_ledger,
+        **execution_authorities_for(i, now_ms=int(NOW.timestamp() * 1000)),
         clock_ms=lambda: int(NOW.timestamp() * 1000),
     )
     with pytest.raises(DispatchGuardDenied, match="ORDER_REQUEST_DURABLE_DENIED:ORDER_REQUEST_PAYLOAD_MISMATCH"):
@@ -131,6 +134,8 @@ def test_final_dispatch_accepts_exact_durable_request(tmp_path: Path):
     guard = GuardedExecutionDispatcher(
         bridge=b, gateway=gateway, permission_snapshot=runtime,
         order_request_ledger=request_ledger,
+        **execution_authorities_for(i, now_ms=int(NOW.timestamp() * 1000)),
+        risk_decision_ledger=risk_decision_ledger_for(b, i, now_ms=int(NOW.timestamp() * 1000)),
         clock_ms=lambda: int(NOW.timestamp() * 1000),
     )
     receipt = guard.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))

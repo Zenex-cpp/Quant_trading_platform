@@ -32,6 +32,10 @@ def validate_workflow_contract_v429(text: str) -> tuple[str, ...]:
         "WORKFLOW_PATH_HARDENING_CONTROLS_MISSING": "REPO-GOV-PATH-03",
         "WORKFLOW_EXCLUSIVE_OUTPUT_CONTROL_MISSING": "REPO-GOV-PATH-04",
         "WORKFLOW_M1_IMPACT_MISSING": "--impacted-requirement M1",
+        "WORKFLOW_M2_IMPACT_MISSING": "--impacted-requirement M2",
+        "WORKFLOW_M3_IMPACT_MISSING": "--impacted-requirement M3",
+        "WORKFLOW_M4_IMPACT_MISSING": "--impacted-requirement M4",
+        "WORKFLOW_M5_IMPACT_MISSING": "--impacted-requirement M5",
     }
     for reason, needle in required.items():
         if needle not in normalized:

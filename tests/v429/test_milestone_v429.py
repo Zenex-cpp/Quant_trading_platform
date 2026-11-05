@@ -77,3 +77,16 @@ def test_v429_m1_matrix_points_to_testnet_read_only_guard_evidence():
     assert "tests/test_testnet_read_only_boundary.py" in m1["test_reference"]
     assert m1["evidence_reference"] == "V429_M1_REMEDIATION_REPORT.md"
     assert "Independent review" in m1["unresolved_gap"]
+
+
+def test_v429_m1_to_m5_matrix_points_to_final_dispatch_authority_evidence():
+    with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
+        rows = {row["machine_check_id"]: row for row in csv.DictReader(stream)}
+    for key in ("M1", "M2", "M3", "M4", "M5"):
+        assert rows[key]["implementation_status"] == "TESTED"
+        assert "trading_platform/v311/dispatch_guard.py" in rows[key]["code_reference"]
+        assert "tests/v318/test_dispatch_freshness.py" in rows[key]["test_reference"]
+        expected_report = "V429_M1_REMEDIATION_REPORT.md" if key == "M1" else "V429_M2_REMEDIATION_REPORT.md"
+        assert rows[key]["evidence_reference"] == expected_report
+        assert "Independent review" in rows[key]["unresolved_gap"]
+    assert "RISK_DECISION_LEDGER_REQUIRED" in (ROOT / "tests/v318/test_dispatch_freshness.py").read_text(encoding="utf-8")

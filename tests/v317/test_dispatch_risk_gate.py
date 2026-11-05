@@ -16,8 +16,10 @@ from trading_platform.v310.runtime_orchestrator import OrchestrationState, Runti
 from trading_platform.v311.dispatch_guard import DispatchGuardDenied, GuardedExecutionDispatcher
 from trading_platform.execution.models import OrderIntent, OrderAction, OrderType, PositionState, Side
 from trading_platform.core.ttl import ValidWindow
+from tests.dispatch_support import execution_authorities_for, risk_decision_ledger_for
 
 NOW = datetime(2026, 9, 17, tzinfo=timezone.utc)
+BASE_MS = int(NOW.timestamp() * 1000)
 WIN = ValidWindow(NOW - timedelta(seconds=1), NOW + timedelta(minutes=5))
 AX = AxisSnapshot("ACTIVE", "LIVE", "HEALTHY", "APPROVED", "ACTIVE", "CHAMPION")
 
@@ -71,14 +73,14 @@ def accounting(tmp_path: Path):
 
 def reservation(tmp_path: Path, accounting_hash: str):
     book = DurableRiskReservationBook(EventStore(str(tmp_path / "risk.db")), allocated=Decimal("10"))
-    book.reserve(RiskReservationRecord("rr317", BudgetScope.ORDER, Decimal("3"), Decimal("3"), "I317", "R317", accounting_hash, 100, 200000))
+    book.reserve(RiskReservationRecord("rr317", BudgetScope.ORDER, Decimal("3"), Decimal("3"), "I317", "R317", accounting_hash, BASE_MS - 1000, BASE_MS + 100000))
     return RiskReservationGate(book), book
 
 
 def test_missing_reservation_blocks_before_transport(tmp_path: Path):
     b, i = build_pair()
     g = FakeGateway()
-    d = GuardedExecutionDispatcher(bridge=b, gateway=g, permission_snapshot=snap, accounting_authority=accounting(tmp_path), risk_reservation_gate=RiskReservationGate(book=DurableRiskReservationBook(EventStore(str(tmp_path / "unused.db")), allocated=Decimal("10"))))
+    d = GuardedExecutionDispatcher(bridge=b, gateway=g, permission_snapshot=snap, accounting_authority=accounting(tmp_path), risk_reservation_gate=RiskReservationGate(book=DurableRiskReservationBook(EventStore(str(tmp_path / "unused.db")), allocated=Decimal("10"))), **execution_authorities_for(i, now_ms=BASE_MS), risk_decision_ledger=risk_decision_ledger_for(b, i, now_ms=BASE_MS), clock_ms=lambda: BASE_MS)
     with pytest.raises(DispatchGuardDenied, match="RISK_RESERVATION_DENIED:RESERVATION_NOT_FOUND"):
         d.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
     assert g.calls == []
@@ -89,7 +91,7 @@ def test_valid_reservation_is_consumed_before_transport(tmp_path: Path):
     acct = accounting(tmp_path)
     gate, book = reservation(tmp_path, acct.snapshot().projection_hash)
     g = FakeGateway()
-    d = GuardedExecutionDispatcher(bridge=b, gateway=g, permission_snapshot=snap, accounting_authority=acct, risk_reservation_gate=gate, clock_ms=lambda: 101)
+    d = GuardedExecutionDispatcher(bridge=b, gateway=g, permission_snapshot=snap, accounting_authority=acct, risk_reservation_gate=gate, **execution_authorities_for(i, now_ms=BASE_MS), risk_decision_ledger=risk_decision_ledger_for(b, i, now_ms=BASE_MS), clock_ms=lambda: BASE_MS)
     d.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
     assert len(g.calls) == 1
     assert book.reservations()[0].state is RiskReservationState.CONSUMED
@@ -100,7 +102,7 @@ def test_stale_accounting_binding_blocks_and_makes_no_transport(tmp_path: Path):
     acct = accounting(tmp_path)
     gate, book = reservation(tmp_path, "different-hash")
     g = FakeGateway()
-    d = GuardedExecutionDispatcher(bridge=b, gateway=g, permission_snapshot=snap, accounting_authority=acct, risk_reservation_gate=gate, clock_ms=lambda: 101)
+    d = GuardedExecutionDispatcher(bridge=b, gateway=g, permission_snapshot=snap, accounting_authority=acct, risk_reservation_gate=gate, **execution_authorities_for(i, now_ms=BASE_MS), risk_decision_ledger=risk_decision_ledger_for(b, i, now_ms=BASE_MS), clock_ms=lambda: BASE_MS)
     with pytest.raises(DispatchGuardDenied, match="RISK_RESERVATION_DENIED:RESERVATION_ACCOUNTING_HASH_STALE"):
         d.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
     assert g.calls == []
@@ -112,7 +114,7 @@ def test_consumed_reservation_does_not_double_consume_on_retry(tmp_path: Path):
     acct = accounting(tmp_path)
     gate, book = reservation(tmp_path, acct.snapshot().projection_hash)
     g = FakeGateway()
-    d = GuardedExecutionDispatcher(bridge=b, gateway=g, permission_snapshot=snap, accounting_authority=acct, risk_reservation_gate=gate, clock_ms=lambda: 101)
+    d = GuardedExecutionDispatcher(bridge=b, gateway=g, permission_snapshot=snap, accounting_authority=acct, risk_reservation_gate=gate, **execution_authorities_for(i, now_ms=BASE_MS), risk_decision_ledger=risk_decision_ledger_for(b, i, now_ms=BASE_MS), clock_ms=lambda: BASE_MS)
     first = d.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
     second = d.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
     assert len(g.calls) == 1
@@ -131,7 +133,7 @@ def test_transport_ambiguity_leaves_reservation_consumed(tmp_path: Path):
     acct = accounting(tmp_path)
     gate, book = reservation(tmp_path, acct.snapshot().projection_hash)
     g = AmbiguousGateway()
-    d = GuardedExecutionDispatcher(bridge=b, gateway=g, permission_snapshot=snap, accounting_authority=acct, risk_reservation_gate=gate, clock_ms=lambda: 101)
+    d = GuardedExecutionDispatcher(bridge=b, gateway=g, permission_snapshot=snap, accounting_authority=acct, risk_reservation_gate=gate, **execution_authorities_for(i, now_ms=BASE_MS), risk_decision_ledger=risk_decision_ledger_for(b, i, now_ms=BASE_MS), clock_ms=lambda: BASE_MS)
     with pytest.raises(RuntimeError, match="TRANSPORT_AMBIGUOUS"):
         d.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
     assert len(g.calls) == 1
