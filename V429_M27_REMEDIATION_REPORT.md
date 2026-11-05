@@ -15,7 +15,8 @@ M27 already rejected unauthorized tuning access and durably invalidated dependen
 
 - Focused holdout, snapshot, and V4.29 matrix tests: **18 passed** on Windows.
 - Mandatory V4.29 runner on Windows/Python 3.14.7: **1,165 passed, 26 skipped**; `RELEASE_HYGIENE=PASS` (decision `V429-M27-RESTART-20261105-03`).
-- Hosted `main` validation of the preceding PR #11 merge (`e0d6611`): **1,187 passed, 2 skipped**; `RELEASE_HYGIENE=PASS` (run [42023395397](https://github.com/Zenex-cpp/Quant_trading_platform/actions/runs/42023395397)). That hosted run predates this M27 follow-up; this follow-up still requires its own PR validation.
+- Hosted validation of PR #12 head `94e4d54`: **1,189 passed, 2 skipped**; `RELEASE_HYGIENE=PASS` (required PR run [42025637012](https://github.com/Zenex-cpp/Quant_trading_platform/actions/runs/42025637012); push run [42025577486](https://github.com/Zenex-cpp/Quant_trading_platform/actions/runs/42025577486)).
+- The hosted governance audit remains non-fatal and reports missing external governance evidence, including the independent trust anchor and signed approval. This does not promote M27 beyond `TESTED` or change production readiness.
 
 ## Boundary
 
