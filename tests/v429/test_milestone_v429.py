@@ -65,3 +65,15 @@ def test_v429_m16_matrix_points_to_live_configuration_conflict_evidence():
     assert "tests/v325/test_deployment_activation.py" in m16["test_reference"]
     assert m16["evidence_reference"] == "V429_M16_REMEDIATION_REPORT.md"
     assert "Independent" in m16["unresolved_gap"]
+
+
+def test_v429_m1_matrix_points_to_testnet_read_only_guard_evidence():
+    with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
+        rows = {row["machine_check_id"]: row for row in csv.DictReader(stream)}
+    m1 = rows["M1"]
+    assert m1["implementation_status"] == "TESTED"
+    assert "trading_platform/testnet/session.py" in m1["code_reference"]
+    assert "trading_platform/testnet/runner.py" in m1["code_reference"]
+    assert "tests/test_testnet_read_only_boundary.py" in m1["test_reference"]
+    assert m1["evidence_reference"] == "V429_M1_REMEDIATION_REPORT.md"
+    assert "Independent review" in m1["unresolved_gap"]

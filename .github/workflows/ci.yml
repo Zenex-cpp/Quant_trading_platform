@@ -36,6 +36,7 @@ jobs:
           --baseline-sha256-file V428_BASELINE_ARCHIVE_SHA256.txt
           --matrix compliance_v429.csv
           --impacted-requirement CI-PREFLIGHT-01
+          --impacted-requirement M1
           --impacted-requirement REPO-GOV-01
           --impacted-requirement REPO-GOV-02
           --impacted-requirement REPO-GOV-03

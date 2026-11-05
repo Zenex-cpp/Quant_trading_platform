@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import Any, Callable, Mapping
 import hashlib, json, os, secrets
 from datetime import datetime, timezone
+from trading_platform.ops.network_policy import TESTNET_POLICY
+from .read_only import normalize_read_only_request
 
 class SessionStatus(str, Enum):
     PLANNED='PLANNED'; RUNNING='RUNNING'; PASSED='PASSED'; FAILED='FAILED'; NOT_VERIFIED='NOT_VERIFIED'
@@ -38,10 +40,13 @@ class SessionConfig:
             raise ValueError('TLS_REQUIRED')
         if 'binance.com' in self.base_url and 'testnet' not in self.base_url:
             raise ValueError('MAINNET_HOST_BLOCKED')
+        TESTNET_POLICY.assert_allowed(self.base_url)
         if self.websocket_url and not self.websocket_url.startswith('wss://'):
             raise ValueError('WEBSOCKET_TLS_REQUIRED')
         if self.websocket_url and 'binance.com' in self.websocket_url and 'testnet' not in self.websocket_url:
             raise ValueError('MAINNET_WS_HOST_BLOCKED')
+        if self.websocket_url:
+            TESTNET_POLICY.assert_allowed(self.websocket_url)
         if not self.symbol.isalnum():
             raise ValueError('INVALID_SYMBOL')
         if self.request_timeout_s <= 0:
@@ -93,6 +98,7 @@ class LiveTestnetSession:
         return a
 
     def run_probe(self, scenario_id: str, method: str, path: str, params: Mapping[str,str], probe: Callable[[Mapping[str,Any]], tuple[bool, tuple[str,...], tuple[str,...]]], request_meta: Mapping[str,Any] | None = None) -> EvidenceArtifact:
+        method = normalize_read_only_request(method, path)
         started=datetime.now(timezone.utc).isoformat(); self.status=SessionStatus.RUNNING
         req={**(request_meta or {}), 'method':method, 'path':path, 'params_keys':sorted(params.keys())}
         try:

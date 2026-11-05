@@ -13,6 +13,13 @@ def test_testnet_config_blocks_non_testnet_and_requires_tls():
     except ValueError as e:
         assert str(e)=="NON_TESTNET_ENVIRONMENT_BLOCKED"
 
+def test_testnet_config_rejects_unapproved_hosts():
+    try:
+        TestnetClientConfig("https://fapi.binance.com", "key", "secret").validate()
+        assert False
+    except PermissionError as e:
+        assert str(e)=="NETWORK_POLICY_DENIED"
+
 def test_signer_matches_hmac_sha256():
     got=BinanceTestnetSigner.sign(b"secret", {"b":"2","a":"1"})
     exp=hmac_sha256(b"secret", b"a=1&b=2")
