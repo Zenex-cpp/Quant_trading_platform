@@ -17,4 +17,4 @@ def test_release_hygiene_detects_bytecode_file(tmp_path):
 
 
 def test_python_package_version_contract_is_preserved():
-    assert __version__ == "3.61.0"
+    assert __version__ == "3.61.1"
