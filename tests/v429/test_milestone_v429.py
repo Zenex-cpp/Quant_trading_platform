@@ -38,3 +38,14 @@ def test_v429_m27_matrix_points_to_restart_safe_invalidation_evidence():
     assert "tests/v354/test_m27_holdout_compromise.py" in m27["test_reference"]
     assert m27["evidence_reference"] == "V429_M27_REMEDIATION_REPORT.md"
     assert "Independent" in m27["unresolved_gap"]
+
+
+def test_v429_m26_matrix_points_to_durable_applicability_evidence():
+    with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
+        rows = {row["machine_check_id"]: row for row in csv.DictReader(stream)}
+    m26 = rows["M26"]
+    assert m26["implementation_status"] == "TESTED"
+    assert "src/trading_platform/v353/methodology_authority.py" in m26["code_reference"]
+    assert "tests/test_v353_m26_method_applicability.py" in m26["test_reference"]
+    assert m26["evidence_reference"] == "V353_VERIFICATION_REPORT.md"
+    assert "Independent" in m26["unresolved_gap"]
