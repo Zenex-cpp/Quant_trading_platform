@@ -22,7 +22,7 @@ Correct two gaps found while checking the current implementation against Master 
 | §93/§95 target-window purge and holdout boundary | TESTED | `tests/test_v03_completion.py` |
 | M2 expired RiskDecision fails closed after restart | TESTED | `tests/test_v358_e2e_acceptance.py` |
 | §178 deterministic offline pipeline, failure injection, recovery, rollback | TESTED | `tests/test_v358_e2e_acceptance.py`; `V368_ROLLBACK_EXERCISE` |
-| M27 holdout incident invalidates all dependent evidence | PARTIAL | This change avoids holdout target access in the acceptance path; automated incident-to-evidence invalidation remains incomplete. |
+| M27 holdout incident invalidates dependent evidence after interruption/restart | TESTED | `tests/v354/test_m27_holdout_compromise.py`; `V429_M27_REMEDIATION_REPORT.md` |
 
 These are application-level tests over synthetic data and local SQLite files. They are not independent review, exchange evidence, or production-readiness evidence. No live or Testnet order is sent.
 
@@ -30,4 +30,4 @@ These are application-level tests over synthetic data and local SQLite files. Th
 
 - Focused splitter and end-to-end acceptance tests: **17 passed** on Windows/Python 3.14.7.
 - Mandatory full V4.29 runner on Windows/Python 3.14.7: **1,163 passed, 26 skipped**, `RELEASE_HYGIENE=PASS` (decision `V429-SPLIT-PURGE-20261104-02`).
-- Hosted PR and post-merge CI results are pending; this report does not treat local simulation as external evidence.
+- PR #11 merged as `e0d6611`; its hosted validation and the subsequent `main` push run completed successfully at **1,187 passed, 2 skipped**, `RELEASE_HYGIENE=PASS`. That run predates the separate M27 restart-recovery follow-up and does not validate its new test.

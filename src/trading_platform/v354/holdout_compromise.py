@@ -203,6 +203,35 @@ class HoldoutCompromiseAuthorityLedger:
             raise HoldoutCompromiseAuthorityError("EVENT_CHAIN_INVALID_AFTER_DEPENDENT_INVALIDATION")
         return record
 
+    def reconcile_compromises(
+        self,
+        *,
+        dependency_authority: DependencyInvalidationLedger,
+        graph,
+        evidence_index,
+        gate_dependencies,
+        candidates,
+        promotions,
+    ) -> tuple[DependencyInvalidationRecord, ...]:
+        """Replay durable holdout incidents so a restart completes interrupted invalidation."""
+        if not self.store.verify_chain():
+            raise HoldoutCompromiseAuthorityError("EVENT_CHAIN_INVALID")
+        records = []
+        for event in tuple(self.store.iter_events()):
+            if event.event_type != self.COMPROMISED_EVENT:
+                continue
+            compromise = self._from_event(event)
+            records.append(self.invalidate_dependents(
+                compromise=compromise,
+                dependency_authority=dependency_authority,
+                graph=graph,
+                evidence_index=evidence_index,
+                gate_dependencies=gate_dependencies,
+                candidates=candidates,
+                promotions=promotions,
+            ))
+        return tuple(records)
+
     def assert_clean(self, holdout_id: str) -> None:
         if not holdout_id:
             raise HoldoutCompromiseAuthorityInvalid("HOLDOUT_ID_REQUIRED")

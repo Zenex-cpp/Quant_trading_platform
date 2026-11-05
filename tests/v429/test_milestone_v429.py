@@ -28,3 +28,13 @@ def test_v429_matrix_does_not_claim_external_governance_is_verified():
     for key in ("REPO-GOV-01", "REPO-GOV-02", "REPO-GOV-03", "REPO-GOV-CAPTURE-01", "REPO-GOV-SIGN-01"):
         assert rows[key]["implementation_status"] in {"PARTIAL", "TESTED"}
         assert rows[key]["unresolved_gap"]
+
+
+def test_v429_m27_matrix_points_to_restart_safe_invalidation_evidence():
+    with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
+        rows = {row["machine_check_id"]: row for row in csv.DictReader(stream)}
+    m27 = rows["M27"]
+    assert m27["implementation_status"] == "TESTED"
+    assert "tests/v354/test_m27_holdout_compromise.py" in m27["test_reference"]
+    assert m27["evidence_reference"] == "V429_M27_REMEDIATION_REPORT.md"
+    assert "Independent" in m27["unresolved_gap"]
