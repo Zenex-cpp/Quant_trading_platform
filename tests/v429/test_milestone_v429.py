@@ -49,3 +49,15 @@ def test_v429_m26_matrix_points_to_durable_applicability_evidence():
     assert "tests/test_v353_m26_method_applicability.py" in m26["test_reference"]
     assert m26["evidence_reference"] == "V353_VERIFICATION_REPORT.md"
     assert "Independent" in m26["unresolved_gap"]
+
+
+def test_v429_m16_matrix_points_to_live_configuration_conflict_evidence():
+    with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
+        rows = {row["machine_check_id"]: row for row in csv.DictReader(stream)}
+    m16 = rows["M16"]
+    assert m16["implementation_status"] == "TESTED"
+    assert "src/trading_platform/v343/config_authority.py" in m16["code_reference"]
+    assert "src/trading_platform/v31/authority.py" in m16["code_reference"]
+    assert "tests/test_v343_m16_configuration_conflict.py" in m16["test_reference"]
+    assert m16["evidence_reference"] == "V343_VERIFICATION_REPORT.md"
+    assert "Independent" in m16["unresolved_gap"]
