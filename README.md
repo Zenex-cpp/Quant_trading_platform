@@ -10,7 +10,7 @@ The current repository is a recovery extension based on the available V4.28 reco
 - V4.29 hardens the external Ed25519 signer and requires the fixed milestone preflight, full regression, and release-hygiene checks.
 - The follow-up hardens chronological label purging at every split boundary and makes the offline §178 acceptance gate require real SQLite recovery, failure-injection, and deployment-rollback proofs. The E2E run uses training labels only and leaves final-holdout targets untouched.
 - Holdout incidents are reconciled from the durable event store at context startup, so an interrupted invalidation is completed before dependents can be used.
-- Latest hosted PR #12 validation: **1,189 passed, 2 skipped**, `RELEASE_HYGIENE=PASS` ([run 42025637012](https://github.com/Zenex-cpp/Quant_trading_platform/actions/runs/42025637012)).
+- Hosted PR #12 regression: **1,189 passed, 2 skipped**, `RELEASE_HYGIENE=PASS` ([run 42025637012](https://github.com/Zenex-cpp/Quant_trading_platform/actions/runs/42025637012)).
 - Windows/Python 3.14 local validation: **1,156 passed, 26 skipped**. POSIX-only signer checks remain enabled in Linux CI; symlink checks skip only when the host cannot create symlinks.
 - Validation does not execute exchange orders or certify production readiness. `external_evidence=false`, `activation_flag=NOT_SET`, and `production_ready=false` remain in force.
 
