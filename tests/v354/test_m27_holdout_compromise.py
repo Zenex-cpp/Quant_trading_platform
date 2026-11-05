@@ -40,6 +40,42 @@ def test_improper_holdout_access_compromises_holdout_and_invalidates_dependents(
     assert store.get("holdout-evidence-invalidated:holdout-access-violation:A1:EV-OLD") is not None
 
 
+def test_restart_reconciles_a_durable_compromise_before_dependents_are_invalidated(tmp_path):
+    store_path = tmp_path / "holdout-recovery.sqlite3"
+    store = EventStore(str(store_path))
+    context = ctx(store)
+    context.compromise_authority.declare_compromised(
+        incident_id="holdout-access-violation:CRASH",
+        holdout_id="H1",
+        holdout_version="1",
+        content_hash="HASH-H1",
+        access_id="CRASH",
+        actor="research",
+        reason="FINAL_HOLDOUT_IMPROPER_ACCESS",
+        recorded_at_ms=NOW_MS,
+    )
+    # Model a process stop after the terminal incident is durable but before its
+    # dependency invalidation and audit events have been appended.
+    store.close()
+
+    reopened_store = EventStore(str(store_path))
+    recovered = ctx(reopened_store)
+    record = recovered.dependency_ledger.get("holdout-access-violation:CRASH")
+
+    assert record is not None
+    assert record.invalidated_evidence == ("EV-OLD",)
+    assert record.invalidated_gates == ("G1",)
+    assert record.affected_candidates == ("C1",)
+    assert record.affected_promotions == ("P1",)
+    assert reopened_store.get(
+        "holdout-evidence-invalidated:holdout-access-violation:CRASH:EV-OLD"
+    ) is not None
+    with pytest.raises(DependencyInvalidationBlocked, match="DEPENDENCY_INVALIDATION_ACTIVE"):
+        recovered.dependency_ledger.assert_promotion_usable("P1")
+
+    reopened_store.close()
+
+
 def test_preissued_capability_cannot_open_after_compromise():
     store = EventStore(); context = ctx(store)
     policy = HoldoutPolicy("H1", holdout_version="1", content_hash="HASH-H1")

@@ -49,7 +49,7 @@ class HoldoutAccessContext:
         candidates: Mapping[str, tuple[str, ...]],
         promotions: Mapping[str, tuple[str, ...]],
     ) -> "HoldoutAccessContext":
-        return cls(
+        context = cls(
             store,
             DependencyInvalidationLedger(store),
             graph,
@@ -59,6 +59,15 @@ class HoldoutAccessContext:
             promotions,
             HoldoutCompromiseAuthorityLedger(store),
         )
+        context.compromise_authority.reconcile_compromises(
+            dependency_authority=context.dependency_ledger,
+            graph=context.graph,
+            evidence_index=context.evidence_index,
+            gate_dependencies=context.gate_dependencies,
+            candidates=context.candidates,
+            promotions=context.promotions,
+        )
+        return context
 
 
 @dataclass(frozen=True)
