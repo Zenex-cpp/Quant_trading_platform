@@ -23,6 +23,7 @@ from trading_platform.v35.binance_execution import ExchangeOutcome, RuntimeCrede
 from trading_platform.v310.runtime_orchestrator import OrchestrationState, RuntimeCycleSnapshot
 from trading_platform.v30.truth import AxisSnapshot, TruthComponent, TruthStatus, build_truth
 from trading_platform.v32.capability import CapabilityAuthority
+from tests.dispatch_support import execution_authorities_for, risk_decision_ledger_for
 
 NOW = datetime(2026, 9, 19, tzinfo=timezone.utc)
 WIN = ValidWindow(NOW - timedelta(seconds=1), NOW + timedelta(minutes=5))
@@ -91,6 +92,8 @@ def dispatcher(b, i, intent_ledger, request_ledger, attempt_ledger, gateway):
         order_intent_ledger=intent_ledger,
         order_request_ledger=request_ledger,
         dispatch_attempt_ledger=attempt_ledger,
+        **execution_authorities_for(i, now_ms=int(NOW.timestamp() * 1000)),
+        risk_decision_ledger=risk_decision_ledger_for(b, i, now_ms=int(NOW.timestamp() * 1000)),
         clock_ms=lambda: int(NOW.timestamp() * 1000),
     )
 

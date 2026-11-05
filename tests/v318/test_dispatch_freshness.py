@@ -18,6 +18,7 @@ from trading_platform.v311.dispatch_guard import DispatchGuardDenied, GuardedExe
 from trading_platform.v310.runtime_orchestrator import OrchestrationState, RuntimeCycleSnapshot
 from trading_platform.execution.models import OrderIntent, OrderAction, OrderType, PositionState, Side
 from trading_platform.core.ttl import ValidWindow
+from tests.dispatch_support import execution_authorities_for
 
 NOW = datetime(2026, 9, 17, tzinfo=timezone.utc)
 BASE_MS = int(NOW.timestamp() * 1000)
@@ -83,8 +84,52 @@ def reservation(path: str, truth_hash: str):
 def test_expired_risk_decision_blocks_before_transport(tmp_path: Path):
     b,i,t=build_bridge(); g=G()
     d=GuardedExecutionDispatcher(bridge=b,gateway=g,permission_snapshot=runtime,
+        **execution_authorities_for(i, now_ms=BASE_MS + 100000),
         risk_decision_ledger=risk(str(tmp_path/"riskd.db"), t.state_hash), clock_ms=lambda: BASE_MS + 100000)
     with pytest.raises(DispatchGuardDenied, match="RISK_DECISION_DENIED:RISK_DECISION_EXPIRED_OR_NOT_YET_VALID"):
+        d.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
+    assert not g.calls
+
+
+def test_missing_risk_decision_ledger_blocks_before_transport():
+    b, i, _ = build_bridge(); g = G()
+    d = GuardedExecutionDispatcher(bridge=b, gateway=g, permission_snapshot=runtime,
+        **execution_authorities_for(i, now_ms=BASE_MS + 50000),
+        clock_ms=lambda: BASE_MS + 50000)
+    with pytest.raises(DispatchGuardDenied, match="RISK_DECISION_LEDGER_REQUIRED"):
+        d.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
+    assert not g.calls
+
+
+def test_missing_position_authority_blocks_before_transport():
+    b, i, _ = build_bridge(); g = G()
+    d = GuardedExecutionDispatcher(bridge=b, gateway=g, permission_snapshot=runtime,
+        clock_ms=lambda: BASE_MS + 50000)
+    with pytest.raises(DispatchGuardDenied, match="POSITION_AUTHORITY_REQUIRED"):
+        d.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
+    assert not g.calls
+
+
+def test_missing_market_data_authority_blocks_entry_before_transport(tmp_path: Path):
+    b, i, _ = build_bridge(); g = G()
+    authorities = execution_authorities_for(i, now_ms=BASE_MS + 50000)
+    authorities.pop("market_data_authority")
+    d = GuardedExecutionDispatcher(bridge=b, gateway=g, permission_snapshot=runtime,
+        **authorities, risk_decision_ledger=risk(str(tmp_path / "riskd.db"), b.committed_request(i.intent_id).authority.truth_hash),
+        clock_ms=lambda: BASE_MS + 50000)
+    with pytest.raises(DispatchGuardDenied, match="MARKET_DATA_AUTHORITY_REQUIRED"):
+        d.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
+    assert not g.calls
+
+
+def test_missing_causal_ttl_authority_blocks_entry_before_transport(tmp_path: Path):
+    b, i, t = build_bridge(); g = G()
+    authorities = execution_authorities_for(i, now_ms=BASE_MS + 50000)
+    authorities.pop("causal_ttl_authority")
+    d = GuardedExecutionDispatcher(bridge=b, gateway=g, permission_snapshot=runtime,
+        **authorities, risk_decision_ledger=risk(str(tmp_path / "riskd.db"), t.state_hash),
+        clock_ms=lambda: BASE_MS + 50000)
+    with pytest.raises(DispatchGuardDenied, match="CAUSAL_TTL_AUTHORITY_REQUIRED"):
         d.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
     assert not g.calls
 
@@ -94,6 +139,7 @@ def test_valid_risk_decision_and_reservation_dispatch(tmp_path: Path):
     acct=accounting(str(tmp_path/"acct.db"))
     gate=reservation(str(tmp_path/"riskr.db"), acct.snapshot().projection_hash)
     d=GuardedExecutionDispatcher(bridge=b,gateway=g,permission_snapshot=runtime, accounting_authority=acct,
+        **execution_authorities_for(i, now_ms=BASE_MS + 50000),
         risk_decision_ledger=risk(str(tmp_path/"riskd.db"), t.state_hash),
         risk_reservation_gate=gate, clock_ms=lambda: BASE_MS + 50000)
     r=d.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
@@ -105,6 +151,7 @@ def test_order_intent_window_and_request_deadline_are_final_guards(tmp_path: Pat
     b,i,t=build_bridge(); g=G()
     expired = OrderIntent(i.intent_id,i.decision_id,i.portfolio_decision_id,i.risk_decision_id,i.strategy_id,i.model_id,i.execution_version,i.symbol,i.side,i.action,i.quantity,i.order_type,ValidWindow(NOW-timedelta(minutes=5),NOW-timedelta(seconds=1)),risk_reservation_id=i.risk_reservation_id)
     d=GuardedExecutionDispatcher(bridge=b,gateway=g,permission_snapshot=runtime,
+        **execution_authorities_for(i, now_ms=BASE_MS + 50000),
         risk_decision_ledger=risk(str(tmp_path/"riskd.db"), t.state_hash),
         risk_reservation_gate=reservation(str(tmp_path/"riskr.db"), t.state_hash), clock_ms=lambda: BASE_MS + 50000)
     with pytest.raises(DispatchGuardDenied, match="ORDER_INTENT_NOT_FRESH"):
@@ -119,6 +166,7 @@ def test_order_request_deadline_blocks_before_transport(tmp_path: Path):
     acct=accounting(str(tmp_path/"acct.db"))
     gate=reservation(str(tmp_path/"riskr.db"), acct.snapshot().projection_hash)
     d=GuardedExecutionDispatcher(bridge=b,gateway=g,permission_snapshot=runtime, accounting_authority=acct,
+        **execution_authorities_for(i, now_ms=BASE_MS + 50000),
         risk_decision_ledger=risk(str(tmp_path/"riskd.db"), t.state_hash),
         risk_reservation_gate=gate, clock_ms=lambda: BASE_MS + 50000)
     with pytest.raises(DispatchGuardDenied, match="ORDER_REQUEST_EXPIRED"):
@@ -130,6 +178,7 @@ def test_committed_intent_identity_is_final_guard(tmp_path: Path):
     b,i,t=build_bridge(); g=G()
     tampered = replace(i, quantity=Decimal("0.002"))
     d=GuardedExecutionDispatcher(bridge=b,gateway=g,permission_snapshot=runtime,
+        **execution_authorities_for(i, now_ms=BASE_MS + 50000),
         risk_decision_ledger=risk(str(tmp_path/"riskd.db"), t.state_hash), clock_ms=lambda: BASE_MS + 50000)
     with pytest.raises(DispatchGuardDenied, match="COMMITTED_INTENT_MISMATCH"):
         d.dispatch_submit(intent=tampered, credentials=RuntimeCredentialValues("API", b"SECRET"))
@@ -141,6 +190,7 @@ def test_durable_order_intent_missing_or_tampered_blocks_before_transport(tmp_pa
     b,i,t=build_bridge(); g=G()
     ledger=DurableOrderIntentLedger(EventStore(str(tmp_path/"intent.db")))
     d=GuardedExecutionDispatcher(bridge=b,gateway=g,permission_snapshot=runtime,
+        **execution_authorities_for(i, now_ms=BASE_MS + 50000),
         risk_decision_ledger=risk(str(tmp_path/"riskd.db"), t.state_hash),
         order_intent_ledger=ledger, clock_ms=lambda: BASE_MS + 50000)
     with pytest.raises(DispatchGuardDenied, match="ORDER_INTENT_DURABLE_DENIED:ORDER_INTENT_NOT_FOUND"):

@@ -10,6 +10,7 @@ from trading_platform.v310.runtime_orchestrator import OrchestrationState, Runti
 from trading_platform.v311.dispatch_guard import DispatchGuardDenied, GuardedExecutionDispatcher
 from trading_platform.execution.models import OrderIntent, OrderAction, OrderType, PositionState, Side
 from trading_platform.core.ttl import ValidWindow
+from tests.dispatch_support import execution_authorities_for, risk_decision_ledger_for
 
 NOW = datetime(2026, 9, 13, tzinfo=timezone.utc)
 WIN = ValidWindow(NOW - timedelta(seconds=1), NOW + timedelta(minutes=5))
@@ -69,7 +70,10 @@ def test_denied_runtime_blocks_before_transport():
 def test_allowed_runtime_dispatches_exact_committed_request():
     b, i = valid_bridge()
     g = FakeGateway(SubmitObservation(ExchangeOutcome.ACKNOWLEDGED, b._requests[i.intent_id].request.client_order_id, "EX123"))
-    d = GuardedExecutionDispatcher(bridge=b, gateway=g, permission_snapshot=lambda: snap(True))
+    d = GuardedExecutionDispatcher(bridge=b, gateway=g, permission_snapshot=lambda: snap(True),
+        **execution_authorities_for(i, now_ms=int(NOW.timestamp() * 1000)),
+        risk_decision_ledger=risk_decision_ledger_for(b, i, now_ms=int(NOW.timestamp() * 1000)),
+        clock_ms=lambda: int(NOW.timestamp() * 1000))
     receipt = d.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
     assert len(g.calls) == 1
     assert g.calls[0][0] == b._requests[i.intent_id].request
@@ -91,7 +95,10 @@ def test_unknown_local_lifecycle_blocks_dispatch():
     b, i = valid_bridge()
     b.mark_unknown(i.intent_id, exchange_order_id="EX", client_order_id=b._requests[i.intent_id].request.client_order_id)
     g = FakeGateway(SubmitObservation(ExchangeOutcome.ACKNOWLEDGED, "cid", "ex"))
-    d = GuardedExecutionDispatcher(bridge=b, gateway=g, permission_snapshot=lambda: snap(True))
+    d = GuardedExecutionDispatcher(bridge=b, gateway=g, permission_snapshot=lambda: snap(True),
+        **execution_authorities_for(i, now_ms=int(NOW.timestamp() * 1000)),
+        risk_decision_ledger=risk_decision_ledger_for(b, i, now_ms=int(NOW.timestamp() * 1000)),
+        clock_ms=lambda: int(NOW.timestamp() * 1000))
     with pytest.raises(ValueError, match="UNKNOWN_ORDER_NO_BLIND_RETRY"):
         d.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
     assert not g.calls
@@ -113,6 +120,9 @@ def test_accounting_unknown_blocks_before_transport():
         gateway=g,
         permission_snapshot=lambda: snap(True),
         accounting_authority=authority,
+        **execution_authorities_for(i, now_ms=int(NOW.timestamp() * 1000)),
+        risk_decision_ledger=risk_decision_ledger_for(b, i, now_ms=int(NOW.timestamp() * 1000)),
+        clock_ms=lambda: int(NOW.timestamp() * 1000),
     )
     with pytest.raises(DispatchGuardDenied, match="ACCOUNTING_NOT_ALLOWED:UNRECONCILED:"):
         d.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
@@ -136,6 +146,9 @@ def test_reconciled_accounting_allows_transport():
         gateway=g,
         permission_snapshot=lambda: snap(True),
         accounting_authority=authority,
+        **execution_authorities_for(i, now_ms=int(NOW.timestamp() * 1000)),
+        risk_decision_ledger=risk_decision_ledger_for(b, i, now_ms=int(NOW.timestamp() * 1000)),
+        clock_ms=lambda: int(NOW.timestamp() * 1000),
     )
     d.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
     assert len(g.calls) == 1

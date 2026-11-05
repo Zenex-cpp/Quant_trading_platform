@@ -16,6 +16,7 @@ from tests.causal_helpers import causal_authority_for_intent
 from trading_platform.core.ttl import ValidWindow
 from trading_platform.portfolio.config import ConfigValue, Precedence
 from trading_platform.v343.config_authority import ConfigurationAuthorityLedger
+from tests.dispatch_support import risk_decision_ledger_for
 
 NOW = datetime(2026, 9, 13, tzinfo=timezone.utc)
 BASE_MS = int(NOW.timestamp() * 1000)
@@ -97,6 +98,13 @@ def runtime_inputs():
     return bridge(record), ledger, record, values
 
 
+def risk_authority(b, *, expires_at_ms=None):
+    return risk_decision_ledger_for(
+        b, intent(), now_ms=BASE_MS,
+        expires_at_ms=expires_at_ms if expires_at_ms is not None else BASE_MS + 60_000,
+    )
+
+
 class FakeGateway:
     def __init__(self, behavior): self.behavior, self.calls = behavior, []
     def submit(self, order, *, credentials):
@@ -114,7 +122,7 @@ class FakeOrchestrator:
 def test_true_path_uses_committed_bridge_request_and_testnet_gateway():
     b, config, resolution, values = runtime_inputs(); o = FakeOrchestrator()
     g = FakeGateway(lambda order, credentials: SubmitObservation(ExchangeOutcome.ACKNOWLEDGED, order.client_order_id, "EX312"))
-    rt = ExecutionRuntimeIntegration(orchestrator=o, bridge=b, gateway=g, position_authority=position_authority(), market_data_authority=market_authority(), causal_ttl_authority=causal_authority_for_intent(intent()), configuration_authority=config)
+    rt = ExecutionRuntimeIntegration(orchestrator=o, bridge=b, gateway=g, position_authority=position_authority(), market_data_authority=market_authority(), causal_ttl_authority=causal_authority_for_intent(intent()), risk_decision_ledger=risk_authority(b), configuration_authority=config)
     res = rt.dispatch(intent=intent(), credentials=RuntimeCredentialValues("API", b"SECRET"), now_epoch=NOW.timestamp(), configuration_resolution_id=resolution.resolution_id, configuration_values=values)
     assert res.submitted is True and res.exchange_uncertain is False
     assert res.receipt is not None and res.receipt.exchange_order_id == "EX312"
@@ -125,7 +133,7 @@ def test_transport_uncertainty_marks_unknown_and_requires_reconciliation():
     b, config, resolution, values = runtime_inputs(); o = FakeOrchestrator()
     def uncertain(order, credentials): raise ExchangeUncertain("SUBMIT_OUTCOME_UNKNOWN")
     g = FakeGateway(uncertain)
-    rt = ExecutionRuntimeIntegration(orchestrator=o, bridge=b, gateway=g, position_authority=position_authority(), market_data_authority=market_authority(), causal_ttl_authority=causal_authority_for_intent(intent()), configuration_authority=config)
+    rt = ExecutionRuntimeIntegration(orchestrator=o, bridge=b, gateway=g, position_authority=position_authority(), market_data_authority=market_authority(), causal_ttl_authority=causal_authority_for_intent(intent()), risk_decision_ledger=risk_authority(b), configuration_authority=config)
     res = rt.dispatch(intent=intent(), credentials=RuntimeCredentialValues("API", b"SECRET"), now_epoch=NOW.timestamp(), configuration_resolution_id=resolution.resolution_id, configuration_values=values)
     assert res.exchange_uncertain is True and res.recovery_required is True
     assert b._lifecycles[intent().intent_id].state.value == "UNKNOWN"
@@ -137,7 +145,7 @@ def test_permission_lost_after_network_dispatch_is_not_reported_as_clean_cycle()
         o.allowed = False
         return SubmitObservation(ExchangeOutcome.ACKNOWLEDGED, order.client_order_id, "EX312-RACE")
     g = FakeGateway(behavior)
-    rt = ExecutionRuntimeIntegration(orchestrator=o, bridge=b, gateway=g, position_authority=position_authority(), market_data_authority=market_authority(), causal_ttl_authority=causal_authority_for_intent(intent()), configuration_authority=config)
+    rt = ExecutionRuntimeIntegration(orchestrator=o, bridge=b, gateway=g, position_authority=position_authority(), market_data_authority=market_authority(), causal_ttl_authority=causal_authority_for_intent(intent()), risk_decision_ledger=risk_authority(b), configuration_authority=config)
     res = rt.dispatch(intent=intent(), credentials=RuntimeCredentialValues("API", b"SECRET"), now_epoch=NOW.timestamp(), configuration_resolution_id=resolution.resolution_id, configuration_values=values)
     assert res.submitted is True
     assert res.recovery_required is True
@@ -155,11 +163,48 @@ def test_blocked_runtime_makes_zero_exchange_calls():
 def test_missing_causal_ttl_authority_blocks_before_gateway():
     b, config, resolution, values = runtime_inputs(); o = FakeOrchestrator()
     g = FakeGateway(lambda order, credentials: SubmitObservation(ExchangeOutcome.ACKNOWLEDGED, order.client_order_id, "NEVER"))
-    rt = ExecutionRuntimeIntegration(orchestrator=o, bridge=b, gateway=g, position_authority=position_authority(), market_data_authority=market_authority(), configuration_authority=config)
+    rt = ExecutionRuntimeIntegration(orchestrator=o, bridge=b, gateway=g, position_authority=position_authority(), market_data_authority=market_authority(), risk_decision_ledger=risk_authority(b), configuration_authority=config)
     res = rt.dispatch(intent=intent(), credentials=RuntimeCredentialValues("API", b"SECRET"), now_epoch=NOW.timestamp(), configuration_resolution_id=resolution.resolution_id, configuration_values=values)
     assert res.submitted is False
     assert "CAUSAL_TTL_DENIED:CAUSAL_TTL_INTENT_NOT_FOUND" in res.reason
     assert g.calls == []
+
+
+def test_missing_risk_decision_authority_blocks_final_runtime_dispatch():
+    b, config, resolution, values = runtime_inputs(); o = FakeOrchestrator()
+    g = FakeGateway(lambda order, credentials: SubmitObservation(ExchangeOutcome.ACKNOWLEDGED, order.client_order_id, "MUST-NOT-SEND"))
+    rt = ExecutionRuntimeIntegration(
+        orchestrator=o, bridge=b, gateway=g,
+        position_authority=position_authority(), market_data_authority=market_authority(),
+        causal_ttl_authority=causal_authority_for_intent(intent()),
+        configuration_authority=config,
+    )
+    result = rt.dispatch(
+        intent=intent(), credentials=RuntimeCredentialValues("API", b"SECRET"),
+        now_epoch=NOW.timestamp(), configuration_resolution_id=resolution.resolution_id,
+        configuration_values=values,
+    )
+    assert result.reason == "RISK_DECISION_LEDGER_REQUIRED"
+    assert result.submitted is False and g.calls == []
+
+
+def test_expired_risk_decision_blocks_final_runtime_dispatch():
+    b, config, resolution, values = runtime_inputs(); o = FakeOrchestrator()
+    g = FakeGateway(lambda order, credentials: SubmitObservation(ExchangeOutcome.ACKNOWLEDGED, order.client_order_id, "MUST-NOT-SEND"))
+    rt = ExecutionRuntimeIntegration(
+        orchestrator=o, bridge=b, gateway=g,
+        position_authority=position_authority(), market_data_authority=market_authority(),
+        causal_ttl_authority=causal_authority_for_intent(intent()),
+        risk_decision_ledger=risk_authority(b, expires_at_ms=BASE_MS),
+        configuration_authority=config,
+    )
+    result = rt.dispatch(
+        intent=intent(), credentials=RuntimeCredentialValues("API", b"SECRET"),
+        now_epoch=NOW.timestamp(), configuration_resolution_id=resolution.resolution_id,
+        configuration_values=values,
+    )
+    assert "RISK_DECISION_DENIED:RISK_DECISION_EXPIRED_OR_NOT_YET_VALID" in result.reason
+    assert result.submitted is False and g.calls == []
 
 
 def test_configuration_conflict_blocks_before_exchange_dispatch():

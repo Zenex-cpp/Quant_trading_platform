@@ -37,6 +37,10 @@ jobs:
           --matrix compliance_v429.csv
           --impacted-requirement CI-PREFLIGHT-01
           --impacted-requirement M1
+          --impacted-requirement M2
+          --impacted-requirement M3
+          --impacted-requirement M4
+          --impacted-requirement M5
           --impacted-requirement REPO-GOV-01
           --impacted-requirement REPO-GOV-02
           --impacted-requirement REPO-GOV-03
