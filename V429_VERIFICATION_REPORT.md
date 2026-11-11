@@ -55,3 +55,7 @@ Focused CSV/CLI/release-integrity verification passed **15 tests**. The full man
 Package 3.61.13 extends the local CSV audit to compare two bounded local OHLCV CSVs, create separate contracts, normalize timestamp/symbol join keys, report coverage/value differences, and apply explicit bounded numeric tolerances. Automated tests use synthetic files and do not establish source independence, licensing, or the quality of the absent real dataset.
 
 Focused CSV/CLI/release-integrity verification passed **22 tests**. The full mandatory Windows/Python 3.14.7 runner passed with **1,269 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`; durable preflight was `READY_FOR_MILESTONE`, `allowed=true`, with no blockers. `external_evidence=false`, `production_ready=false`, and `activation_flag=NOT_SET` remain unchanged.
+
+## Hosted branch validation — 2026-11-11
+
+GitHub Actions push run [43042509186](https://github.com/Zenex-cpp/Quant_trading_platform/actions/runs/43042509186) for commit `30ba40ec4ad6f9a76524825f5125c3ca2db86801` completed successfully. Job `controlled-milestone-validation` succeeded. Artifact `V428-validation-audit-43042509186-1` was present (20,205 bytes) with GitHub archive digest `sha256:46558e35e87386132f708063c2e1a460a319c978b33f73c94679d573866a2b2d`. The public artifact metadata was readable, but downloading its contents returned HTTP 401. This run was on the working branch, not protected `main`; REPO-GOV-02 remains `PARTIAL`, and REPO-GOV-01 branch-protection evidence remains `NOT_VERIFIED`.

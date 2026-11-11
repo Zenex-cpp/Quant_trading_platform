@@ -23,6 +23,7 @@
 
 - A GitHub provider capture was performed on 2026-11-04, but it is unsigned, stale and bound to an older commit; it is not accepted as current trusted evidence. The current branch-protection API read was denied with HTTP 403, so effective settings remain `NOT_VERIFIED`.
 - Before this remediation, the latest verified hosted PR regression was PR #14, run [42039306544](https://github.com/Zenex-cpp/Quant_trading_platform/actions/runs/42039306544): 1,191 passed, 2 skipped, `RELEASE_HYGIENE=PASS`. Hosted CI confirms code checks only; it does not certify provider governance or trading operations.
+- A push-triggered hosted CI run for working-branch commit `30ba40ec4ad6f9a76524825f5125c3ca2db86801` passed: run [43042509186](https://github.com/Zenex-cpp/Quant_trading_platform/actions/runs/43042509186), job success, artifact `V428-validation-audit-43042509186-1` present with digest `sha256:46558e35e87386132f708063c2e1a460a319c978b33f73c94679d573866a2b2d`. Downloading its contents returned HTTP 401. The run was on the working branch and does not verify the protected-main requirement; REPO-GOV-02 remains `PARTIAL`.
 - Effective branch protection/rulesets/CODEOWNERS: `NOT_VERIFIED` until a fresh, independently signed and trusted provider capture is accepted.
 - Independent reviewer identity, public-key trust ceremony and trust anchor: `NOT_CONFIGURED`.
 - Canonical V4.23 and V4.26 byte-for-byte lineage: `NOT_ESTABLISHED`.
