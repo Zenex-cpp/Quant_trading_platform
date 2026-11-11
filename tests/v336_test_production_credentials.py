@@ -71,6 +71,33 @@ def test_research_boundary_rejects_credential_bearing_mapping():
         assert_research_safe({"features": [1, 2], "api_secret": "PROD_SECRET"})
 
 
+def test_research_boundary_traverses_slotted_wrappers_and_mangled_secret_names():
+    class SlottedWrapper:
+        __slots__ = ("payload",)
+
+        def __init__(self):
+            self.payload = RuntimeCredentialValues("K", b"S")
+
+    class SlottedSecretName:
+        __slots__ = ("__api_secret",)
+
+        def __init__(self):
+            self.__api_secret = "S"
+
+    for value in (SlottedWrapper(), SlottedSecretName()):
+        with pytest.raises(ProductionCredentialAccessError, match="VISIBILITY_FORBIDDEN"):
+            assert_research_safe(value)
+
+
+def test_research_boundary_traverses_numpy_object_arrays():
+    import numpy as np
+
+    values = np.empty(1, dtype=object)
+    values[0] = RuntimeCredentialValues("K", b"S")
+    with pytest.raises(ProductionCredentialAccessError, match="VISIBILITY_FORBIDDEN"):
+        assert_research_safe(values)
+
+
 def test_research_boundary_allows_normal_research_inputs():
     assert_research_arguments(
         [1, 2, 3],

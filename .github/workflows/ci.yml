@@ -42,6 +42,7 @@ jobs:
           --impacted-requirement M4
           --impacted-requirement M5
           --impacted-requirement M7
+          --impacted-requirement M9
           --impacted-requirement M14
           --impacted-requirement REPO-GOV-01
           --impacted-requirement REPO-GOV-02

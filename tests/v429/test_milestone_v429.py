@@ -134,3 +134,16 @@ def test_v429_m14_matrix_points_to_guarded_runtime_execution():
     assert m14["evidence_reference"] == "V429_M14_REMEDIATION_REPORT.md"
     assert "Production" in m14["unresolved_gap"]
     assert '"M14"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")
+
+
+def test_v429_m9_matrix_points_to_research_credential_boundary():
+    with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
+        m9 = next(row for row in csv.DictReader(stream) if row["machine_check_id"] == "M9")
+    assert m9["implementation_status"] == "TESTED"
+    assert "trading_platform/security/credentials.py" in m9["code_reference"]
+    assert "trading_platform/data/holdout.py" in m9["code_reference"]
+    assert "tests/v336_test_production_credentials.py" in m9["test_reference"]
+    assert "tests/v335/test_tuning_surface.py" in m9["test_reference"]
+    assert m9["evidence_reference"] == "V429_M9_REMEDIATION_REPORT.md"
+    assert "operational proof" in m9["unresolved_gap"]
+    assert '"M9"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")

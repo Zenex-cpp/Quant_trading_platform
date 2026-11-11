@@ -263,7 +263,27 @@ _CREDENTIAL_KEY_MARKERS = {
 def _looks_like_credential_key(key: object) -> bool:
     if not isinstance(key, str):
         return False
-    return key.lower().replace("-", "_") in _CREDENTIAL_KEY_MARKERS
+    normalized = key.lower().replace("-", "_")
+    candidates = (
+        normalized.strip("_"),
+        normalized.rsplit("__", 1)[-1].strip("_"),
+    )
+    return any(candidate in _CREDENTIAL_KEY_MARKERS for candidate in candidates)
+
+
+def _iter_research_slots(value: Any):
+    """Yield declared slot names and their Python-mangled attribute names."""
+    for owner in type(value).__mro__:
+        declared = owner.__dict__.get("__slots__", ())
+        if isinstance(declared, str):
+            declared = (declared,)
+        for name in declared:
+            if not isinstance(name, str) or name in {"__dict__", "__weakref__"}:
+                continue
+            attribute = name
+            if name.startswith("__") and not name.endswith("__"):
+                attribute = f"_{owner.__name__.lstrip('_')}{name}"
+            yield name, attribute
 
 
 def assert_research_safe(value: Any, *, _seen: set[int] | None = None) -> None:
@@ -285,11 +305,38 @@ def assert_research_safe(value: Any, *, _seen: set[int] | None = None) -> None:
         for item in value:
             assert_research_safe(item, _seen=seen)
         return
+    # NumPy object arrays can carry credential objects inside model inputs; numeric
+    # arrays contain no Python object references and need no element traversal.
+    if any(
+        base.__module__.startswith("numpy") and "ndarray" in base.__name__
+        for base in type(value).__mro__
+    ):
+        try:
+            dtype = object.__getattribute__(value, "dtype")
+        except AttributeError:
+            dtype = None
+        if dtype is not None and getattr(dtype, "hasobject", False):
+            names = getattr(dtype, "names", None)
+            for item in object.__getattribute__(value, "flat"):
+                if names:
+                    for field_name in names:
+                        assert_research_safe(item[field_name], _seen=seen)
+                else:
+                    assert_research_safe(item, _seen=seen)
+            return
     if hasattr(value, "__dict__"):
         for k, v in vars(value).items():
             if _looks_like_credential_key(k):
                 raise ProductionCredentialAccessError("RESEARCH_PRODUCTION_CREDENTIAL_VISIBILITY_FORBIDDEN")
             assert_research_safe(v, _seen=seen)
+    for name, attribute in _iter_research_slots(value):
+        if _looks_like_credential_key(name) or _looks_like_credential_key(attribute):
+            raise ProductionCredentialAccessError("RESEARCH_PRODUCTION_CREDENTIAL_VISIBILITY_FORBIDDEN")
+        try:
+            slot_value = object.__getattribute__(value, attribute)
+        except AttributeError:
+            continue
+        assert_research_safe(slot_value, _seen=seen)
 
 
 def assert_research_arguments(*args: Any, **kwargs: Any) -> None:

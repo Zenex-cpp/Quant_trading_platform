@@ -28,7 +28,7 @@ EXPECTED_MILESTONE_ID = "V4.29-RECOVERY"
 EXPECTED_BASELINE_VERSION = "V4.28-RECOVERY"
 EXPECTED_MATRIX_PATH = "compliance_v429.csv"
 EXPECTED_BASELINE_HASH_PATH = "V428_BASELINE_ARCHIVE_SHA256.txt"
-EXPECTED_IMPACTED_IDS = ("CI-PREFLIGHT-01", "M1", "M2", "M3", "M4", "M5", "M7", "M14", "REPO-GOV-01", "REPO-GOV-02", "REPO-GOV-03", "REPO-GOV-CAPTURE-01", "REPO-GOV-SIGN-01", "REPO-GOV-PATH-01", "REPO-GOV-PATH-02", "REPO-GOV-PATH-03", "REPO-GOV-PATH-04")
+EXPECTED_IMPACTED_IDS = ("CI-PREFLIGHT-01", "M1", "M2", "M3", "M4", "M5", "M7", "M9", "M14", "REPO-GOV-01", "REPO-GOV-02", "REPO-GOV-03", "REPO-GOV-CAPTURE-01", "REPO-GOV-SIGN-01", "REPO-GOV-PATH-01", "REPO-GOV-PATH-02", "REPO-GOV-PATH-03", "REPO-GOV-PATH-04")
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 if str(ROOT / "src") not in sys.path:
@@ -60,6 +60,7 @@ CONTRACT_FILES = (
     "V429_M2_REMEDIATION_REPORT.md",
     "V429_M1_M5_TRANSPORT_REMEDIATION.md",
     "V429_M7_REMEDIATION_REPORT.md",
+    "V429_M9_REMEDIATION_REPORT.md",
     "V429_M14_REMEDIATION_REPORT.md",
     "V428_RECONSTRUCTION_NOTE.md",
     "V424_RECONSTRUCTION_NOTE.md",
@@ -84,6 +85,10 @@ CONTRACT_FILES = (
     "src/trading_platform/v429/__init__.py",
     "src/trading_platform/v429/external_file_safety.py",
     "src/trading_platform/v429/workflow_contract.py",
+    "src/trading_platform/security/credentials.py",
+    "src/trading_platform/security/permissions.py",
+    "src/trading_platform/data/holdout.py",
+    "src/trading_platform/research/pipeline.py",
     "src/trading_platform/v334/champion_authority.py",
     "src/trading_platform/v341/compatibility_authority.py",
     "src/trading_platform/v375/decision_parity.py",
@@ -93,7 +98,6 @@ CONTRACT_FILES = (
     "src/trading_platform/v311/dispatch_guard.py",
     "src/trading_platform/v312/execution_runtime.py",
     "src/trading_platform/v36/user_execution.py",
-    "src/trading_platform/v379/execution_parity.py",
     "src/trading_platform/v380/order_adapter.py",
     "src/trading_platform/v384/testnet_execution_activation.py",
     "src/trading_platform/v385/controlled_testnet_submit.py",
@@ -115,9 +119,12 @@ CONTRACT_FILES = (
     "tests/v429/test_workflow_contract_v429.py",
     "tests/v334_test_champion_authority.py",
     "tests/test_v341_m14_compatibility_authority.py",
+    "tests/v336_test_production_credentials.py",
+    "tests/v335/test_tuning_surface.py",
+    "tests/ops/test_v15_ops.py",
+    "tests/v389/test_testnet_runtime_capability.py",
     "tests/test_v375_decision_parity.py",
     "tests/test_v379_execution_parity.py",
-    "tests/test_v344_m17_gate_reuse.py",
     "tests/test_v344_m17_gate_reuse.py",
     "tests/test_v345_m18_evidence_snapshot.py",
     "tests/test_v346_m19_promotion_bundle.py",
@@ -132,7 +139,6 @@ CONTRACT_FILES = (
     "tests/v312/test_execution_runtime.py",
     "tests/v332/test_market_authority.py",
     "tests/v36/test_user_execution.py",
-    "tests/test_v379_execution_parity.py",
     "tests/test_v384_execution_activation.py",
     "tests/test_v385_controlled_testnet_submit.py",
     "tests/v385_submit_support.py",
@@ -141,7 +147,6 @@ CONTRACT_FILES = (
     "tests/v387/test_first_testnet_order.py",
     "tests/test_v362_release_integrity.py",
     "tests/test_v365_release_hygiene.py",
-    "tests/v429/test_milestone_v429.py",
     "tests/v317/test_dispatch_risk_gate.py",
     "tests/v318/test_dispatch_freshness.py",
     "tests/v320/test_dispatch_order_request.py",

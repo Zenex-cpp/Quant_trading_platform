@@ -1,6 +1,9 @@
 from datetime import datetime, timezone, timedelta
 import pytest
 from trading_platform.research.pipeline import SplitSpec, TuningSession
+from trading_platform.data.holdout import TuningDataView
+from trading_platform.security.credentials import ProductionCredentialAccessError
+from trading_platform.v35.binance_execution import RuntimeCredentialValues
 
 UTC=timezone.utc
 
@@ -21,3 +24,11 @@ def test_tuning_session_rejects_holdout_evaluation():
     session=TuningSession(times=[t(i) for i in range(10)], spec=spec, rows=list(range(10)))
     with pytest.raises(PermissionError, match="FINAL_HOLDOUT_TUNING_FORBIDDEN"):
         session.evaluate_split("FINAL_HOLDOUT", lambda _: 1)
+
+def test_direct_tuning_data_view_rejects_runtime_credentials():
+    with pytest.raises(ProductionCredentialAccessError, match="VISIBILITY_FORBIDDEN"):
+        TuningDataView(
+            train=(RuntimeCredentialValues("K", b"S"),),
+            validation=(),
+            oos=(),
+        )
