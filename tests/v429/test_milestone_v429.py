@@ -191,6 +191,21 @@ def test_v429_m24_matrix_points_to_fingerprinted_durable_health_source():
     assert '"M24"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")
 
 
+def test_v429_m23_matrix_points_to_source_bound_durable_drawdown_history():
+    with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
+        m23 = next(row for row in csv.DictReader(stream) if row["machine_check_id"] == "M23")
+    assert m23["implementation_status"] == "TESTED"
+    assert "trading_platform/v350/drawdown_history.py" in m23["code_reference"]
+    assert "trading_platform/v350/drawdown_risk_authority.py" in m23["code_reference"]
+    assert "trading_platform/v31/authority.py" in m23["code_reference"]
+    assert "trading_platform/v318/durable_decision.py" in m23["code_reference"]
+    assert "tests/test_v350_m23_drawdown_risk.py" in m23["test_reference"]
+    assert "tests/v318/test_durable_decision.py" in m23["test_reference"]
+    assert m23["evidence_reference"] == "V429_M23_REMEDIATION_REPORT.md"
+    assert "Independent" in m23["unresolved_gap"]
+    assert '"M23"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")
+
+
 def test_v429_m25_matrix_points_to_isolated_public_archive_downloader():
     with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
         m25 = next(row for row in csv.DictReader(stream) if row["machine_check_id"] == "M25")

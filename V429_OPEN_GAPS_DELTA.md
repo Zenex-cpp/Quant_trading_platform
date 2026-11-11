@@ -18,6 +18,7 @@
 - M27 now replays durable holdout-compromise incidents when the access context starts, completing interrupted dependency invalidation before the context is returned. Restart coverage checks persisted blocking through evidence, gates, candidates and promotions.
 - M25 now has an application-level public archive zone and a bounded, checksummed, immutable USD-M kline importer. Research still has no egress; the importer requires explicit acknowledgement for non-commercial historical research. The current public-data terms exclude live proprietary/commercial use, so this source cannot be used for the intended live trading path.
 - DATASET-01 has a bounded local-only CSV audit and paired-source comparison command. The user/vendor CSVs themselves are absent from the checkout, so no real dataset has been audited or compared; source independence, source-license assessment, actual anomaly review, and definitive-use authority remain open.
+- M23 derives dynamic drawdown from a hash-chained accounting-equity history with an explicit opening snapshot and history-evidence ID. The source fingerprint is carried through runtime authority, execution capability, and durable risk-decision validation; raw scalar drawdown inputs fail closed at the risk boundary. Synthetic initialization flags do not authenticate the historical source, so independent history attestation and production accounting integration remain open. See `V429_M23_REMEDIATION_REPORT.md`.
 
 ## Still open
 
@@ -29,6 +30,7 @@
 - Canonical V4.23 and V4.26 byte-for-byte lineage: `NOT_ESTABLISHED`.
 - Production security assessment, monitoring/on-call, network segmentation, secret store, backup/DR, authenticated Testnet, production rollback, independent approval and production sign-off: `NOT_VERIFIED`.
 - M25 remains `TESTED`, not `VERIFIED`: actual host/VPC/container routing enforcement is not configured or independently evidenced. A commercially licensed market-data source is required before any production or commercial strategy use; the public archive importer's non-commercial scope is recorded in its manifest.
+- M23 remains `TESTED`, not `VERIFIED`: the durable history, source binding and monotone risk cap have synthetic local coverage, but independent authenticated opening-history evidence and live production accounting integration have not been supplied.
 - Independent review and broader production integration of all configuration sources are still required to promote M16 from `TESTED` to `VERIFIED`.
 - Independent review and operational promotion evidence are still required to promote M7 from `TESTED` to `VERIFIED`.
 - M14's signed JSON model adapter is locally tested and bound to the durable runtime compatibility grant, but V3.75 remains decision-only; production inference integration and independent runtime review remain unverified.

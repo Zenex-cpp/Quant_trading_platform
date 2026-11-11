@@ -7,6 +7,7 @@ import json
 from typing import Any
 
 from trading_platform.v25.health import HealthAssessment
+from trading_platform.v350.drawdown_history import DrawdownAssessment
 from trading_platform.v30.truth import CanonicalAction, OperationalTruth
 from trading_platform.v31.authority import AuthorityDecision, AuthorityStatus, RuntimeAuthority
 
@@ -21,6 +22,7 @@ class TradeCapability:
     expires_at: datetime
     consumed: bool = False
     model_health_assessment: HealthAssessment | None = None
+    drawdown_assessment: DrawdownAssessment | None = None
 
     @property
     def truth_hash(self) -> str:
@@ -44,7 +46,7 @@ class CapabilityAuthority:
               uncertainty_method_version: str = "1",
               drawdown: Decimal | None = None, max_drawdown: Decimal = Decimal("1"),
               drawdown_floor: Decimal = Decimal("0"), drawdown_method: str = "CONSERVATIVE_LINEAR",
-              drawdown_method_version: str = "1",
+              drawdown_method_version: str = "1", drawdown_assessment: DrawdownAssessment | None = None,
               model_health: Decimal | None = None, max_model_health: Decimal = Decimal("1"),
               model_health_floor: Decimal = Decimal("0"), model_health_method: str = "CONSERVATIVE_LINEAR",
               model_health_method_version: str = "1", model_health_assessment: HealthAssessment | None = None,
@@ -57,6 +59,7 @@ class CapabilityAuthority:
             uncertainty_method_version=uncertainty_method_version,
             drawdown=drawdown, max_drawdown=max_drawdown, drawdown_floor=drawdown_floor,
             drawdown_method=drawdown_method, drawdown_method_version=drawdown_method_version,
+            drawdown_assessment=drawdown_assessment,
             model_health=model_health, max_model_health=max_model_health, model_health_floor=model_health_floor,
             model_health_method=model_health_method, model_health_method_version=model_health_method_version,
             model_health_assessment=model_health_assessment, model_health_assessment_id=model_health_assessment_id,
@@ -75,6 +78,12 @@ class CapabilityAuthority:
                                           "drawdown_floor": str(drawdown_floor),
                                           "drawdown_method": drawdown_method,
                                           "drawdown_method_version": drawdown_method_version,
+                                          "drawdown_assessment_id": (
+                                              None if drawdown_assessment is None else drawdown_assessment.assessment_id
+                                          ),
+                                          "drawdown_source_fingerprint": (
+                                              None if drawdown_assessment is None else drawdown_assessment.source_fingerprint
+                                          ),
                                           "model_health": None if model_health is None else str(model_health),
                                           "max_model_health": str(max_model_health),
                                           "model_health_floor": str(model_health_floor),
@@ -86,12 +95,17 @@ class CapabilityAuthority:
                                               else model_health_assessment.source_fingerprint
                                           )})
         cap_id = f"cap:{decision.decision_id}:{fp[:24]}"
-        return TradeCapability(cap_id, decision, TradeCapability.fingerprint(intent_payload), expires_at, False, model_health_assessment)
+        return TradeCapability(
+            cap_id, decision, TradeCapability.fingerprint(intent_payload), expires_at,
+            consumed=False, model_health_assessment=model_health_assessment,
+            drawdown_assessment=drawdown_assessment,
+        )
 
     def validate(self, capability: TradeCapability, *, now: datetime, truth: OperationalTruth,
                  intent_payload: dict[str, Any], model_health: Decimal | None = None,
                  model_health_assessment: HealthAssessment | None = None,
-                 model_health_assessment_id: str | None = None) -> None:
+                 model_health_assessment_id: str | None = None,
+                 drawdown_assessment: DrawdownAssessment | None = None) -> None:
         if capability.capability_id in self._consumed or capability.consumed:
             raise CapabilityError("CAPABILITY_ALREADY_CONSUMED")
         if now >= capability.expires_at:
@@ -100,6 +114,17 @@ class CapabilityAuthority:
             raise CapabilityError("TRUTH_HASH_CHANGED")
         if not truth.decision_fresh or not truth.trading_allowed:
             raise CapabilityError("TRUTH_NO_LONGER_AUTHORIZES_TRADE")
+        if capability.authority.drawdown is not None:
+            if drawdown_assessment is None:
+                raise CapabilityError("DRAWDOWN_REVALIDATION_REQUIRED")
+            if drawdown_assessment != capability.drawdown_assessment:
+                raise CapabilityError("DRAWDOWN_SOURCE_CHANGED")
+            if drawdown_assessment.source_fingerprint != capability.authority.drawdown_source_fingerprint:
+                raise CapabilityError("DRAWDOWN_SOURCE_CHANGED")
+            if not drawdown_assessment.source_fresh_at(self._datetime_to_epoch_ns(now)):
+                raise CapabilityError("DRAWDOWN_SOURCE_EXPIRED")
+        elif drawdown_assessment is not None:
+            raise CapabilityError("DRAWDOWN_UNEXPECTED_PROVENANCE")
         if capability.authority.model_health is not None:
             if model_health is None or model_health_assessment is None or not model_health_assessment_id:
                 raise CapabilityError("MODEL_HEALTH_REVALIDATION_REQUIRED")
@@ -119,13 +144,17 @@ class CapabilityAuthority:
     def consume(self, capability: TradeCapability, *, now: datetime, truth: OperationalTruth,
                 intent_payload: dict[str, Any], model_health: Decimal | None = None,
                 model_health_assessment: HealthAssessment | None = None,
-                model_health_assessment_id: str | None = None) -> TradeCapability:
+                model_health_assessment_id: str | None = None,
+                drawdown_assessment: DrawdownAssessment | None = None) -> TradeCapability:
         self.validate(capability, now=now, truth=truth, intent_payload=intent_payload,
                       model_health=model_health, model_health_assessment=model_health_assessment,
-                      model_health_assessment_id=model_health_assessment_id)
+                      model_health_assessment_id=model_health_assessment_id,
+                      drawdown_assessment=drawdown_assessment)
         self._consumed.add(capability.capability_id)
         return TradeCapability(capability.capability_id, capability.authority, capability.intent_fingerprint,
-                               capability.expires_at, consumed=True, model_health_assessment=capability.model_health_assessment)
+                               capability.expires_at, consumed=True,
+                               model_health_assessment=capability.model_health_assessment,
+                               drawdown_assessment=capability.drawdown_assessment)
 
     @staticmethod
     def _datetime_to_epoch_ns(value: datetime) -> int:

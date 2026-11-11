@@ -18,6 +18,7 @@ This is a recovery extension built from the exact V4.28 recovery archive present
 - Unsupported platforms without the strict path primitives fail closed.
 - A V4.29-specific workflow contract and mandatory milestone runner use `compliance_v429.csv` and the exact V4.28 parent archive digest.
 - V4.28 governance payload schema and audit artifact names are retained for compatibility with the existing provider capture normalizer.
+- M23 derives risk drawdown from an explicitly initialized accounting-equity history and binds the complete history fingerprint through runtime, capability and durable decision gates.
 
 ## Verification results
 
@@ -30,6 +31,14 @@ This is a recovery extension built from the exact V4.28 recovery archive present
 ## Model-health source binding — M24, package 3.61.17
 
 `HealthAssessment` retains the evidence ID, capture time, TTL, verification flag and assessment time. Authority and capability fingerprints bind this source; commit rejects changed/expired evidence, and durable risk replay recomputes the source fingerprint and rejects mismatches or expired evidence at revalidation. The focused M24/health/durable/release-contract set passed **51 tests** on Windows/Python 3.14.4. The mandatory full runner passed with **1,307 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`; `.audit/V429_M24_SOURCE_BINDING_FINAL3_20261111.json` records `READY_FOR_MILESTONE`, `allowed=true`, pipeline PASS, no blockers and M24 in the impacted set. Inputs are synthetic; `verified=true` is not a signed trust claim. Trusted source identity, independent review and live operational health integration remain open; M24 stays `TESTED`.
+
+## Dynamic drawdown source binding — M23, package 3.61.18
+
+The dynamic drawdown budget now comes from a durable, hash-chained portfolio-equity history. A caller must initialize that history with an explicit opening accounting snapshot, nonempty evidence ID and `verified=True`; later snapshots must be unique and strictly chronological. The assessment records its opening-history evidence ID, current and peak snapshot hashes, validity window, and history fingerprint. Runtime authority binds the current snapshot to accounting truth and rejects unbound scalar inputs. The same assessment fingerprint is retained through execution routing, one-shot capability validation and durable risk decisions; changed or expired sources are rejected at use and restart-safe revalidation. Higher drawdown therefore cannot increase the allowed risk budget.
+
+The focused M23/authority/durable/workflow/release-contract set passed **70 tests** on Windows/Python 3.14.4. The mandatory full V4.29 runner passed with **1,314 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`; `.audit/V429_M23_DRAWDOWN_FINAL_20261111.json` records `READY_FOR_MILESTONE`, `allowed=true`, pipeline PASS, no blockers and M23 in the impacted set.
+
+The `verified` input is only a caller assertion. The local tests use synthetic accounting records and do not establish an independently authenticated opening balance, a trusted history source, live production accounting integration, or independent review. M23 remains `TESTED`, not `VERIFIED`.
 
 ## Decision-trace parity integrity — package 3.61.14
 

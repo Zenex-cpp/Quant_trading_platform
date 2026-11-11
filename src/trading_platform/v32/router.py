@@ -4,6 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
+from trading_platform.v350.drawdown_history import DrawdownAssessment
 from trading_platform.v30.truth import OperationalTruth
 from trading_platform.v31.router import ExecutionRouter, AuthorizedOrderRequest
 from trading_platform.execution.models import OrderIntent, PositionState
@@ -25,7 +26,8 @@ class CommitRouter:
     def commit(self, *, capability: TradeCapability, intent: OrderIntent, truth: OperationalTruth,
                now: datetime, position_state: PositionState, market_window: ValidWindow,
                upstream_windows: list[ValidWindow], risk_valid: bool, model_health: Decimal | None = None,
-               model_health_assessment: HealthAssessment | None = None, model_health_assessment_id: str | None = None) -> CommittedOrder:
+               model_health_assessment: HealthAssessment | None = None, model_health_assessment_id: str | None = None,
+               drawdown_assessment: DrawdownAssessment | None = None) -> CommittedOrder:
         payload = {
             "intent_id": intent.intent_id, "decision_id": intent.decision_id,
             "risk_decision_id": intent.risk_decision_id, "symbol": intent.symbol,
@@ -39,13 +41,18 @@ class CommitRouter:
             model_health_assessment = capability.model_health_assessment
         if model_health_assessment_id is None and capability.authority.model_health_assessment_id is not None:
             model_health_assessment_id = capability.authority.model_health_assessment_id
+        if drawdown_assessment is None and capability.drawdown_assessment is not None:
+            drawdown_assessment = capability.drawdown_assessment
         consumed = self.capabilities.consume(capability, now=now, truth=truth, intent_payload=payload,
                                              model_health=model_health, model_health_assessment=model_health_assessment,
-                                             model_health_assessment_id=model_health_assessment_id)
+                                             model_health_assessment_id=model_health_assessment_id,
+                                             drawdown_assessment=drawdown_assessment)
         out = self.router.route(intent=intent, truth=truth, now=now, position_state=position_state,
                                 market_window=market_window, upstream_windows=upstream_windows,
                                 risk_valid=risk_valid, requested_risk=capability.authority.requested_risk,
                                 decision_id=capability.authority.decision_id, input_payload=payload,
+                                drawdown=capability.authority.drawdown,
+                                drawdown_assessment=capability.drawdown_assessment,
                                 model_health=capability.authority.model_health,
                                 model_health_method=capability.authority.model_health_method or "CONSERVATIVE_LINEAR",
                                 model_health_method_version=capability.authority.model_health_method_version or "1",

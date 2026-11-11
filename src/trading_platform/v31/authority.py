@@ -13,6 +13,7 @@ from trading_platform.v30.truth import CanonicalAction, OperationalTruth, TruthS
 from trading_platform.v348.uncertainty_risk_authority import bind_uncertainty_to_risk, UncertaintyRiskError
 from trading_platform.v349.liquidity_risk_authority import bind_liquidity_to_risk, LiquidityRiskError
 from trading_platform.v350.drawdown_risk_authority import bind_drawdown_to_risk, DrawdownRiskError
+from trading_platform.v350.drawdown_history import DrawdownAssessment
 from trading_platform.v351.model_health_risk_authority import bind_model_health_to_risk, ModelHealthRiskError
 from trading_platform.v356.risk_state_monotonicity import (
     RiskStateMonotonicityError,
@@ -50,6 +51,9 @@ class AuthorityDecision:
     drawdown_risk_factor: Decimal | None = None
     drawdown_method: str | None = None
     drawdown_method_version: str | None = None
+    drawdown_assessment_id: str | None = None
+    drawdown_source_fingerprint: str | None = None
+    drawdown_assessment: DrawdownAssessment | None = None
     model_health: Decimal | None = None
     model_health_risk_factor: Decimal | None = None
     model_health_method: str | None = None
@@ -94,6 +98,9 @@ class AuthorityDecision:
         drawdown_risk_factor: Decimal | None = None,
         drawdown_method: str | None = None,
         drawdown_method_version: str | None = None,
+        drawdown_assessment_id: str | None = None,
+        drawdown_source_fingerprint: str | None = None,
+        drawdown_assessment: DrawdownAssessment | None = None,
         model_health: Decimal | None = None,
         model_health_risk_factor: Decimal | None = None,
         model_health_method: str | None = None,
@@ -136,6 +143,8 @@ class AuthorityDecision:
                 "drawdown_risk_factor": None if drawdown_risk_factor is None else str(drawdown_risk_factor),
                 "drawdown_method": drawdown_method,
                 "drawdown_method_version": drawdown_method_version,
+                "drawdown_assessment_id": drawdown_assessment_id,
+                "drawdown_source_fingerprint": drawdown_source_fingerprint,
             })
         if model_health is not None:
             fp_payload.update({
@@ -175,6 +184,11 @@ class AuthorityDecision:
             drawdown_risk_factor=drawdown_risk_factor,
             drawdown_method=drawdown_method,
             drawdown_method_version=drawdown_method_version,
+            drawdown_assessment_id=drawdown_assessment_id,
+            drawdown_source_fingerprint=(
+                None if drawdown_assessment is None else drawdown_assessment.source_fingerprint
+            ),
+            drawdown_assessment=drawdown_assessment,
             model_health=model_health,
             model_health_risk_factor=model_health_risk_factor,
             model_health_method=model_health_method,
@@ -221,6 +235,7 @@ class RuntimeAuthority:
         drawdown_floor: Decimal = Decimal("0"),
         drawdown_method: str = "CONSERVATIVE_LINEAR",
         drawdown_method_version: str = "1",
+        drawdown_assessment: DrawdownAssessment | None = None,
         model_health: Decimal | None = None,
         max_model_health: Decimal = Decimal("1"),
         model_health_floor: Decimal = Decimal("0"),
@@ -258,6 +273,9 @@ class RuntimeAuthority:
                 drawdown_risk_factor=None if drawdown_binding is None else drawdown_binding.risk_factor,
                 drawdown_method=None if drawdown_binding is None else drawdown_binding.method,
                 drawdown_method_version=None if drawdown_binding is None else drawdown_binding.method_version,
+                drawdown_assessment_id=None if drawdown_assessment is None else drawdown_assessment.assessment_id,
+                drawdown_source_fingerprint=None if drawdown_assessment is None else drawdown_assessment.source_fingerprint,
+                drawdown_assessment=drawdown_assessment,
                 model_health=model_health,
                 model_health_risk_factor=None if model_health_binding is None else model_health_binding.risk_factor,
                 model_health_method=None if model_health_binding is None else model_health_binding.method,
@@ -315,6 +333,20 @@ class RuntimeAuthority:
             except LiquidityRiskError as exc:
                 return build(f"LIQUIDITY_RISK_BLOCKED:{exc}", AuthorityStatus.DENIED)
 
+        if drawdown_assessment is not None:
+            accounting_component = truth.component_map.get("accounting")
+            if accounting_component is None or drawdown_assessment.current_snapshot_hash not in accounting_component.evidence_ids:
+                return build("DRAWDOWN_ACCOUNTING_SOURCE_BINDING_REQUIRED", AuthorityStatus.DENIED)
+            if drawdown_assessment.history_fingerprint not in accounting_component.evidence_ids:
+                return build("DRAWDOWN_HISTORY_SOURCE_BINDING_REQUIRED", AuthorityStatus.DENIED)
+            if not drawdown_assessment.source_fresh_at(truth.observed_at_ns):
+                return build("DRAWDOWN_SOURCE_EXPIRED", AuthorityStatus.DENIED)
+            if drawdown is not None and Decimal(str(drawdown)) != drawdown_assessment.drawdown:
+                return build("DRAWDOWN_ASSESSMENT_VALUE_MISMATCH", AuthorityStatus.DENIED)
+            drawdown = drawdown_assessment.drawdown
+        elif drawdown is not None:
+            return build("DRAWDOWN_SOURCE_BINDING_REQUIRED", AuthorityStatus.DENIED)
+
         if drawdown is not None:
             try:
                 drawdown_binding = bind_drawdown_to_risk(
@@ -324,6 +356,8 @@ class RuntimeAuthority:
                     floor=drawdown_floor,
                     method=drawdown_method,
                     method_version=drawdown_method_version,
+                    assessment=drawdown_assessment,
+                    now_ns=truth.observed_at_ns,
                 )
             except DrawdownRiskError as exc:
                 return build(f"DRAWDOWN_RISK_BLOCKED:{exc}", AuthorityStatus.DENIED)

@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 
+from trading_platform.v350.drawdown_history import DrawdownAssessment
 from trading_platform.v350.drawdown_registry import get_production_drawdown_method
 
 
@@ -20,6 +21,7 @@ class DrawdownRiskBinding:
     risk_factor: Decimal
     method: str
     method_version: str
+    source_fingerprint: str | None = None
 
     @property
     def worsens_with_drawdown(self) -> bool:
@@ -59,6 +61,8 @@ def bind_drawdown_to_risk(
     floor: Decimal | int | float | str = Decimal("0"),
     method: str = "CONSERVATIVE_LINEAR",
     method_version: str = "1",
+    assessment: DrawdownAssessment | None = None,
+    now_ns: int | None = None,
 ) -> DrawdownRiskBinding:
     if not method or not method_version:
         raise DrawdownRiskError("DRAWDOWN_METHOD_IDENTITY_REQUIRED")
@@ -69,6 +73,15 @@ def bind_drawdown_to_risk(
     baseline = _decimal(baseline_risk, "INVALID_BASELINE_RISK")
     if baseline < 0:
         raise DrawdownRiskError("INVALID_BASELINE_RISK")
+    source_fingerprint = None
+    if assessment is not None:
+        if _decimal(drawdown, "INVALID_DRAWDOWN") != assessment.drawdown:
+            raise DrawdownRiskError("DRAWDOWN_ASSESSMENT_VALUE_MISMATCH")
+        if now_ns is None:
+            raise DrawdownRiskError("DRAWDOWN_SOURCE_VALIDATION_TIME_REQUIRED")
+        if not assessment.source_fresh_at(now_ns):
+            raise DrawdownRiskError("DRAWDOWN_SOURCE_EXPIRED")
+        source_fingerprint = assessment.source_fingerprint
     factor = conservative_drawdown_factor_decimal(drawdown, max_drawdown=max_drawdown, floor=floor)
     return DrawdownRiskBinding(
         drawdown=_decimal(drawdown, "INVALID_DRAWDOWN"),
@@ -79,6 +92,7 @@ def bind_drawdown_to_risk(
         risk_factor=factor,
         method=method,
         method_version=method_version,
+        source_fingerprint=source_fingerprint,
     )
 
 

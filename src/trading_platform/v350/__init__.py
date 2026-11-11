@@ -1,6 +1,7 @@
 """V3.50 — M23 drawdown/risk budget monotonicity authority."""
 
 from .drawdown_registry import PRODUCTION_DRAWDOWN_METHODS, DrawdownMethodSpec, get_production_drawdown_method
+from .drawdown_history import DrawdownAssessment, DrawdownHistoryError, DrawdownHistoryLedger
 from .drawdown_risk_authority import (
     DrawdownRiskBinding,
     DrawdownRiskError,
@@ -14,6 +15,9 @@ __all__ = [
     "PRODUCTION_DRAWDOWN_METHODS",
     "DrawdownMethodSpec",
     "get_production_drawdown_method",
+    "DrawdownAssessment",
+    "DrawdownHistoryError",
+    "DrawdownHistoryLedger",
     "DrawdownRiskBinding",
     "DrawdownRiskError",
     "assert_drawdown_monotone",
