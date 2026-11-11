@@ -12,10 +12,11 @@ Deployment activation already required a durable compatibility authorization, bu
 - Made the V3.75 live/shadow decision runner require this executor and an injected timezone-aware current-time provider. It checks compatibility before every injected pipeline stage. The V3.79 parity harness also checks compatibility before starting its backtest reference. Missing guard/clock, incompatible or unknown report, expired authorization, binding mismatch, invalidation, or malformed report stops before the affected callable runs.
 - Expanded M14 coverage to every compatibility dimension (`runtime_input_schema`, `output_schema`, `feature_schema`, `configuration`, `dependencies`, `execution`, and `venue_rules`) with both `INCOMPATIBLE` and `UNKNOWN` results. Added proof that current compatibility is fetched again on each invocation and that expired grants do not reach the callable.
 - Added M14 to the fixed V4.29 preflight impact set and CI workflow contract.
+- Hardened backtest/live decision-trace comparison: only the supported trace version and non-empty immutable traces with unique ordered offsets and a valid content hash can pass. Comparison preserves duplicate rows when checking event parity and returns explicit validation errors for malformed or tampered traces.
 
 ## Verification boundary
 
-V3.75 remains a decision-only live/shadow runner and does not submit orders. The V3.73 backtest engine still accepts injected pure stage functions; no production model inference adapter is implemented in this checkout. Any future artifact loader or production inference integration must use the guarded executor at its execution boundary and bind its actual runtime versions. This report does not claim that such a production path exists.
+V3.75 remains a decision-only live/shadow runner and does not submit orders. The V3.73 backtest engine still accepts injected pure stage functions; no production model inference adapter is implemented in this checkout. Any future artifact loader or production inference integration must use the guarded executor at its execution boundary and bind its actual runtime versions. The trace comparator validates supplied trace integrity and parity evidence; it does not prove production inference or execution.
 
 M14 remains `TESTED`, not `VERIFIED`. Tests use synthetic compatibility reports and local durable event stores. No Testnet/Production order or deployment was activated. `external_evidence=false`, `production_ready=false`, and `activation_flag=NOT_SET` remain in force.
 

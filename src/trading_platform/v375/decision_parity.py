@@ -82,6 +82,7 @@ class ParityComparison:
     mismatch_offsets: tuple[int, ...]
     backtest_hash: str
     live_hash: str
+    validation_errors: tuple[str, ...] = ()
 
     @property
     def passed(self) -> bool:
@@ -353,24 +354,83 @@ def compare_decision_traces(
     backtest_trace: DecisionTrace,
     live_trace: DecisionTrace,
 ) -> ParityComparison:
-    mismatch_offsets: list[int] = []
-    by_offset = {record.event_offset: record for record in live_trace.records}
+    validation_errors: list[str] = []
 
-    for record in backtest_trace.records:
-        other = by_offset.get(record.event_offset)
-        if other != record:
-            mismatch_offsets.append(record.event_offset)
+    def validate_trace(trace: DecisionTrace, label: str) -> tuple[DecisionTraceRecord, ...]:
+        if not isinstance(trace, DecisionTrace):
+            validation_errors.append(f"{label}_TRACE_TYPE_INVALID")
+            return ()
+        if trace.trace_version != "V375_DECISION_TRACE_1":
+            validation_errors.append(f"{label}_TRACE_VERSION_UNSUPPORTED")
+        if not isinstance(trace.records, tuple):
+            validation_errors.append(f"{label}_TRACE_RECORDS_NOT_IMMUTABLE")
+            return ()
+        records = trace.records
+        if not records:
+            validation_errors.append(f"{label}_TRACE_EMPTY")
+        if any(not isinstance(record, DecisionTraceRecord) for record in records):
+            validation_errors.append(f"{label}_TRACE_RECORD_TYPE_INVALID")
+            return ()
 
-    for offset in live_trace.event_offsets:
-        if offset not in {record.event_offset for record in backtest_trace.records}:
-            mismatch_offsets.append(offset)
+        offsets = tuple(record.event_offset for record in records)
+        valid_offsets = tuple(
+            offset
+            for offset in offsets
+            if isinstance(offset, int) and not isinstance(offset, bool) and offset >= 0
+        )
+        if len(valid_offsets) != len(offsets):
+            validation_errors.append(f"{label}_TRACE_EVENT_OFFSET_INVALID")
+        if len(valid_offsets) != len(set(valid_offsets)):
+            validation_errors.append(f"{label}_TRACE_DUPLICATE_EVENT_OFFSETS")
+        if valid_offsets != tuple(sorted(valid_offsets)):
+            validation_errors.append(f"{label}_TRACE_EVENT_OFFSETS_OUT_OF_ORDER")
 
-    mismatch_offsets = sorted(set(mismatch_offsets))
-    status = "PASS" if not mismatch_offsets else "FAIL"
+        state = {
+            "trace_version": trace.trace_version,
+            "records": [record.as_dict() for record in records],
+        }
+        if trace.state_hash != canonical_hash(state):
+            validation_errors.append(f"{label}_TRACE_STATE_HASH_MISMATCH")
+        return tuple(
+            record
+            for record in records
+            if isinstance(record.event_offset, int)
+            and not isinstance(record.event_offset, bool)
+            and record.event_offset >= 0
+        )
+
+    backtest_records = validate_trace(backtest_trace, "BACKTEST")
+    live_records = validate_trace(live_trace, "LIVE")
+    if (
+        isinstance(backtest_trace, DecisionTrace)
+        and isinstance(live_trace, DecisionTrace)
+        and backtest_trace.trace_version != live_trace.trace_version
+    ):
+        validation_errors.append("TRACE_VERSION_MISMATCH")
+
+    backtest_by_offset: dict[int, list[DecisionTraceRecord]] = {}
+    live_by_offset: dict[int, list[DecisionTraceRecord]] = {}
+    for record in backtest_records:
+        backtest_by_offset.setdefault(record.event_offset, []).append(record)
+    for record in live_records:
+        live_by_offset.setdefault(record.event_offset, []).append(record)
+
+    mismatch_offsets = tuple(
+        sorted(
+            offset
+            for offset in backtest_by_offset.keys() | live_by_offset.keys()
+            if backtest_by_offset.get(offset, []) != live_by_offset.get(offset, [])
+        )
+    )
+    unique_validation_errors = tuple(dict.fromkeys(validation_errors))
+    status = "PASS" if not mismatch_offsets and not unique_validation_errors else "FAIL"
+    backtest_hash = backtest_trace.state_hash if isinstance(backtest_trace, DecisionTrace) else ""
+    live_hash = live_trace.state_hash if isinstance(live_trace, DecisionTrace) else ""
     return ParityComparison(
         status=status,
-        compared_events=max(len(backtest_trace.records), len(live_trace.records)),
-        mismatch_offsets=tuple(mismatch_offsets),
-        backtest_hash=backtest_trace.state_hash,
-        live_hash=live_trace.state_hash,
+        compared_events=max(len(backtest_records), len(live_records)),
+        mismatch_offsets=mismatch_offsets,
+        backtest_hash=backtest_hash,
+        live_hash=live_hash,
+        validation_errors=unique_validation_errors,
     )

@@ -26,6 +26,12 @@ This is a recovery extension built from the exact V4.28 recovery archive present
 - Mandatory runner exit code: `0`.
 - `RELEASE_HYGIENE=PASS`.
 - Durable preflight: `READY_FOR_MILESTONE`, decision ID `V429-LOCAL-03`, **49 input fingerprints**, no blockers.
+
+## Decision-trace parity integrity — package 3.61.14
+
+Backtest/live trace comparison rejects empty traces, unsupported trace versions, mutable record sequences, invalid or repeated event offsets, non-chronological offsets and content hashes that do not bind the current trace payload. It compares complete per-offset record sequences, so duplicated offsets become mismatches instead of being overwritten by a dictionary. Focused decision, execution-parity, release-integrity and release-hygiene regressions passed **30 tests** on Windows/Python 3.14.7. The production inference adapter and independent M14 review remain unimplemented; this local result does not promote M14 beyond `TESTED` or change production readiness.
+
+The mandatory full V4.29 runner passed with **1,273 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`. Durable preflight `.audit/V429_M14_PARITY_PREFLIGHT_20261111.json` records `READY_FOR_MILESTONE`, `allowed=true`, no blocking reasons, pipeline PASS, and release-hygiene PASS. It retains `external_evidence=false`, `production_ready=false`, and `activation_flag=NOT_SET`.
 - The final archive extraction test and exact inventory/hash comparison are recorded in the external sidecar `V429_ARCHIVE_VERIFICATION.json`.
 
 ## Compliance status

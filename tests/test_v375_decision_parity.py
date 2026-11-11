@@ -22,6 +22,7 @@ from trading_platform.v375.decision_parity import (
     compare_decision_traces,
 )
 from trading_platform.v341.compatibility_authority import CompatibilityAuthorityInvalid
+from trading_platform.replay.replay import canonical_hash
 
 
 SYMBOL = "BTCUSDT"
@@ -165,6 +166,84 @@ def test_live_stage_change_is_detected_as_parity_failure():
     comparison = compare_decision_traces(backtest_trace, live_result.trace)
     assert not comparison.passed
     assert comparison.mismatch_offsets == (0, 1, 2)
+
+
+def _rehash_trace(trace, *, records=None, trace_version=None):
+    records = trace.records if records is None else tuple(records)
+    trace_version = trace.trace_version if trace_version is None else trace_version
+    state = {
+        "trace_version": trace_version,
+        "records": [record.as_dict() for record in records],
+    }
+    return replace(
+        trace,
+        trace_version=trace_version,
+        records=records,
+        state_hash=canonical_hash(state),
+    )
+
+
+def test_trace_comparison_rejects_duplicate_event_offsets_even_with_valid_hash():
+    events = [_event(i, str(100 + i)) for i in range(3)]
+    trace, _ = capture_backtest_decision_trace(_stages(), _model(), SYMBOL, events)
+    duplicate = _rehash_trace(trace, records=(trace.records[0], *trace.records))
+
+    comparison = compare_decision_traces(trace, duplicate)
+
+    assert not comparison.passed
+    assert "LIVE_TRACE_DUPLICATE_EVENT_OFFSETS" in comparison.validation_errors
+    assert comparison.mismatch_offsets == (0,)
+
+
+def test_trace_comparison_rejects_a_tampered_state_hash():
+    events = [_event(i, str(100 + i)) for i in range(2)]
+    trace, _ = capture_backtest_decision_trace(_stages(), _model(), SYMBOL, events)
+    tampered = replace(trace, state_hash="0" * 64)
+
+    comparison = compare_decision_traces(trace, tampered)
+
+    assert not comparison.passed
+    assert "LIVE_TRACE_STATE_HASH_MISMATCH" in comparison.validation_errors
+
+
+def test_trace_comparison_rejects_unsupported_versions_and_empty_traces():
+    events = [_event(0, "100")]
+    trace, _ = capture_backtest_decision_trace(_stages(), _model(), SYMBOL, events)
+    unknown_version = _rehash_trace(trace, trace_version="V375_DECISION_TRACE_UNKNOWN")
+    empty = _rehash_trace(trace, records=())
+
+    version_comparison = compare_decision_traces(trace, unknown_version)
+    empty_comparison = compare_decision_traces(empty, empty)
+
+    assert not version_comparison.passed
+    assert "LIVE_TRACE_VERSION_UNSUPPORTED" in version_comparison.validation_errors
+    assert not empty_comparison.passed
+    assert "BACKTEST_TRACE_EMPTY" in empty_comparison.validation_errors
+    assert "LIVE_TRACE_EMPTY" in empty_comparison.validation_errors
+
+
+def test_trace_comparison_rejects_mutable_records_invalid_offsets_and_reordering():
+    events = [_event(i, str(100 + i)) for i in range(2)]
+    trace, _ = capture_backtest_decision_trace(_stages(), _model(), SYMBOL, events)
+    mutable = replace(trace, records=list(trace.records))
+    invalid_offset = _rehash_trace(
+        trace,
+        records=(replace(trace.records[0], event_offset=-1), trace.records[1]),
+    )
+    reordered = _rehash_trace(trace, records=tuple(reversed(trace.records)))
+
+    mutable_comparison = compare_decision_traces(trace, mutable)
+    invalid_offset_comparison = compare_decision_traces(trace, invalid_offset)
+    reordered_comparison = compare_decision_traces(trace, reordered)
+
+    assert "LIVE_TRACE_RECORDS_NOT_IMMUTABLE" in mutable_comparison.validation_errors
+    assert "LIVE_TRACE_EVENT_OFFSET_INVALID" in invalid_offset_comparison.validation_errors
+    assert "LIVE_TRACE_EVENT_OFFSETS_OUT_OF_ORDER" in reordered_comparison.validation_errors
+    assert all(not result.passed for result in (
+        mutable_comparison,
+        invalid_offset_comparison,
+        reordered_comparison,
+    ))
 
 
 def test_live_runner_rejects_position_length_mismatch():
