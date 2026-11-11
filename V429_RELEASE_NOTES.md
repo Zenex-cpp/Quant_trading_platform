@@ -8,7 +8,9 @@ Python package `3.61.5` makes the final dispatcher require current risk, positio
 
 Python package `3.61.6` closes alternate Testnet submit paths through the V3.36/V3.79/V3.80/V3.84/V3.85 adapters. The V3.85 controlled submit shares the final M1–M5 authority checks; older direct-submit adapters fail closed. See `V429_M1_M5_TRANSPORT_REMEDIATION.md`.
 
-At package `3.61.5`, the mandatory Windows/Python 3.14.7 runner completed with **1,190 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`. On the current `3.61.6` tree, it completed with **1,200 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`, preflight `READY_FOR_MILESTONE`. These local results do not replace hosted CI or external review.
+Python package `3.61.7` closes the M7 Champion gate-claim gap. Promotion now requires durable PASS gate authorizations and binds each authorization to the exact gate run and fingerprint, which are checked again at promotion and LIVE activation. The V4.29 preflight now includes M7 in the impacted-control set. See `V429_M7_REMEDIATION_REPORT.md`.
+
+At package `3.61.5`, the mandatory Windows/Python 3.14.7 runner completed with **1,190 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`. On package `3.61.6`, it completed with **1,200 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`. On the current `3.61.7` tree, it completed with **1,201 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`, preflight `READY_FOR_MILESTONE`. These local results do not replace hosted CI or external review.
 
 ## Verification contract
 

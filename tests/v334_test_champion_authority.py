@@ -9,6 +9,7 @@ from trading_platform.v26.governance import ChampionChallengerRegistry, Governed
 from tests._m14_helpers import authorize_compatibility
 from trading_platform.v25.health import HealthState
 from trading_platform.promotion.contracts import ModelRole, OperationalMode, DeploymentState
+from tests.champion_gate_support import register_pass_gates
 
 NOW = datetime(2026, 9, 23, tzinfo=timezone.utc)
 
@@ -20,9 +21,13 @@ def champion():
 
 def authority(store):
     dep = DependencyInvalidationLedger(store)
+    register_pass_gates(
+        store=store, dependency_authority=dep, gate_ids=("G1", "G2"),
+        candidate_version="1", now=NOW, recorded_at_ms=1, run_prefix="CA1",
+    )
     rec, created = ChampionGateAuthorityLedger.authorize(
         authorization_id="CA1", model_id="m2", model_version="1", candidate_id="m2",
-        required_gate_ids=("G1", "G2"), passed_gate_ids=("G1", "G2"), promotion_id="P1",
+        required_gate_ids=("G1", "G2"), promotion_id="P1", now=NOW,
         valid_from=NOW, expires_at=NOW + timedelta(hours=1), reviewer="reviewer", recorded_at_ms=1,
         dependency_authority=dep, store=store,
     )
@@ -36,12 +41,65 @@ def test_no_champion_promotion_without_gate_authority():
 def test_champion_promotion_requires_all_gates(tmp_path):
     store = EventStore(str(tmp_path / "events.db"))
     dep = DependencyInvalidationLedger(store)
-    with pytest.raises(ChampionGateAuthorityError, match="REQUIRED_GATES_NOT_PASSED"):
+    register_pass_gates(
+        store=store, dependency_authority=dep, gate_ids=("G1",),
+        candidate_version="1", now=NOW, recorded_at_ms=1, run_prefix="MISSING-G2",
+    )
+    with pytest.raises(ChampionGateAuthorityError, match="REQUIRED_GATE_AUTHORITY_INVALID:G2"):
         ChampionGateAuthorityLedger.authorize(
             authorization_id="CA1", model_id="m2", model_version="1", candidate_id="m2",
-            required_gate_ids=("G1", "G2"), passed_gate_ids=("G1",), promotion_id="P1",
+            required_gate_ids=("G1", "G2"), promotion_id="P1", now=NOW,
             valid_from=NOW, expires_at=NOW + timedelta(hours=1), reviewer="reviewer", recorded_at_ms=1,
             dependency_authority=dep, store=store,
+        )
+
+def test_candidate_cannot_claim_passed_gate_ids_without_durable_gate_records():
+    store = EventStore()
+    dep = DependencyInvalidationLedger(store)
+    with pytest.raises(ChampionGateAuthorityError, match="REQUIRED_GATE_AUTHORITY_INVALID:G1"):
+        ChampionGateAuthorityLedger.authorize(
+            authorization_id="CA-UNBACKED", model_id="m2", model_version="1", candidate_id="m2",
+            required_gate_ids=("G1",), promotion_id="P1", now=NOW,
+            valid_from=NOW, expires_at=NOW + timedelta(hours=1), reviewer="reviewer",
+            recorded_at_ms=1, dependency_authority=dep, store=store,
+        )
+
+def test_champion_gate_requires_authoritative_gate_for_same_candidate_version():
+    store = EventStore()
+    dep = DependencyInvalidationLedger(store)
+    register_pass_gates(
+        store=store, dependency_authority=dep, gate_ids=("G1",),
+        candidate_version="candidate-v2", now=NOW, recorded_at_ms=1, run_prefix="VERSION-MISMATCH",
+    )
+    with pytest.raises(ChampionGateAuthorityError, match="REQUIRED_GATE_CANDIDATE_VERSION_MISMATCH:G1"):
+        ChampionGateAuthorityLedger.authorize(
+            authorization_id="CA-VERSION-MISMATCH", model_id="m2", model_version="1", candidate_id="m2",
+            required_gate_ids=("G1",), promotion_id="P1", now=NOW,
+            valid_from=NOW, expires_at=NOW + timedelta(hours=1), reviewer="reviewer",
+            recorded_at_ms=2, dependency_authority=dep, store=store,
+        )
+
+def test_champion_authorization_is_bound_to_the_exact_gate_run():
+    store = EventStore()
+    dep = DependencyInvalidationLedger(store)
+    register_pass_gates(
+        store=store, dependency_authority=dep, gate_ids=("G1",),
+        candidate_version="1", now=NOW, recorded_at_ms=1, run_prefix="INITIAL-RUN",
+    )
+    champion_auth, _ = ChampionGateAuthorityLedger.authorize(
+        authorization_id="CA-EXACT-GATE", model_id="m2", model_version="1", candidate_id="m2",
+        required_gate_ids=("G1",), promotion_id="P1", now=NOW,
+        valid_from=NOW, expires_at=NOW + timedelta(hours=1), reviewer="reviewer",
+        recorded_at_ms=2, dependency_authority=dep, store=store,
+    )
+    register_pass_gates(
+        store=store, dependency_authority=dep, gate_ids=("G1",),
+        candidate_version="1", now=NOW, recorded_at_ms=3, run_prefix="REPLACEMENT-RUN",
+    )
+    with pytest.raises(ChampionGateAuthorityError, match="REQUIRED_GATE_AUTHORIZATION_CHANGED:G1"):
+        ChampionGateAuthorityLedger(store).assert_valid(
+            champion_auth.authorization_id, now=NOW + timedelta(seconds=1), model_id="m2",
+            model_version="1", candidate_id="m2", promotion_id="P1", dependency_authority=dep,
         )
 
 def test_champion_promotion_requires_evidence_snapshot_and_bundle_authority(tmp_path):

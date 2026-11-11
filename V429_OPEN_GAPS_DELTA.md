@@ -3,6 +3,7 @@
 ## Closed locally
 
 - M1–M5 gates are fail-closed across the V3.11 dispatcher and legacy V3.36/V3.79/V3.80/V3.84/V3.85 Testnet submit paths. The V3.85 runner checks the same durable RiskDecision, position, market-data and causal-TTL authorities; direct legacy adapters cannot submit; V3.36 accepts only the guarded dispatcher. See `V429_M1_M5_TRANSPORT_REMEDIATION.md`.
+- M7 Champion authorization now requires durable PASS-gate records in the shared event store, binds the exact gate run IDs and fingerprints, and rechecks them after invalidation or replacement at promotion/use. See `V429_M7_REMEDIATION_REPORT.md`.
 - External reviewer key and unsigned evidence are read with POSIX directory descriptors and `O_NOFOLLOW` on every path component.
 - Input is required to be a regular file and bounded (1 MiB key, 16 MiB evidence); metadata is checked before and after the read.
 - Reviewer output paths reject symlinked ancestors, traversal, paths inside the checkout, and existing targets.
@@ -23,5 +24,6 @@
 - Canonical V4.23 and V4.26 byte-for-byte lineage: `NOT_ESTABLISHED`.
 - Production security assessment, monitoring/on-call, network segmentation, secret store, backup/DR, authenticated Testnet, production rollback, independent approval and production sign-off: `NOT_VERIFIED`.
 - Independent review and broader production integration of all configuration sources are still required to promote M16 from `TESTED` to `VERIFIED`.
+- Independent review and operational promotion evidence are still required to promote M7 from `TESTED` to `VERIFIED`.
 - Independent methodology review and operational evidence are still required to promote M26 from `TESTED` to `VERIFIED`.
 - Independent review of holdout replacement/revalidation and external operational audit evidence for M27: `NOT_VERIFIED`; M27 is `TESTED`, not `VERIFIED`.

@@ -100,3 +100,21 @@ def test_v429_m1_to_m5_matrix_points_to_final_dispatch_authority_evidence():
     assert "RISK_DECISION_LEDGER_REQUIRED" in (ROOT / "tests/v318/test_dispatch_freshness.py").read_text(encoding="utf-8")
     assert "CONTROLLED_SUBMIT_AUTHORITY_REQUIRED" in (ROOT / "src/trading_platform/v380/order_adapter.py").read_text(encoding="utf-8")
     assert "dispatcher: \"GuardedExecutionDispatcher\"" in (ROOT / "src/trading_platform/v36/user_execution.py").read_text(encoding="utf-8")
+
+
+def test_v429_m7_matrix_points_to_durable_exact_gate_run_authority():
+    with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
+        m7 = next(row for row in csv.DictReader(stream) if row["machine_check_id"] == "M7")
+    assert m7["implementation_status"] == "TESTED"
+    assert "trading_platform/v334/champion_authority.py" in m7["code_reference"]
+    assert "trading_platform/v408/gate_promotion.py" in m7["code_reference"]
+    assert "tests/v334_test_champion_authority.py" in m7["test_reference"]
+    assert "tests/v408/test_gate_promotion.py" in m7["test_reference"]
+    assert "tests/champion_gate_support.py" in m7["test_reference"]
+    assert m7["evidence_reference"] == "V429_M7_REMEDIATION_REPORT.md"
+    assert "Independent" in m7["unresolved_gap"]
+    authority = (ROOT / "src/trading_platform/v334/champion_authority.py").read_text(encoding="utf-8")
+    assert "assert_registered_reusable" in authority
+    assert "gate_fingerprints" in authority
+    assert "passed_gate_ids: Iterable" not in authority
+    assert '"M7"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")

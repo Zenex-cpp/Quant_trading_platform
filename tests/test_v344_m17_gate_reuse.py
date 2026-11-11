@@ -12,6 +12,7 @@ from trading_platform.v329.dependency_authority import DependencyInvalidationLed
 from trading_platform.v334.champion_authority import ChampionGateAuthorityLedger, ChampionGateAuthorityError
 from trading_platform.v341.compatibility_authority import CompatibilityAuthorityInvalid, CompatibilityAuthorityLedger
 from trading_platform.v342.artifact_integrity import ArtifactIntegrityAuthorityInvalid, ArtifactIntegrityAuthorityLedger
+from tests.champion_gate_support import register_pass_gates
 
 NOW = datetime(2026, 9, 23, 0, 0, tzinfo=timezone.utc)
 
@@ -64,9 +65,14 @@ def test_champion_gate_must_be_reissued_after_invalidating_change(tmp_path):
             auth.authorization_id, now=NOW + timedelta(minutes=1), model_id="m2", model_version="1",
             candidate_id="m2", promotion_id="P1", dependency_authority=dep,
         )
+    register_pass_gates(
+        store=store, dependency_authority=dep, gate_ids=("G1", "G2"),
+        candidate_version="1", now=NOW + timedelta(minutes=1), recorded_at_ms=10,
+        run_prefix="CA2-REVALIDATED",
+    )
     replacement, created = ChampionGateAuthorityLedger.authorize(
         authorization_id="CA2", model_id="m2", model_version="1", candidate_id="m2",
-        required_gate_ids=("G1", "G2"), passed_gate_ids=("G1", "G2"), promotion_id="P1",
+        required_gate_ids=("G1", "G2"), promotion_id="P1", now=NOW + timedelta(minutes=1),
         valid_from=NOW, expires_at=NOW + timedelta(hours=1), reviewer="reviewer", recorded_at_ms=10,
         dependency_authority=dep, store=store,
     )

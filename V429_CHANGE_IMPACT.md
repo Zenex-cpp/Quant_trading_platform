@@ -4,6 +4,7 @@
 - Modified code: `src/trading_platform/v311/dispatch_guard.py`, `v36/user_execution.py`, `v379/execution_parity.py`, `v380/order_adapter.py`, `v384/testnet_execution_activation.py`, `v385/controlled_testnet_submit.py`, and the V4.29 validation contract.
 - New authority/helpers: `trading_platform.v429.external_file_safety` and `trading_platform.v429.workflow_contract`.
 - Final dispatch now rejects missing risk/position/market/causal authorities and expired RiskDecision, intent, or request deadline before gateway invocation. V3.85 shares the same M1–M5 checks; older direct-submit adapters fail closed; V3.36 accepts only a guarded dispatcher.
+- Champion promotion now requires durable PASS records for every required gate, binds the authorization to the exact gate runs and fingerprints, and revalidates them at registry promotion and LIVE activation. A changed or invalidated gate blocks reuse.
 - Safety properties: no-follow descriptor traversal, bounded regular-file reads, consistency checks during read, no-overwrite output creation, `0600` output permissions, and fail-closed behavior on unsupported platforms.
 - Operational effect: the Testnet submit API now requires current durable authority evidence through the controlled path. Tests use fake gateways; no Testnet order, Production mutation or deployment activation is performed.
 - Reversibility: revert V4.29-specific runner, workflow and signer/helper changes; retain the V4.28 recovery archive as the direct baseline.
