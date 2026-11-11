@@ -1,6 +1,7 @@
 """V3.49 — M22 liquidity/risk monotonicity authority."""
 
 from .liquidity_registry import PRODUCTION_LIQUIDITY_METHODS, LiquidityMethodSpec, get_production_liquidity_method
+from .liquidity_assessment import LiquidityAssessment, LiquidityAssessmentError
 from .liquidity_risk_authority import (
     LiquidityRiskBinding,
     LiquidityRiskError,
@@ -14,6 +15,8 @@ __all__ = [
     "PRODUCTION_LIQUIDITY_METHODS",
     "LiquidityMethodSpec",
     "get_production_liquidity_method",
+    "LiquidityAssessment",
+    "LiquidityAssessmentError",
     "LiquidityRiskBinding",
     "LiquidityRiskError",
     "assert_liquidity_monotone",

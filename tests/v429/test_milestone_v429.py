@@ -206,6 +206,20 @@ def test_v429_m23_matrix_points_to_source_bound_durable_drawdown_history():
     assert '"M23"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")
 
 
+def test_v429_m22_matrix_points_to_source_bound_orderbook_liquidity():
+    with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
+        m22 = next(row for row in csv.DictReader(stream) if row["machine_check_id"] == "M22")
+    assert m22["implementation_status"] == "TESTED"
+    assert "trading_platform/v349/liquidity_assessment.py" in m22["code_reference"]
+    assert "trading_platform/v31/authority.py" in m22["code_reference"]
+    assert "trading_platform/v318/durable_decision.py" in m22["code_reference"]
+    assert "trading_platform/v311/dispatch_guard.py" in m22["code_reference"]
+    assert "tests/test_v349_m22_liquidity_risk.py" in m22["test_reference"]
+    assert m22["evidence_reference"] == "V429_M22_REMEDIATION_REPORT.md"
+    assert "calibration" in m22["unresolved_gap"].lower()
+    assert '"M22"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")
+
+
 def test_v429_m25_matrix_points_to_isolated_public_archive_downloader():
     with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
         m25 = next(row for row in csv.DictReader(stream) if row["machine_check_id"] == "M25")

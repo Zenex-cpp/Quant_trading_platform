@@ -12,6 +12,7 @@ from trading_platform.v25.health import HealthAssessment
 from trading_platform.v30.truth import CanonicalAction, OperationalTruth, TruthStatus, ConfigurationStatus
 from trading_platform.v348.uncertainty_risk_authority import bind_uncertainty_to_risk, UncertaintyRiskError
 from trading_platform.v349.liquidity_risk_authority import bind_liquidity_to_risk, LiquidityRiskError
+from trading_platform.v349.liquidity_assessment import LiquidityAssessment
 from trading_platform.v350.drawdown_risk_authority import bind_drawdown_to_risk, DrawdownRiskError
 from trading_platform.v350.drawdown_history import DrawdownAssessment
 from trading_platform.v351.model_health_risk_authority import bind_model_health_to_risk, ModelHealthRiskError
@@ -45,8 +46,13 @@ class AuthorityDecision:
     uncertainty_method_version: str | None = None
     liquidity_stress: Decimal | None = None
     liquidity_risk_factor: Decimal | None = None
+    liquidity_max_stress: Decimal | None = None
+    liquidity_floor: Decimal | None = None
     liquidity_method: str | None = None
     liquidity_method_version: str | None = None
+    liquidity_assessment_id: str | None = None
+    liquidity_source_fingerprint: str | None = None
+    liquidity_assessment: LiquidityAssessment | None = None
     drawdown: Decimal | None = None
     drawdown_risk_factor: Decimal | None = None
     drawdown_method: str | None = None
@@ -92,8 +98,13 @@ class AuthorityDecision:
         uncertainty_method_version: str | None = None,
         liquidity_stress: Decimal | None = None,
         liquidity_risk_factor: Decimal | None = None,
+        liquidity_max_stress: Decimal | None = None,
+        liquidity_floor: Decimal | None = None,
         liquidity_method: str | None = None,
         liquidity_method_version: str | None = None,
+        liquidity_assessment_id: str | None = None,
+        liquidity_source_fingerprint: str | None = None,
+        liquidity_assessment: LiquidityAssessment | None = None,
         drawdown: Decimal | None = None,
         drawdown_risk_factor: Decimal | None = None,
         drawdown_method: str | None = None,
@@ -134,8 +145,12 @@ class AuthorityDecision:
             fp_payload.update({
                 "liquidity_stress": str(liquidity_stress),
                 "liquidity_risk_factor": None if liquidity_risk_factor is None else str(liquidity_risk_factor),
+                "liquidity_max_stress": None if liquidity_max_stress is None else str(liquidity_max_stress),
+                "liquidity_floor": None if liquidity_floor is None else str(liquidity_floor),
                 "liquidity_method": liquidity_method,
                 "liquidity_method_version": liquidity_method_version,
+                "liquidity_assessment_id": liquidity_assessment_id,
+                "liquidity_source_fingerprint": liquidity_source_fingerprint,
             })
         if drawdown is not None:
             fp_payload.update({
@@ -178,8 +193,15 @@ class AuthorityDecision:
             uncertainty_method_version=uncertainty_method_version,
             liquidity_stress=liquidity_stress,
             liquidity_risk_factor=liquidity_risk_factor,
+            liquidity_max_stress=liquidity_max_stress,
+            liquidity_floor=liquidity_floor,
             liquidity_method=liquidity_method,
             liquidity_method_version=liquidity_method_version,
+            liquidity_assessment_id=liquidity_assessment_id,
+            liquidity_source_fingerprint=(
+                None if liquidity_assessment is None else liquidity_assessment.source_fingerprint
+            ),
+            liquidity_assessment=liquidity_assessment,
             drawdown=drawdown,
             drawdown_risk_factor=drawdown_risk_factor,
             drawdown_method=drawdown_method,
@@ -230,6 +252,7 @@ class RuntimeAuthority:
         liquidity_floor: Decimal = Decimal("0"),
         liquidity_method: str = "CONSERVATIVE_LINEAR",
         liquidity_method_version: str = "1",
+        liquidity_assessment: LiquidityAssessment | None = None,
         drawdown: Decimal | None = None,
         max_drawdown: Decimal = Decimal("1"),
         drawdown_floor: Decimal = Decimal("0"),
@@ -267,8 +290,13 @@ class RuntimeAuthority:
                 uncertainty_method_version=None if uncertainty_binding is None else uncertainty_binding.method_version,
                 liquidity_stress=liquidity_stress,
                 liquidity_risk_factor=None if liquidity_binding is None else liquidity_binding.risk_factor,
+                liquidity_max_stress=max_liquidity_stress if liquidity_binding is not None else None,
+                liquidity_floor=liquidity_floor if liquidity_binding is not None else None,
                 liquidity_method=None if liquidity_binding is None else liquidity_binding.method,
                 liquidity_method_version=None if liquidity_binding is None else liquidity_binding.method_version,
+                liquidity_assessment_id=None if liquidity_assessment is None else liquidity_assessment.assessment_id,
+                liquidity_source_fingerprint=None if liquidity_assessment is None else liquidity_assessment.source_fingerprint,
+                liquidity_assessment=liquidity_assessment,
                 drawdown=drawdown,
                 drawdown_risk_factor=None if drawdown_binding is None else drawdown_binding.risk_factor,
                 drawdown_method=None if drawdown_binding is None else drawdown_binding.method,
@@ -320,6 +348,20 @@ class RuntimeAuthority:
             except UncertaintyRiskError as exc:
                 return build(f"UNCERTAINTY_RISK_BLOCKED:{exc}", AuthorityStatus.DENIED)
 
+        if liquidity_assessment is not None:
+            market_component = truth.component_map.get("market_data")
+            if market_component is None or liquidity_assessment.source_evidence_id not in market_component.evidence_ids:
+                return build("LIQUIDITY_MARKET_SOURCE_BINDING_REQUIRED", AuthorityStatus.DENIED)
+            if liquidity_assessment.source_fingerprint not in market_component.evidence_ids:
+                return build("LIQUIDITY_ASSESSMENT_SOURCE_BINDING_REQUIRED", AuthorityStatus.DENIED)
+            if not liquidity_assessment.source_fresh_at(truth.observed_at_ns):
+                return build("LIQUIDITY_SOURCE_EXPIRED", AuthorityStatus.DENIED)
+            if liquidity_stress is not None and Decimal(str(liquidity_stress)) != liquidity_assessment.liquidity_stress:
+                return build("LIQUIDITY_ASSESSMENT_VALUE_MISMATCH", AuthorityStatus.DENIED)
+            liquidity_stress = liquidity_assessment.liquidity_stress
+        elif liquidity_stress is not None:
+            return build("LIQUIDITY_SOURCE_BINDING_REQUIRED", AuthorityStatus.DENIED)
+
         if liquidity_stress is not None:
             try:
                 liquidity_binding = bind_liquidity_to_risk(
@@ -329,6 +371,8 @@ class RuntimeAuthority:
                     floor=liquidity_floor,
                     method=liquidity_method,
                     method_version=liquidity_method_version,
+                    assessment=liquidity_assessment,
+                    now_ns=truth.observed_at_ns,
                 )
             except LiquidityRiskError as exc:
                 return build(f"LIQUIDITY_RISK_BLOCKED:{exc}", AuthorityStatus.DENIED)

@@ -90,3 +90,7 @@ Focused CSV/CLI/release-integrity verification passed **22 tests**. The full man
 ## Hosted branch validation — 2026-11-11
 
 GitHub Actions push run [43042509186](https://github.com/Zenex-cpp/Quant_trading_platform/actions/runs/43042509186) for commit `30ba40ec4ad6f9a76524825f5125c3ca2db86801` completed successfully. Job `controlled-milestone-validation` succeeded. Artifact `V428-validation-audit-43042509186-1` was present (20,205 bytes) with GitHub archive digest `sha256:46558e35e87386132f708063c2e1a460a319c978b33f73c94679d573866a2b2d`. The public artifact metadata was readable, but downloading its contents returned HTTP 401. This run was on the working branch, not protected `main`; REPO-GOV-02 remains `PARTIAL`, and REPO-GOV-01 branch-protection evidence remains `NOT_VERIFIED`.
+
+## M22 source-bound liquidity — package 3.61.19
+
+The focused M22/M23/final-dispatch and matrix/workflow/release-contract verification passed **63 tests**. The mandatory Windows/Python 3.12.14 V4.29 runner passed with **1,322 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`; preflight was `READY_FOR_MILESTONE`, `allowed=true`, `pipeline_status=PASS`, with M22 included and no blockers. Order-book fixtures and market-source records are synthetic. M22 remains `TESTED`; authenticated live feed integration, real-market calibration and independent review remain open. `external_evidence=false`, `production_ready=false`, and `activation_flag=NOT_SET` remain unchanged.

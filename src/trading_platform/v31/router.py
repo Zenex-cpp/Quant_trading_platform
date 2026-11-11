@@ -5,6 +5,7 @@ from decimal import Decimal
 from typing import Any
 
 from trading_platform.v25.health import HealthAssessment
+from trading_platform.v349.liquidity_assessment import LiquidityAssessment
 from trading_platform.v350.drawdown_history import DrawdownAssessment
 from trading_platform.v30.truth import CanonicalAction, OperationalTruth
 from trading_platform.v31.authority import RuntimeAuthority, AuthorityDecision
@@ -35,6 +36,9 @@ class ExecutionRouter:
               uncertainty_floor: Decimal = Decimal("0"),
               uncertainty_method: str = "CONSERVATIVE_LINEAR",
               uncertainty_method_version: str = "1",
+              liquidity_stress: Decimal | None = None, max_liquidity_stress: Decimal = Decimal("1"),
+              liquidity_floor: Decimal = Decimal("0"), liquidity_method: str = "CONSERVATIVE_LINEAR",
+              liquidity_method_version: str = "1", liquidity_assessment: LiquidityAssessment | None = None,
               drawdown: Decimal | None = None, max_drawdown: Decimal = Decimal("1"),
               drawdown_floor: Decimal = Decimal("0"), drawdown_method: str = "CONSERVATIVE_LINEAR",
               drawdown_method_version: str = "1", drawdown_assessment: DrawdownAssessment | None = None,
@@ -42,6 +46,13 @@ class ExecutionRouter:
               model_health_floor: Decimal = Decimal("0"), model_health_method: str = "CONSERVATIVE_LINEAR",
               model_health_method_version: str = "1", model_health_assessment: HealthAssessment | None = None,
               model_health_assessment_id: str | None = None) -> AuthorizedOrderRequest:
+        if liquidity_assessment is not None:
+            if not liquidity_assessment.matches_order(
+                symbol=intent.symbol, side=intent.side, quantity=intent.quantity,
+            ):
+                raise PermissionError("LIQUIDITY_INTENT_MISMATCH")
+            if not liquidity_assessment.source_fresh_at(self._datetime_to_epoch_ns(now)):
+                raise PermissionError("LIQUIDITY_SOURCE_EXPIRED")
         if drawdown_assessment is not None and not drawdown_assessment.source_fresh_at(self._datetime_to_epoch_ns(now)):
             raise PermissionError("DRAWDOWN_SOURCE_EXPIRED")
         decision = self.authority.evaluate(
@@ -50,6 +61,10 @@ class ExecutionRouter:
             uncertainty=uncertainty, max_uncertainty=max_uncertainty,
             uncertainty_floor=uncertainty_floor, uncertainty_method=uncertainty_method,
             uncertainty_method_version=uncertainty_method_version,
+            liquidity_stress=liquidity_stress, max_liquidity_stress=max_liquidity_stress,
+            liquidity_floor=liquidity_floor, liquidity_method=liquidity_method,
+            liquidity_method_version=liquidity_method_version,
+            liquidity_assessment=liquidity_assessment,
             drawdown=drawdown, max_drawdown=max_drawdown, drawdown_floor=drawdown_floor,
             drawdown_method=drawdown_method, drawdown_method_version=drawdown_method_version,
             drawdown_assessment=drawdown_assessment,

@@ -1,7 +1,7 @@
 # Quant Trading Platform
 
 **Repository release train:** `V4.29-RECOVERY`  
-**Python distribution version:** `3.61.18` (a separate versioning scheme).
+**Python distribution version:** `3.61.19` (a separate versioning scheme).
 
 The current repository is a recovery extension based on the available V4.28 recovery archive. Byte-for-byte canonical lineage to V4.23 and V4.26 is **not established** because those source archives are not available in the project.
 
@@ -18,13 +18,14 @@ The current repository is a recovery extension based on the available V4.28 reco
 - Research credential scanning now traverses slotted objects, Python-mangled secret fields and NumPy object arrays; the direct tuning-data view applies the same boundary.
 - Production credential storage now requires an explicit persistent backend; Windows Credential Manager stores secret blobs while the append-only ledger stores metadata only. M9 resolution and revocation are serialized and every access attempt is audited. M9 remains `TESTED` pending dedicated service identity, process-isolation and external operational evidence.
 - M10 serializes concurrent access to each SQLite event-store connection, streams event iteration under the lock, and verifies concurrent appends preserve the hash chain. Independent storage tamper review remains open.
+- M22 derives source-bound liquidity stress from visible order-book depth utilization, spread and order-size VWAP impact; it binds the exact order-book sequence and market-data record through runtime risk, capability, durable decision and final dispatch checks. M22 remains `TESTED` pending authenticated live feeds and independent real-market calibration.
 - M24 carries model-health source identity, capture time, TTL and verification state into authority and capability fingerprints and durable risk records. Commit and restart-safe risk gates reject changed or expired evidence; signed source identity and live health-source integration remain open.
 - M23 derives dynamic drawdown from a hash-chained equity history with an explicit opening record and binds its identity/freshness through runtime risk authority, execution capabilities and durable decisions. Independent history authentication and live accounting integration remain open.
 - The explicit market-data command imports checksummed USD-M Futures daily archives into immutable, audited snapshots. Public archive access is isolated from Research and requires a non-commercial research attestation.
 - DATASET-01 provides a bounded local-only audit CLI for user/vendor OHLCV CSVs. It emits a DatasetContract and can compare a second CSV by UTC timestamp and symbol, reporting OHLCV divergences and coverage differences. Source independence, license assessment, and authority still require review. No actual user market-data CSV is present.
 - Latest hosted validation of `main` before the local M14, M9, CLI and data-import changes, post-merge PR #20: successful ([run 43004773712](https://github.com/Zenex-cpp/Quant_trading_platform/actions/runs/43004773712)).
 - Hosted push CI for working-branch commit `30ba40e` passed ([run 43042509186](https://github.com/Zenex-cpp/Quant_trading_platform/actions/runs/43042509186)) and uploaded the hashed preflight/governance artifact. It was not a protected-main run; artifact contents require connected-account access.
-- Latest full local Windows/Python 3.14.4 validation on package `3.61.18`: **1,314 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`; preflight `READY_FOR_MILESTONE`, `allowed=true`, no blockers, with M9/M10/M14/M15/M23/M24/M25 included. Audit: `.audit/V429_M23_DRAWDOWN_FINAL_20261111.json`. Local synthetic inputs do not replace independent source evidence. POSIX-only signer checks remain enabled in Linux CI; symlink checks skip only when the host cannot create symlinks.
+- Latest full local Windows/Python 3.12.14 validation on package `3.61.19`: **1,322 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`; preflight `READY_FOR_MILESTONE`, `allowed=true`, no blockers, with M9/M10/M14/M15/M22/M23/M24/M25 included. Local synthetic inputs do not replace independent source evidence. POSIX-only signer checks remain enabled in Linux CI; symlink checks skip only when the host cannot create symlinks.
 - Validation does not execute exchange orders or certify production readiness. `external_evidence=false`, `activation_flag=NOT_SET`, and `production_ready=false` remain in force.
 
 The hosted governance audit is intentionally non-fatal while signed, trusted external evidence is absent. A green CI job does not mean the trust anchor, independent evidence, operational controls, or production approval have been satisfied.

@@ -10,6 +10,9 @@ from trading_platform.v30.truth import AxisSnapshot, TruthComponent, TruthStatus
 from trading_platform.v31.authority import AuthorityStatus, RuntimeAuthority
 from trading_platform.v318 import DurableRiskDecisionLedger, RiskDecisionAction, RiskDecisionConflict, RiskDecisionRecord, RiskSystemState
 from trading_platform.v24.accounting import AccountingSnapshot, AccountingTruth, CashComponents, PnLView
+from trading_platform.realtime.orderbook import OrderBookSnapshot
+from trading_platform.v332.market_authority import MarketDataAuthorityLedger
+from trading_platform.v349 import LiquidityAssessment
 from trading_platform.v350 import DrawdownHistoryError, DrawdownHistoryLedger, DrawdownRiskError, assert_drawdown_monotone, bind_drawdown_to_risk
 
 
@@ -62,7 +65,28 @@ def assessment_for(
     )
 
 
-def truth(*, assessment=None, bind_history: bool = True):
+def liquidity_assessment_for():
+    market = MarketDataAuthorityLedger(EventStore())
+    source = market.record_observation(
+        symbol="BTCUSDT", feed_id="primary", event_time_ms=100,
+        receive_time_ms=100, processing_time_ms=100, max_age_ms=1_000,
+        source="synthetic-l2", sequence_number=41,
+    )
+    mid = Decimal("100")
+    book = OrderBookSnapshot(
+        last_update_id=41,
+        bids=((mid - Decimal("0.01"), Decimal("10")), (mid - Decimal("0.02"), Decimal("20"))),
+        asks=((mid + Decimal("0.01"), Decimal("10")), (mid + Decimal("0.02"), Decimal("20"))),
+    )
+    return LiquidityAssessment.assess(
+        symbol="BTCUSDT", source_evidence_id=source.fingerprint, verified=True,
+        side="BUY", requested_quantity=Decimal("10"), snapshot=book,
+        observed_at_ns=100_000_000, ttl_ns=1_000_000_000, depth_levels=2,
+        max_spread_bps=Decimal("2.5"), max_impact_bps=Decimal("10"),
+    )
+
+
+def truth(*, assessment=None, liquidity=None, bind_history: bool = True):
     evidence_ids = (
         (assessment.current_snapshot_hash, assessment.history_fingerprint)
         if assessment is not None and bind_history
@@ -71,11 +95,19 @@ def truth(*, assessment=None, bind_history: bool = True):
         else ("E-accounting",)
     )
     comps = tuple(
-        TruthComponent(n, TruthStatus.VERIFIED, "OK", evidence_ids if n == "accounting" else (f"E-{n}",))
-        for n in ("health", "provenance", "governance", "reconciliation", "accounting", "ledger")
+        TruthComponent(
+            n, TruthStatus.VERIFIED, "OK",
+            evidence_ids if n == "accounting" else
+            (liquidity.source_evidence_id, liquidity.source_fingerprint)
+            if n == "market_data" and liquidity is not None else (f"E-{n}",),
+        )
+        for n in ("health", "provenance", "governance", "reconciliation", "accounting", "ledger", "market_data")
     )
     caps = {k: Decimal("100") for k in ("health_cap", "deployment_cap", "accounting_cap", "reconciliation_cap", "provenance_cap", "operator_cap")}
-    observed_at_ns = assessment.observed_at_ns if assessment is not None else 1
+    observed_at_ns = max(
+        assessment.observed_at_ns if assessment is not None else 1,
+        liquidity.observed_at_ns if liquidity is not None else 1,
+    )
     return build_truth(
         observed_at_ns=observed_at_ns, axes=AXES, components=comps,
         requested_risk=Decimal("100"), caps=caps, decision_fresh=True,
@@ -288,10 +320,11 @@ def test_durable_decision_replays_and_revalidates_dynamic_drawdown_source(tmp_pa
 
 def test_combined_uncertainty_liquidity_drawdown_uses_tightest_cap():
     assessment = assessment_for(("100", "70"))
+    liquidity = liquidity_assessment_for()
     low = RuntimeAuthority().evaluate(
-        truth=truth(assessment=assessment), action=CanonicalAction.TRADE,
+        truth=truth(assessment=assessment, liquidity=liquidity), action=CanonicalAction.TRADE,
         requested_risk=Decimal("20"), decision_id="DD-COMB-1",
-        uncertainty=Decimal("0.5"), liquidity_stress=Decimal("0.8"),
+        uncertainty=Decimal("0.5"), liquidity_assessment=liquidity,
         drawdown_assessment=assessment,
     )
     assert low.status is AuthorityStatus.AUTHORIZED
@@ -299,9 +332,9 @@ def test_combined_uncertainty_liquidity_drawdown_uses_tightest_cap():
     assert low.liquidity_risk_factor == Decimal("0.2")
     assert low.drawdown_risk_factor == Decimal("0.7")
     denied = RuntimeAuthority().evaluate(
-        truth=truth(assessment=assessment), action=CanonicalAction.TRADE,
+        truth=truth(assessment=assessment, liquidity=liquidity), action=CanonicalAction.TRADE,
         requested_risk=Decimal("20.01"), decision_id="DD-COMB-2",
-        uncertainty=Decimal("0.5"), liquidity_stress=Decimal("0.8"),
+        uncertainty=Decimal("0.5"), liquidity_assessment=liquidity,
         drawdown_assessment=assessment,
     )
     assert denied.status is AuthorityStatus.DENIED

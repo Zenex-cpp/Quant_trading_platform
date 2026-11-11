@@ -5,6 +5,7 @@ from decimal import Decimal
 from typing import Any
 
 from trading_platform.v350.drawdown_history import DrawdownAssessment
+from trading_platform.v349.liquidity_assessment import LiquidityAssessment
 from trading_platform.v30.truth import OperationalTruth
 from trading_platform.v31.router import ExecutionRouter, AuthorizedOrderRequest
 from trading_platform.execution.models import OrderIntent, PositionState
@@ -27,6 +28,7 @@ class CommitRouter:
                now: datetime, position_state: PositionState, market_window: ValidWindow,
                upstream_windows: list[ValidWindow], risk_valid: bool, model_health: Decimal | None = None,
                model_health_assessment: HealthAssessment | None = None, model_health_assessment_id: str | None = None,
+               liquidity_assessment: LiquidityAssessment | None = None,
                drawdown_assessment: DrawdownAssessment | None = None) -> CommittedOrder:
         payload = {
             "intent_id": intent.intent_id, "decision_id": intent.decision_id,
@@ -43,14 +45,23 @@ class CommitRouter:
             model_health_assessment_id = capability.authority.model_health_assessment_id
         if drawdown_assessment is None and capability.drawdown_assessment is not None:
             drawdown_assessment = capability.drawdown_assessment
+        if liquidity_assessment is None and capability.liquidity_assessment is not None:
+            liquidity_assessment = capability.liquidity_assessment
         consumed = self.capabilities.consume(capability, now=now, truth=truth, intent_payload=payload,
                                              model_health=model_health, model_health_assessment=model_health_assessment,
                                              model_health_assessment_id=model_health_assessment_id,
+                                             liquidity_assessment=liquidity_assessment,
                                              drawdown_assessment=drawdown_assessment)
         out = self.router.route(intent=intent, truth=truth, now=now, position_state=position_state,
                                 market_window=market_window, upstream_windows=upstream_windows,
                                 risk_valid=risk_valid, requested_risk=capability.authority.requested_risk,
                                 decision_id=capability.authority.decision_id, input_payload=payload,
+                                liquidity_stress=capability.authority.liquidity_stress,
+                                max_liquidity_stress=capability.authority.liquidity_max_stress or Decimal("1"),
+                                liquidity_floor=capability.authority.liquidity_floor or Decimal("0"),
+                                liquidity_method=capability.authority.liquidity_method or "CONSERVATIVE_LINEAR",
+                                liquidity_method_version=capability.authority.liquidity_method_version or "1",
+                                liquidity_assessment=liquidity_assessment,
                                 drawdown=capability.authority.drawdown,
                                 drawdown_assessment=capability.drawdown_assessment,
                                 model_health=capability.authority.model_health,

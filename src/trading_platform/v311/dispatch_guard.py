@@ -14,6 +14,7 @@ from trading_platform.v310.runtime_orchestrator import RuntimeCycleSnapshot
 from trading_platform.v316.accounting_gate import AccountingGateDenied, DurableAccountingAuthority
 from trading_platform.v317.durable_risk import RiskReservationConflict, RiskReservationGate
 from trading_platform.v318.durable_decision import RiskDecisionConflict, DurableRiskDecisionLedger
+from trading_platform.v349.liquidity_assessment import LiquidityAssessment
 from trading_platform.v319.durable_intent import DurableOrderIntentLedger, OrderIntentConflict
 from trading_platform.v320.durable_request import DurableOrderRequestLedger, OrderRequestConflict
 from trading_platform.v321.durable_dispatch import DurableDispatchAttemptLedger, DispatchAttemptConflict, DispatchAttemptState
@@ -44,6 +45,7 @@ def assert_final_dispatch_authorities(
     position_authority: PositionAuthorityLedger | None,
     market_data_authority: MarketDataAuthorityLedger | None,
     causal_ttl_authority: CausalTTLAuthorityLedger | None,
+    liquidity_assessment: LiquidityAssessment | None = None,
 ) -> None:
     """Apply the shared M1–M5 authority checks immediately before transport.
 
@@ -84,6 +86,8 @@ def assert_final_dispatch_authorities(
             reservation_id=intent.risk_reservation_id,
             requested_exposure=Decimal(str(requested_exposure)),
             truth_hash=truth_hash,
+            liquidity_stress=(None if liquidity_assessment is None else liquidity_assessment.liquidity_stress),
+            liquidity_assessment=liquidity_assessment,
         )
     except RiskDecisionConflict as exc:
         raise DispatchGuardDenied(f"RISK_DECISION_DENIED:{exc}") from exc
@@ -92,11 +96,25 @@ def assert_final_dispatch_authorities(
         if market_data_authority is None:
             raise DispatchGuardDenied("MARKET_DATA_AUTHORITY_REQUIRED")
         try:
-            market_data_authority.assert_fresh(
+            market_record = market_data_authority.assert_fresh(
                 symbol=intent.symbol, now_ms=now_ms, feed_id="primary",
             )
         except MarketDataAuthorityConflict as exc:
             raise DispatchGuardDenied(f"MARKET_DATA_AUTHORITY_DENIED:{exc}") from exc
+        if liquidity_assessment is not None:
+            if not liquidity_assessment.matches_order(
+                symbol=intent.symbol, side=intent.side, quantity=intent.quantity,
+            ):
+                raise DispatchGuardDenied("LIQUIDITY_INTENT_MISMATCH")
+            if liquidity_assessment.source_evidence_id != market_record.fingerprint:
+                raise DispatchGuardDenied("LIQUIDITY_MARKET_EVIDENCE_MISMATCH")
+            if (
+                market_record.sequence_number is not None
+                and liquidity_assessment.last_update_id != market_record.sequence_number
+            ):
+                raise DispatchGuardDenied("LIQUIDITY_MARKET_SEQUENCE_MISMATCH")
+            if not liquidity_assessment.source_fresh_at(now_ms * 1_000_000):
+                raise DispatchGuardDenied("LIQUIDITY_SOURCE_EXPIRED")
         if causal_ttl_authority is None:
             raise DispatchGuardDenied("CAUSAL_TTL_AUTHORITY_REQUIRED")
         try:
@@ -217,6 +235,7 @@ class GuardedExecutionDispatcher:
             position_authority=self.position_authority,
             market_data_authority=self.market_data_authority,
             causal_ttl_authority=self.causal_ttl_authority,
+            liquidity_assessment=req.authority.liquidity_assessment,
         )
         attempt_intent_fp = (self.order_intent_ledger.fingerprint(intent)
                              if self.order_intent_ledger is not None

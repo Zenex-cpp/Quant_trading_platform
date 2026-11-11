@@ -9,6 +9,7 @@ from typing import Any, Mapping
 
 from trading_platform.v21.event_store import EventStore
 from trading_platform.v25.health import EvidenceFreshness, HealthAssessment, HealthState
+from trading_platform.v349.liquidity_assessment import LiquidityAssessment
 from trading_platform.v350.drawdown_history import DrawdownAssessment
 
 
@@ -71,6 +72,7 @@ class RiskDecisionRecord:
     liquidity_risk_factor: Decimal | None = None
     liquidity_method: str | None = None
     liquidity_method_version: str | None = None
+    liquidity_assessment: LiquidityAssessment | None = None
     drawdown: Decimal | None = None
     drawdown_max: Decimal | None = None
     drawdown_floor: Decimal = Decimal("0")
@@ -132,6 +134,10 @@ class RiskDecisionRecord:
             "liquidity_risk_factor": None if self.liquidity_risk_factor is None else str(self.liquidity_risk_factor),
             "liquidity_method": self.liquidity_method,
             "liquidity_method_version": self.liquidity_method_version,
+            "liquidity_assessment": None if self.liquidity_assessment is None else {
+                **self.liquidity_assessment.payload(),
+                "source_fingerprint": self.liquidity_assessment.source_fingerprint,
+            },
             "drawdown": None if self.drawdown is None else str(self.drawdown),
             "drawdown_max": None if self.drawdown_max is None else str(self.drawdown_max),
             "drawdown_floor": str(self.drawdown_floor),
@@ -183,6 +189,7 @@ class RiskDecisionGateSnapshot:
     uncertainty_risk_factor: Decimal | None = None
     liquidity_stress: Decimal | None = None
     liquidity_risk_factor: Decimal | None = None
+    liquidity_source_fingerprint: str | None = None
     drawdown: Decimal | None = None
     drawdown_risk_factor: Decimal | None = None
     drawdown_source_fingerprint: str | None = None
@@ -256,6 +263,7 @@ class DurableRiskDecisionLedger:
         position_version: str | None = None,
         uncertainty: Decimal | None = None,
         liquidity_stress: Decimal | None = None,
+        liquidity_assessment: LiquidityAssessment | None = None,
         drawdown: Decimal | None = None,
         drawdown_assessment: DrawdownAssessment | None = None,
         model_health: Decimal | None = None,
@@ -292,7 +300,18 @@ class DurableRiskDecisionLedger:
             current_liquidity = DurableRiskDecisionLedger._amount(liquidity_stress, "INVALID_LIQUIDITY_STRESS")
             if current_liquidity != decision.liquidity_stress:
                 raise RiskDecisionConflict("RISK_DECISION_LIQUIDITY_STALE")
-        elif liquidity_stress is not None:
+            if liquidity_assessment is None:
+                raise RiskDecisionConflict("RISK_DECISION_LIQUIDITY_SOURCE_REQUIRED")
+            if (
+                decision.liquidity_assessment is None
+                or liquidity_assessment.source_fingerprint != decision.liquidity_assessment.source_fingerprint
+            ):
+                raise RiskDecisionConflict("RISK_DECISION_LIQUIDITY_SOURCE_STALE")
+            if liquidity_assessment.liquidity_stress != current_liquidity:
+                raise RiskDecisionConflict("RISK_DECISION_LIQUIDITY_SOURCE_MISMATCH")
+            if not liquidity_assessment.source_fresh_at(now_ms * 1_000_000):
+                raise RiskDecisionConflict("RISK_DECISION_LIQUIDITY_SOURCE_EXPIRED")
+        elif liquidity_stress is not None or liquidity_assessment is not None:
             raise RiskDecisionConflict("RISK_DECISION_LIQUIDITY_PROVENANCE_MISSING")
         if decision.drawdown is not None:
             if drawdown is None:
@@ -352,6 +371,9 @@ class DurableRiskDecisionLedger:
             uncertainty_risk_factor=decision.uncertainty_risk_factor,
             liquidity_stress=decision.liquidity_stress,
             liquidity_risk_factor=decision.liquidity_risk_factor,
+            liquidity_source_fingerprint=(
+                None if decision.liquidity_assessment is None else decision.liquidity_assessment.source_fingerprint
+            ),
             drawdown=decision.drawdown,
             drawdown_risk_factor=decision.drawdown_risk_factor,
             drawdown_source_fingerprint=(
@@ -411,12 +433,21 @@ class DurableRiskDecisionLedger:
                 raise ValueError("LIQUIDITY_MAX_REQUIRED")
             if not decision.liquidity_method or not decision.liquidity_method_version:
                 raise ValueError("LIQUIDITY_METHOD_IDENTITY_REQUIRED")
+            assessment = decision.liquidity_assessment
+            if assessment is None or not assessment.is_valid():
+                raise ValueError("LIQUIDITY_SOURCE_PROVENANCE_REQUIRED")
+            if assessment.liquidity_stress != decision.liquidity_stress:
+                raise ValueError("LIQUIDITY_ASSESSMENT_VALUE_MISMATCH")
+            created_at_ns = decision.created_at_ms * 1_000_000
+            if not assessment.source_fresh_at(created_at_ns):
+                raise ValueError("LIQUIDITY_SOURCE_NOT_FRESH_AT_DECISION")
             try:
                 from trading_platform.v349.liquidity_risk_authority import bind_liquidity_to_risk
                 binding = bind_liquidity_to_risk(
                     liquidity_stress=decision.liquidity_stress, baseline_risk=requested,
                     max_stress=decision.liquidity_max, floor=decision.liquidity_floor,
                     method=decision.liquidity_method, method_version=decision.liquidity_method_version,
+                    assessment=assessment, now_ns=created_at_ns,
                 )
             except Exception as exc:
                 raise ValueError("INVALID_LIQUIDITY_RISK_BINDING") from exc
@@ -424,7 +455,7 @@ class DurableRiskDecisionLedger:
                 raise ValueError("LIQUIDITY_RISK_FACTOR_MISMATCH")
             if allowed > binding.allowed_risk:
                 raise ValueError("RISK_ALLOWED_EXCEEDS_LIQUIDITY_CAP")
-        elif any(v is not None for v in (decision.liquidity_max, decision.liquidity_risk_factor, decision.liquidity_method, decision.liquidity_method_version)):
+        elif any(v is not None for v in (decision.liquidity_max, decision.liquidity_risk_factor, decision.liquidity_method, decision.liquidity_method_version, decision.liquidity_assessment)):
             raise ValueError("LIQUIDITY_PROVENANCE_INCOMPLETE")
         elif decision.liquidity_floor != Decimal("0"):
             raise ValueError("LIQUIDITY_FLOOR_WITHOUT_LIQUIDITY")
@@ -584,6 +615,7 @@ class DurableRiskDecisionLedger:
                 liquidity_risk_factor=None if payload.get("liquidity_risk_factor") is None else Decimal(str(payload["liquidity_risk_factor"])),
                 liquidity_method=None if payload.get("liquidity_method") is None else str(payload["liquidity_method"]),
                 liquidity_method_version=None if payload.get("liquidity_method_version") is None else str(payload["liquidity_method_version"]),
+                liquidity_assessment=None if payload.get("liquidity_assessment") is None else LiquidityAssessment.from_payload(dict(payload["liquidity_assessment"])),
                 drawdown=None if payload.get("drawdown") is None else Decimal(str(payload["drawdown"])),
                 drawdown_max=None if payload.get("drawdown_max") is None else Decimal(str(payload["drawdown_max"])),
                 drawdown_floor=Decimal(str(payload.get("drawdown_floor", "0"))),

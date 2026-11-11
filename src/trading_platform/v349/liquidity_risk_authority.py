@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 
+from trading_platform.v349.liquidity_assessment import LiquidityAssessment
 from trading_platform.v349.liquidity_registry import get_production_liquidity_method
 
 
@@ -20,6 +21,7 @@ class LiquidityRiskBinding:
     risk_factor: Decimal
     method: str
     method_version: str
+    source_fingerprint: str | None = None
 
     @property
     def worsens_with_liquidity_stress(self) -> bool:
@@ -59,6 +61,8 @@ def bind_liquidity_to_risk(
     floor: Decimal | int | float | str = Decimal("0"),
     method: str = "CONSERVATIVE_LINEAR",
     method_version: str = "1",
+    assessment: LiquidityAssessment | None = None,
+    now_ns: int | None = None,
 ) -> LiquidityRiskBinding:
     if not method or not method_version:
         raise LiquidityRiskError("LIQUIDITY_METHOD_IDENTITY_REQUIRED")
@@ -69,6 +73,15 @@ def bind_liquidity_to_risk(
     baseline = _decimal(baseline_risk, "INVALID_BASELINE_RISK")
     if baseline < 0:
         raise LiquidityRiskError("INVALID_BASELINE_RISK")
+    source_fingerprint = None
+    if assessment is not None:
+        if _decimal(liquidity_stress, "INVALID_LIQUIDITY_STRESS") != assessment.liquidity_stress:
+            raise LiquidityRiskError("LIQUIDITY_ASSESSMENT_VALUE_MISMATCH")
+        if now_ns is None:
+            raise LiquidityRiskError("LIQUIDITY_SOURCE_VALIDATION_TIME_REQUIRED")
+        if not assessment.source_fresh_at(now_ns):
+            raise LiquidityRiskError("LIQUIDITY_SOURCE_EXPIRED")
+        source_fingerprint = assessment.source_fingerprint
     factor = conservative_liquidity_factor_decimal(
         liquidity_stress,
         max_stress=max_stress,
@@ -83,6 +96,7 @@ def bind_liquidity_to_risk(
         risk_factor=factor,
         method=method,
         method_version=method_version,
+        source_fingerprint=source_fingerprint,
     )
 
 
