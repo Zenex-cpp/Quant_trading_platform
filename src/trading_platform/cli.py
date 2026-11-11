@@ -57,6 +57,19 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
         help="attest the source terms permit non-commercial historical research only (not live/commercial trading)",
     )
+    audit_csv = market_commands.add_parser(
+        "audit-csv",
+        help="audit a local user/vendor OHLCV CSV and write a DatasetContract report",
+        description=(
+            "Local-only audit of a user/vendor CSV. No network access or source-file copy. "
+            "A single-source audit does not assess licensing, perform source comparison, or authorize definitive use."
+        ),
+    )
+    audit_csv.add_argument("--input", required=True, help="path to the local CSV file")
+    audit_csv.add_argument("--source-label", required=True, help="operator-provided source name")
+    audit_csv.add_argument("--report", required=True, help="new JSON report path outside the repository checkout")
+    audit_csv.add_argument("--dataset-id", default="DATASET-01", help="dataset identifier (default: DATASET-01)")
+    audit_csv.add_argument("--anomaly-note", help="optional operator note documenting known anomalies")
     return parser
 
 
@@ -101,4 +114,33 @@ def main(argv: Sequence[str] | None = None) -> int:
         }
         print(json.dumps(payload, sort_keys=True, indent=2))
         return 0
+    if args.command == "market-data" and args.market_data_command == "audit-csv":
+        from trading_platform.data.user_csv_audit import UserCsvAuditError, audit_user_dataset_csv
+
+        try:
+            result = audit_user_dataset_csv(
+                input_path=args.input,
+                source_label=args.source_label,
+                report_path=args.report,
+                dataset_id=args.dataset_id,
+                anomaly_note=args.anomaly_note,
+            )
+        except (UserCsvAuditError, OSError, ValueError) as exc:
+            print(f"DATASET_CSV_AUDIT=FAILED {type(exc).__name__}:{exc}", file=sys.stderr)
+            return 2
+        payload = {
+            "status": "AUDITED",
+            "dataset_id": args.dataset_id,
+            "row_count": result.row_count,
+            "quality_status": result.quality_status.value,
+            "source_sha256": result.source_sha256,
+            "dataset_contract_created": result.dataset_contract is not None,
+            "report_path": str(result.report_path),
+            "source_comparison": "NOT_PERFORMED_SINGLE_SOURCE",
+            "dataset_authority": "NOT_AUTHORIZED_BY_SINGLE_SOURCE_AUDIT",
+            "network_used": False,
+            "production_ready": False,
+        }
+        print(json.dumps(payload, sort_keys=True, indent=2))
+        return result.exit_code
     raise AssertionError("UNREACHABLE_COMMAND")

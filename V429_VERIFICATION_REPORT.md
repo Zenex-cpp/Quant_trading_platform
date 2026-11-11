@@ -43,3 +43,9 @@ All new filesystem tests use local temporary directories and synthetic Ed25519 k
 Package 3.61.11 adds the M25-scoped public historical-data importer and its application-level egress zone. The focused importer, segmentation, workflow-contract, compliance-matrix and release-integrity suite passed **43 tests**. The mandatory Windows/Python 3.14.7 runner passed with **1,255 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`; durable preflight returned `READY_FOR_MILESTONE`, `allowed=true`, with M9, M14 and M25 impacted and no blockers.
 
 This patch does not change external evidence or production readiness. M25 remains `TESTED` pending infrastructure routing proof. No Binance data was downloaded; the public data source is limited by its current terms to non-commercial historical research and cannot supply the intended live/commercial strategy. Hosted GitHub CI and the current remote-main revision still require confirmation.
+
+## DATASET-01 audit path — 2026-11-11
+
+Package 3.61.12 adds the local-only user/vendor CSV audit command. No DATASET-01 source file is present in this checkout. Synthetic tests verify contract creation, coverage and hashes, critical/malformed data handling, incomplete temporal coverage, exclusive report creation, repository path refusal, and no-network CLI behavior. This does not count as an audit of a real market dataset or complete source comparison; the source license and definitive-use authority remain unresolved.
+
+Focused CSV/CLI/release-integrity verification passed **15 tests**. The full mandatory Windows/Python 3.14.7 V4.29 runner passed with **1,262 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`; durable preflight was `READY_FOR_MILESTONE`, `allowed=true`, with no blockers. `external_evidence=false`, `production_ready=false`, and `activation_flag=NOT_SET` remain unchanged.
