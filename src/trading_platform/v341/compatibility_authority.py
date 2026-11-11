@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from hashlib import sha256
 import json
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping, Sequence
 
 from trading_platform.promotion.compatibility import Compatibility, CompatibilityReport
 from trading_platform.v21.event_store import EventStore
@@ -296,3 +296,72 @@ class CompatibilityAuthorityLedger:
             except DependencyInvalidationBlocked as exc:
                 raise CompatibilityAuthorityInvalid("COMPATIBILITY_STALE_AFTER_INVALIDATION") from exc
         return record
+
+
+class CompatibilityGuardedArtifactExecutor:
+    """Execute an artifact callable only while its durable compatibility grant is valid.
+
+    The report provider is evaluated for every invocation so a runtime/schema/config
+    change cannot reuse an earlier PASS. The dependency ledger is mandatory here:
+    a compatibility authorization without live invalidation checks is not an
+    execution credential.
+    """
+
+    def __init__(
+        self,
+        *,
+        ledger: CompatibilityAuthorityLedger,
+        authorization_id: str,
+        artifact_id: str,
+        artifact_hashes: Sequence[str],
+        code_version: str,
+        configuration_version: str,
+        execution_model_version: str,
+        report_provider: Callable[[], CompatibilityReport],
+        dependency_authority: DependencyInvalidationLedger,
+    ) -> None:
+        if not authorization_id or not artifact_id:
+            raise CompatibilityAuthorityInvalid("COMPATIBILITY_AUTHORIZATION_IDENTIFIERS_REQUIRED")
+        if not callable(report_provider):
+            raise CompatibilityAuthorityInvalid("COMPATIBILITY_REPORT_PROVIDER_REQUIRED")
+        if dependency_authority is None:
+            raise CompatibilityAuthorityInvalid("COMPATIBILITY_DEPENDENCY_AUTHORITY_REQUIRED")
+        if dependency_authority.store is not ledger.store:
+            raise CompatibilityAuthorityInvalid("COMPATIBILITY_DEPENDENCY_STORE_MISMATCH")
+        self._ledger = ledger
+        self._authorization_id = authorization_id
+        self._artifact_id = artifact_id
+        self._artifact_hashes = tuple(artifact_hashes)
+        self._code_version = code_version
+        self._configuration_version = configuration_version
+        self._execution_model_version = execution_model_version
+        self._report_provider = report_provider
+        self._dependency_authority = dependency_authority
+
+    def execute(
+        self,
+        executable: Callable[..., Any],
+        *args: Any,
+        now: datetime,
+        **kwargs: Any,
+    ) -> Any:
+        if not callable(executable):
+            raise CompatibilityAuthorityInvalid("ARTIFACT_EXECUTABLE_REQUIRED")
+        self.assert_valid(now=now)
+        return executable(*args, **kwargs)
+
+    def assert_valid(self, *, now: datetime) -> CompatibilityAuthorization:
+        report = self._report_provider()
+        if not isinstance(report, CompatibilityReport):
+            raise CompatibilityAuthorityInvalid("ARTIFACT_COMPATIBILITY_REPORT_REQUIRED")
+        return self._ledger.assert_valid(
+            self._authorization_id,
+            now=now,
+            artifact_id=self._artifact_id,
+            artifact_hashes=self._artifact_hashes,
+            code_version=self._code_version,
+            configuration_version=self._configuration_version,
+            execution_model_version=self._execution_model_version,
+            report=report,
+            dependency_authority=self._dependency_authority,
+        )

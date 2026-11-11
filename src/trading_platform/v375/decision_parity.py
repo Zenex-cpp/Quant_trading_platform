@@ -34,6 +34,7 @@ from trading_platform.v373.backtest_engine import (
     MarketEvent,
 )
 from trading_platform.execution.models import OrderIntent
+from trading_platform.v341.compatibility_authority import CompatibilityGuardedArtifactExecutor
 
 
 class ParityInputError(ValueError):
@@ -269,10 +270,28 @@ def capture_backtest_decision_trace(
 
 
 class LiveDecisionEngine:
-    """Decision-only live/shadow runner using the same stage object."""
+    """Decision-only live/shadow runner with compatibility checks at every stage."""
 
-    def __init__(self, stages: BacktestStageFunctions) -> None:
+    def __init__(
+        self,
+        stages: BacktestStageFunctions,
+        *,
+        compatibility_executor: CompatibilityGuardedArtifactExecutor,
+        now_provider: Callable[[], datetime],
+    ) -> None:
+        if not isinstance(compatibility_executor, CompatibilityGuardedArtifactExecutor):
+            raise ParityInputError("RUNTIME_COMPATIBILITY_EXECUTOR_REQUIRED")
+        if not callable(now_provider):
+            raise ParityInputError("RUNTIME_CLOCK_PROVIDER_REQUIRED")
         self._stages = stages
+        self._compatibility_executor = compatibility_executor
+        self._now_provider = now_provider
+
+    def _execute_stage(self, executable: Callable, *args: Any) -> Any:
+        now = self._now_provider()
+        if not isinstance(now, datetime) or now.tzinfo is None:
+            raise ParityInputError("RUNTIME_CLOCK_TIMEZONE_REQUIRED")
+        return self._compatibility_executor.execute(executable, *args, now=now)
 
     def run(
         self,
@@ -291,14 +310,14 @@ class LiveDecisionEngine:
                 raise ParityInputError("OUT_OF_ORDER_LIVE_EVENT")
             last_offset = event.event_offset
 
-            feature = self._stages.feature_fn(event)
-            regime = self._stages.regime_fn(event, feature)
-            prediction = self._stages.prediction_fn(event, feature, regime)
-            signal = self._stages.signal_fn(event, prediction)
-            opportunity = self._stages.opportunity_fn(event, signal, regime)
-            portfolio = self._stages.portfolio_fn(event, opportunity, position_quantity)
-            risk = self._stages.risk_fn(event, portfolio, position_quantity)
-            intent = self._stages.intent_fn(event, risk)
+            feature = self._execute_stage(self._stages.feature_fn, event)
+            regime = self._execute_stage(self._stages.regime_fn, event, feature)
+            prediction = self._execute_stage(self._stages.prediction_fn, event, feature, regime)
+            signal = self._execute_stage(self._stages.signal_fn, event, prediction)
+            opportunity = self._execute_stage(self._stages.opportunity_fn, event, signal, regime)
+            portfolio = self._execute_stage(self._stages.portfolio_fn, event, opportunity, position_quantity)
+            risk = self._execute_stage(self._stages.risk_fn, event, portfolio, position_quantity)
+            intent = self._execute_stage(self._stages.intent_fn, event, risk)
 
             records.append(
                 DecisionTraceRecord(

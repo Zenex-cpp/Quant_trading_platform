@@ -10,6 +10,10 @@ Python package `3.61.6` closes alternate Testnet submit paths through the V3.36/
 
 Python package `3.61.7` closes the M7 Champion gate-claim gap. Promotion now requires durable PASS gate authorizations and binds each authorization to the exact gate run and fingerprint, which are checked again at promotion and LIVE activation. The V4.29 preflight now includes M7 in the impacted-control set. See `V429_M7_REMEDIATION_REPORT.md`.
 
+Python package `3.61.8` guards the V3.75 live/shadow prediction callable with a durable M14 compatibility authorization, checks the current seven-dimension report on every call, and includes M14 in the V4.29 preflight and CI contract. It does not add a production inference adapter. See `V429_M14_REMEDIATION_REPORT.md`.
+
+On package `3.61.8`, the Windows/Python 3.14.7 mandatory runner passed with **1,224 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`; preflight was `READY_FOR_MILESTONE` with M14 impacted and no blocking reasons.
+
 At package `3.61.5`, the mandatory Windows/Python 3.14.7 runner completed with **1,190 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`. On package `3.61.6`, it completed with **1,200 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`. On the current `3.61.7` tree, it completed with **1,201 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`, preflight `READY_FOR_MILESTONE`. These local results do not replace hosted CI or external review.
 
 ## Verification contract

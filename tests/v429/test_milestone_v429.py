@@ -118,3 +118,19 @@ def test_v429_m7_matrix_points_to_durable_exact_gate_run_authority():
     assert "gate_fingerprints" in authority
     assert "passed_gate_ids: Iterable" not in authority
     assert '"M7"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")
+
+
+def test_v429_m14_matrix_points_to_guarded_runtime_execution():
+    with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
+        m14 = next(row for row in csv.DictReader(stream) if row["machine_check_id"] == "M14")
+    assert m14["implementation_status"] == "TESTED"
+    assert "trading_platform/v341/compatibility_authority.py" in m14["code_reference"]
+    assert "trading_platform/v375/decision_parity.py" in m14["code_reference"]
+    assert "trading_platform/v379/execution_parity.py" in m14["code_reference"]
+    assert "tests/test_v341_m14_compatibility_authority.py" in m14["test_reference"]
+    assert "tests/test_v375_decision_parity.py" in m14["test_reference"]
+    assert "tests/test_v379_execution_parity.py" in m14["test_reference"]
+    assert "tests/test_v344_m17_gate_reuse.py" in m14["test_reference"]
+    assert m14["evidence_reference"] == "V429_M14_REMEDIATION_REPORT.md"
+    assert "Production" in m14["unresolved_gap"]
+    assert '"M14"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")

@@ -17,7 +17,7 @@ def test_v429_ci_workflow_contract_passes_and_preserves_capture_artifact_compati
     assert "V428_MILESTONE_PREFLIGHT.json" in text
     assert "V428_MILESTONE_PREFLIGHT.sqlite3" in text
     assert "--impacted-requirement M1" in text
-    for requirement_id in ("M2", "M3", "M4", "M5", "M7"):
+    for requirement_id in ("M2", "M3", "M4", "M5", "M7", "M14"):
         assert f"--impacted-requirement {requirement_id}" in text
 
 
