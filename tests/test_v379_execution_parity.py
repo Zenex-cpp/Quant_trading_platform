@@ -149,7 +149,7 @@ def test_deliberate_live_stage_mutation_is_detected():
     assert comparison.mismatch_offsets == (0, 1)
 
 
-def test_testnet_order_adapter_market_mapping_is_deterministic():
+def test_testnet_order_adapter_maps_market_order_but_cannot_bypass_controlled_submit():
     from trading_platform.v35.binance_execution import BinanceTestnetExecutionGateway, BinanceTestnetExecutionConfig
     from trading_platform.v35.binance_execution import RuntimeCredentialValues
     class FakeGateway(BinanceTestnetExecutionGateway):
@@ -165,10 +165,12 @@ def test_testnet_order_adapter_market_mapping_is_deterministic():
     gateway = FakeGateway()
     adapter = BinanceTestnetOrderAdapter(gateway, TestnetMutationGate(mutation_enabled=True, operator_approval=True, max_notional=Decimal("200")))
     intent = _stages().intent_fn(_event(0).market, {"allowed": True, "qty": Decimal("1")})
-    result = adapter.submit(intent, credentials=RuntimeCredentialValues("k", b"s"), now=TS, reference_price=Decimal("100"))
-    assert result.outcome.value == "ACKNOWLEDGED"
-    assert gateway.requests[0].client_order_id == "tp-" + __import__("hashlib").sha256(intent.intent_id.encode()).hexdigest()[:24]
-    assert gateway.requests[0].order_type is OrderType.MARKET
+    request = adapter.to_order_request(intent, now=TS)
+    assert request.client_order_id == "tp-" + __import__("hashlib").sha256(intent.intent_id.encode()).hexdigest()[:24]
+    assert request.order_type is OrderType.MARKET
+    with pytest.raises(PermissionError, match="CONTROLLED_SUBMIT_AUTHORITY_REQUIRED"):
+        adapter.submit(intent, credentials=RuntimeCredentialValues("k", b"s"), now=TS, reference_price=Decimal("100"))
+    assert gateway.requests == []
 
 
 def test_testnet_order_adapter_limit_is_fail_closed_until_request_contract_is_extended():

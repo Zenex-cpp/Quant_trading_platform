@@ -7,7 +7,7 @@ from hashlib import sha256
 import json
 from typing import Any, Callable, Mapping, Protocol
 
-from trading_platform.execution.models import OrderIntent
+from trading_platform.execution.models import OrderAction, OrderIntent
 from trading_platform.v34.execution_bridge import BridgeStatus, ExecutionBridge, ExecutionObservation
 from trading_platform.v35.binance_execution import RuntimeCredentialValues, SubmitObservation
 from trading_platform.v310.runtime_orchestrator import RuntimeCycleSnapshot
@@ -31,6 +31,85 @@ class GuardedExecutionGateway(Protocol):
 
 class DispatchGuardDenied(PermissionError):
     """The runtime did not authorize an external order dispatch."""
+
+
+def assert_final_dispatch_authorities(
+    *,
+    intent: OrderIntent,
+    now_ms: int,
+    request_deadline: datetime,
+    requested_exposure: Decimal,
+    truth_hash: str,
+    risk_decision_ledger: DurableRiskDecisionLedger | None,
+    position_authority: PositionAuthorityLedger | None,
+    market_data_authority: MarketDataAuthorityLedger | None,
+    causal_ttl_authority: CausalTTLAuthorityLedger | None,
+) -> None:
+    """Apply the shared M1–M5 authority checks immediately before transport.
+
+    Both the durable V3.11 dispatcher and the controlled Testnet submit path call
+    this function so an alternate adapter cannot weaken the final order boundary.
+    """
+    if isinstance(now_ms, bool) or not isinstance(now_ms, int) or now_ms < 0:
+        raise DispatchGuardDenied("DISPATCH_CLOCK_INVALID")
+    try:
+        now_dt = datetime.fromtimestamp(now_ms / 1000.0, tz=timezone.utc)
+    except (OverflowError, OSError, ValueError) as exc:
+        raise DispatchGuardDenied("DISPATCH_CLOCK_INVALID") from exc
+    try:
+        intent.validate(now_dt)
+    except (ValueError, TypeError) as exc:
+        raise DispatchGuardDenied(f"ORDER_INTENT_NOT_FRESH:{exc}") from exc
+    if not isinstance(request_deadline, datetime) or request_deadline.tzinfo is None:
+        raise DispatchGuardDenied("ORDER_DEADLINE_INVALID")
+    if now_dt >= request_deadline:
+        raise DispatchGuardDenied("ORDER_REQUEST_EXPIRED")
+
+    if position_authority is None:
+        raise DispatchGuardDenied("POSITION_AUTHORITY_REQUIRED")
+    try:
+        position_authority.assert_orderable(
+            symbol=intent.symbol, action=intent.action, now_ms=now_ms,
+        )
+    except PositionAuthorityConflict as exc:
+        raise DispatchGuardDenied(f"POSITION_AUTHORITY_DENIED:{exc}") from exc
+
+    if risk_decision_ledger is None:
+        raise DispatchGuardDenied("RISK_DECISION_LEDGER_REQUIRED")
+    try:
+        risk_decision_ledger.assert_valid_for_new_risk(
+            decision_id=intent.risk_decision_id,
+            now_ms=now_ms,
+            intent_id=intent.intent_id,
+            reservation_id=intent.risk_reservation_id,
+            requested_exposure=Decimal(str(requested_exposure)),
+            truth_hash=truth_hash,
+        )
+    except RiskDecisionConflict as exc:
+        raise DispatchGuardDenied(f"RISK_DECISION_DENIED:{exc}") from exc
+
+    if intent.action in {OrderAction.OPEN, OrderAction.INCREASE}:
+        if market_data_authority is None:
+            raise DispatchGuardDenied("MARKET_DATA_AUTHORITY_REQUIRED")
+        try:
+            market_data_authority.assert_fresh(
+                symbol=intent.symbol, now_ms=now_ms, feed_id="primary",
+            )
+        except MarketDataAuthorityConflict as exc:
+            raise DispatchGuardDenied(f"MARKET_DATA_AUTHORITY_DENIED:{exc}") from exc
+        if causal_ttl_authority is None:
+            raise DispatchGuardDenied("CAUSAL_TTL_AUTHORITY_REQUIRED")
+        try:
+            valid_from_ms = int(intent.window.valid_from.timestamp() * 1000)
+            expires_at_ms = int(intent.window.expires_at.timestamp() * 1000)
+            causal_ttl_authority.assert_intent_chain_valid(
+                intent_id=intent.intent_id,
+                now_ms=now_ms,
+                expected_valid_from_ms=valid_from_ms,
+                expected_expires_at_ms=expires_at_ms,
+            )
+        except CausalTTLConflict as exc:
+            raise DispatchGuardDenied(f"CAUSAL_TTL_DENIED:{exc}") from exc
 
 
 @dataclass(frozen=True)
@@ -111,21 +190,6 @@ class GuardedExecutionDispatcher:
             raise DispatchGuardDenied(f"TRADING_NOT_ALLOWED:{snap.state.value}:{snap.reason}")
         if snap.recovery_required:
             raise DispatchGuardDenied("RECOVERY_REQUIRED")
-        if self.position_authority is None:
-            raise DispatchGuardDenied("POSITION_AUTHORITY_REQUIRED")
-        try:
-            self.position_authority.assert_orderable(
-                symbol=intent.symbol, action=intent.action, now_ms=now_ms,
-            )
-        except PositionAuthorityConflict as exc:
-            raise DispatchGuardDenied(f"POSITION_AUTHORITY_DENIED:{exc}") from exc
-        if intent.action in {intent.action.OPEN, intent.action.INCREASE}:
-            if self.market_data_authority is None:
-                raise DispatchGuardDenied("MARKET_DATA_AUTHORITY_REQUIRED")
-            try:
-                self.market_data_authority.assert_fresh(symbol=intent.symbol, now_ms=now_ms, feed_id="primary")
-            except MarketDataAuthorityConflict as exc:
-                raise DispatchGuardDenied(f"MARKET_DATA_AUTHORITY_DENIED:{exc}") from exc
         if self._intent_authority_fingerprint(intent, req.authority.truth_hash, req.authority.requested_risk) != req.authority.input_fingerprint:
             raise DispatchGuardDenied("COMMITTED_INTENT_MISMATCH")
         if self.order_intent_ledger is not None:
@@ -143,42 +207,17 @@ class GuardedExecutionDispatcher:
                 )
             except OrderRequestConflict as exc:
                 raise DispatchGuardDenied(f"ORDER_REQUEST_DURABLE_DENIED:{exc}") from exc
-        if self.risk_decision_ledger is None:
-            raise DispatchGuardDenied("RISK_DECISION_LEDGER_REQUIRED")
-        try:
-            intent.validate(now_dt)
-        except (ValueError, TypeError) as exc:
-            raise DispatchGuardDenied(f"ORDER_INTENT_NOT_FRESH:{exc}") from exc
-        deadline = req.request.deadline
-        if not isinstance(deadline, datetime) or deadline.tzinfo is None:
-            raise DispatchGuardDenied("ORDER_DEADLINE_INVALID")
-        if now_dt >= deadline:
-            raise DispatchGuardDenied("ORDER_REQUEST_EXPIRED")
-        try:
-            self.risk_decision_ledger.assert_valid_for_new_risk(
-                decision_id=intent.risk_decision_id,
-                now_ms=now_ms,
-                intent_id=intent.intent_id,
-                reservation_id=intent.risk_reservation_id,
-                requested_exposure=Decimal(str(req.authority.requested_risk)),
-                truth_hash=req.authority.truth_hash,
-            )
-        except RiskDecisionConflict as exc:
-            raise DispatchGuardDenied(f"RISK_DECISION_DENIED:{exc}") from exc
-        if intent.action in {intent.action.OPEN, intent.action.INCREASE}:
-            if self.causal_ttl_authority is None:
-                raise DispatchGuardDenied("CAUSAL_TTL_AUTHORITY_REQUIRED")
-            try:
-                valid_from_ms = int(intent.window.valid_from.timestamp() * 1000)
-                expires_at_ms = int(intent.window.expires_at.timestamp() * 1000)
-                self.causal_ttl_authority.assert_intent_chain_valid(
-                    intent_id=intent.intent_id,
-                    now_ms=now_ms,
-                    expected_valid_from_ms=valid_from_ms,
-                    expected_expires_at_ms=expires_at_ms,
-                )
-            except CausalTTLConflict as exc:
-                raise DispatchGuardDenied(f"CAUSAL_TTL_DENIED:{exc}") from exc
+        assert_final_dispatch_authorities(
+            intent=intent,
+            now_ms=now_ms,
+            request_deadline=req.request.deadline,
+            requested_exposure=Decimal(str(req.authority.requested_risk)),
+            truth_hash=req.authority.truth_hash,
+            risk_decision_ledger=self.risk_decision_ledger,
+            position_authority=self.position_authority,
+            market_data_authority=self.market_data_authority,
+            causal_ttl_authority=self.causal_ttl_authority,
+        )
         attempt_intent_fp = (self.order_intent_ledger.fingerprint(intent)
                              if self.order_intent_ledger is not None
                              else DurableOrderIntentLedger.fingerprint(intent))

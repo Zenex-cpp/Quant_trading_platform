@@ -281,7 +281,7 @@ class TestnetExecutionActivationAuthorityV384:
 
 
 class BinanceTestnetExecutionAdapterV384:
-    """v3.84 mutation adapter requiring activation authority before gateway calls."""
+    """Compatibility adapter; mutations must use the guarded V3.85 submit path."""
 
     __test__ = False
 
@@ -292,10 +292,6 @@ class BinanceTestnetExecutionAdapterV384:
     ) -> None:
         self.gateway = gateway
         self.authority = authority
-        self._delegate = BinanceTestnetOrderAdapterV380(
-            gateway=gateway,
-            mutation_gate=_DelegatingMutationGate(authority),
-        )
 
     def submit(
         self,
@@ -305,17 +301,4 @@ class BinanceTestnetExecutionAdapterV384:
         now: datetime,
         reference_price: Decimal | None = None,
     ) -> SubmitObservation:
-        authorization = self.authority.authorize(intent=intent, reference_price=reference_price, now=now)
-        if not authorization.allowed:
-            raise PermissionError(authorization.reason)
-        return self._delegate.submit(intent, credentials=credentials, now=now, reference_price=reference_price)
-
-
-class _DelegatingMutationGate:
-    def __init__(self, authority: TestnetExecutionActivationAuthorityV384) -> None:
-        self.authority = authority
-
-    def authorize(self, *, intent: OrderIntent, reference_price: Decimal | None = None) -> None:
-        result = self.authority.authorize(intent=intent, reference_price=reference_price)
-        if not result.allowed:
-            raise PermissionError(result.reason)
+        raise PermissionError("CONTROLLED_SUBMIT_AUTHORITY_REQUIRED")

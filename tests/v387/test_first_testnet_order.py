@@ -13,6 +13,7 @@ from trading_platform.v384 import ConnectivityProofV384, OperatorApprovalV384, T
 from trading_platform.v385 import ControlledTestnetSubmitAuthorityV385, PreTradeSnapshotV385
 from trading_platform.v386 import OperatorSessionAuthorityV386, UserDataHealthV386
 from trading_platform.v387 import FirstTestnetOrderPolicyV387, FirstTestnetOrderRunnerV387, QuoteSnapshotV387, OrderEventObservationV387, ReconciliationResultV387
+from tests.v385_submit_support import build_v385_submit_authorities
 
 BASE=datetime(2026,10,5,10,0,tzinfo=timezone.utc)
 class G:
@@ -21,10 +22,17 @@ class G:
 def mk():
     i=OrderIntent('I-387','D-387','P-387','R-387','S-387','M-387','V387','BTCUSDT',Side.BUY,OrderAction.OPEN,Decimal('0.0002'),OrderType.LIMIT,ValidWindow(BASE,BASE+timedelta(minutes=5)),Decimal('49900'),'GTC','RR-387')
     rid='or-'+hashlib.sha256((i.intent_id+i.execution_version).encode()).hexdigest()[:24]
-    snap=PreTradeSnapshotV385('SNP-387',BASE,i.intent_id,rid,'D','POS','PORT','RISK','LIMITS','MARKET','LIQ','MODEL','STRATEGY','VERSIONS','FLAT','RECONCILED','GREEN',False)
+    authorities=build_v385_submit_authorities(i,BASE)
+    snap=authorities.snapshot(i,'SNP-387')
     a=TestnetExecutionActivationAuthorityV384(ActivationConfigV384(max_notional=Decimal('25')),clock=lambda:BASE)
     a.activate(connectivity=ConnectivityProofV384('VERIFIED','EV-387',BASE,BASE+timedelta(minutes=5),'https://testnet.binancefuture.com',0),approval=OperatorApprovalV384('APR-387','operator','TESTNET_ORDER_MUTATION',BASE,BASE+timedelta(minutes=5),'controlled'),reconciliation_state='GREEN',now=BASE)
-    g=G(); store=EventStore(); ctl=ControlledTestnetSubmitAuthorityV385(activation=a,gateway=g,event_store=store,clock=lambda:BASE); op=OperatorSessionAuthorityV386(activation=a,submitter=ctl,clock=lambda:BASE)
+    g=G(); store=EventStore(); ctl=ControlledTestnetSubmitAuthorityV385(
+        activation=a,gateway=g,event_store=store,clock=lambda:BASE,
+        risk_decision_ledger=authorities.risk_decision_ledger,
+        position_authority=authorities.position_authority,
+        market_data_authority=authorities.market_data_authority,
+        causal_ttl_authority=authorities.causal_ttl_authority,
+    ); op=OperatorSessionAuthorityV386(activation=a,submitter=ctl,clock=lambda:BASE)
     conn=ConnectivityEvidenceV383(PreflightStatus.VERIFIED,'https://testnet.binancefuture.com','wss://ws-api.testnet.binancefuture.com/ws-api/v3','wss://ws-api.testnet.binancefuture.com/ws-api/v3','RESOLVED',BASE.timestamp()*1000,BASE.timestamp()*1000,0,'OK')
     gate=op.preflight(connectivity=conn,user_data=UserDataHealthV386(True,True,True,BASE.timestamp(),'OK'),reconciliation_green=True,credentials=RuntimeCredentialValues('K',b'S'),now=BASE)
     runner=FirstTestnetOrderRunnerV387(session=op,clock=lambda:BASE)

@@ -106,6 +106,8 @@ def test_runtime_integration_blocks_stale_market_before_gateway(tmp_path):
     from trading_platform.portfolio.config import ConfigValue, Precedence
     from trading_platform.v343.config_authority import ConfigurationAuthorityLedger
     from trading_platform.v20.reconciliation import ReconciliationDiff, ReconciliationResult, ReconciliationState
+    from tests.causal_helpers import causal_authority_for_intent
+    from tests.dispatch_support import risk_decision_ledger_for
 
     now = datetime(2026, 9, 23, tzinfo=timezone.utc)
     now_ms = int(now.timestamp() * 1000)
@@ -153,6 +155,8 @@ def test_runtime_integration_blocks_stale_market_before_gateway(tmp_path):
     gateway = G()
     runtime = ExecutionRuntimeIntegration(orchestrator=O(), bridge=bridge, gateway=gateway,
                                           position_authority=pos, market_data_authority=market,
+                                          causal_ttl_authority=causal_authority_for_intent(intent),
+                                          risk_decision_ledger=risk_decision_ledger_for(bridge, intent, now_ms=now_ms),
                                           configuration_authority=config_ledger)
     result = runtime.dispatch(
         intent=intent, credentials=RuntimeCredentialValues("API", b"SECRET"), now_epoch=now.timestamp(),
