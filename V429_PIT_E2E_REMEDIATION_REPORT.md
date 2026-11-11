@@ -14,6 +14,7 @@ Correct two gaps found while checking the current implementation against Master 
 - Risk decisions, order intents, fill identity, and accounting state are reopened from SQLite. Duplicate fills are ignored, conflicting fill content is rejected, expired risk is rejected, and accounting state is reconstructed and checked with a recovery proof.
 - The runner invokes the deployment rollback drill and requires failure-injection, recovery, and rollback artifacts in both the evidence snapshot and the acceptance gate.
 - The result identifies its environment as `OFFLINE_SIMULATION`; it keeps `external_evidence=false`, `production_ready=false`, and `activation_flag=NOT_SET`.
+- The same acceptance flow can now be run outside pytest from a source checkout with `python scripts/run_offline_acceptance.py`, or after installation with `trading-platform offline-acceptance` / `python -m trading_platform offline-acceptance`. It prints the evidence report as JSON and has a regression that rejects any socket connection attempt.
 
 ## Requirements and evidence
 
@@ -31,3 +32,4 @@ These are application-level tests over synthetic data and local SQLite files. Th
 - Focused splitter and end-to-end acceptance tests: **17 passed** on Windows/Python 3.14.7.
 - Mandatory full V4.29 runner on Windows/Python 3.14.7: **1,163 passed, 26 skipped**, `RELEASE_HYGIENE=PASS` (decision `V429-SPLIT-PURGE-20261104-02`).
 - PR #11 merged as `e0d6611`; its hosted validation and the subsequent `main` push run completed successfully at **1,187 passed, 2 skipped**, `RELEASE_HYGIENE=PASS`. That run predates the separate M27 restart-recovery follow-up and does not validate its new test.
+- Current CLI runtime verification: `python scripts/run_offline_acceptance.py` produced a valid JSON report for 22 stages, ending at Gate; the CLI test blocks socket connection attempts. The package `3.61.10` full V4.29 runner passed **1,242 tests, 26 skipped**, with `RELEASE_HYGIENE=PASS`.

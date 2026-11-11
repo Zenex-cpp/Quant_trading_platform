@@ -14,6 +14,10 @@ Python package `3.61.8` guards the V3.75 live/shadow prediction callable with a 
 
 Python package `3.61.9` closes M9 research-boundary gaps for credential-bearing `__slots__` objects and NumPy object arrays, and validates direct tuning-data views. The V4.29 preflight and CI contract now include M9. The credential vault remains an in-process recovery implementation pending production credential-store and process-isolation evidence. See `V429_M9_REMEDIATION_REPORT.md`.
 
+Python package `3.61.10` adds an installed command-line entry point and a source-checkout runner (`python scripts/run_offline_acceptance.py`) for the complete §178 offline acceptance chain. It emits the deterministic JSON report and uses synthetic data plus local SQLite only; a test blocks socket connections during command execution.
+
+On package `3.61.10`, the Windows/Python 3.14.7 mandatory runner passed with **1,242 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`; preflight was `READY_FOR_MILESTONE`, `allowed=true`, with M9 and M14 impacted and no blocking reasons. The source-checkout CLI also completed the 22-stage §178 flow as `OFFLINE_SIMULATION`, with `production_ready=false` and `activation_flag=NOT_SET`.
+
 On package `3.61.8`, the Windows/Python 3.14.7 mandatory runner passed with **1,224 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`; preflight was `READY_FOR_MILESTONE` with M14 impacted and no blocking reasons.
 
 On package `3.61.9`, the Windows/Python 3.14.7 mandatory runner passed with **1,240 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`; preflight was `READY_FOR_MILESTONE`, `allowed=true`, with M9 and M14 impacted and no blocking reasons. Pytest now explicitly collects the retained legacy credential test module so its regressions run in the mandatory suite. Hosted CI has not yet run for the local M14/M9 changes because GitHub access is unavailable in this environment.
