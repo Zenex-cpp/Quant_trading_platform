@@ -5,10 +5,16 @@ from trading_platform.v333 import CausalArtifactState, CausalArtifactType, Causa
 from trading_platform.execution.models import OrderIntent
 
 
-def causal_authority_for_intent(intent: OrderIntent, *, store=None) -> CausalTTLAuthorityLedger:
+def causal_authority_for_intent(
+    intent: OrderIntent,
+    *,
+    store=None,
+) -> CausalTTLAuthorityLedger:
     ledger = CausalTTLAuthorityLedger(store or EventStore())
     vf = int(intent.window.valid_from.timestamp() * 1000)
     ex = int(intent.window.expires_at.timestamp() * 1000)
+    if ex <= vf:
+        raise ValueError("causal fixture expiry must follow the valid-from time")
     record_at = vf
     prediction_id = f"{intent.intent_id}:prediction"
     signal_id = f"{intent.intent_id}:signal"

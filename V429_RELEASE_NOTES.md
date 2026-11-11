@@ -6,7 +6,9 @@ V4.29 hardens the independent Ed25519 signer against symlinked ancestor paths, i
 
 Python package `3.61.5` makes the final dispatcher require current risk, position, market-data, and causal-TTL authorities before a new risk-increasing order can reach its gateway. The runtime now passes the durable RiskDecision ledger, and V4.29 CI preflights M1–M5 for this boundary. See `V429_M2_REMEDIATION_REPORT.md`.
 
-The mandatory Windows/Python 3.14.7 runner completed with **1,190 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`. This local result does not replace hosted CI or external review.
+Python package `3.61.6` closes alternate Testnet submit paths through the V3.36/V3.79/V3.80/V3.84/V3.85 adapters. The V3.85 controlled submit shares the final M1–M5 authority checks; older direct-submit adapters fail closed. See `V429_M1_M5_TRANSPORT_REMEDIATION.md`.
+
+At package `3.61.5`, the mandatory Windows/Python 3.14.7 runner completed with **1,190 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`. On the current `3.61.6` tree, it completed with **1,200 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`, preflight `READY_FOR_MILESTONE`. These local results do not replace hosted CI or external review.
 
 ## Verification contract
 

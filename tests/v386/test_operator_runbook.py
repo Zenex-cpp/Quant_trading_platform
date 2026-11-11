@@ -13,6 +13,7 @@ from trading_platform.v383_connectivity import ConnectivityEvidenceV383, Preflig
 from trading_platform.v384 import ConnectivityProofV384, OperatorApprovalV384, TestnetExecutionActivationAuthorityV384, TestnetExecutionActivationConfigV384 as ActivationConfigV384
 from trading_platform.v385 import ControlledTestnetSubmitAuthorityV385, PreTradeSnapshotV385, ControlledSubmitError
 from trading_platform.v386 import OperatorSessionAuthorityV386, UserDataHealthV386
+from tests.v385_submit_support import build_v385_submit_authorities
 
 BASE=datetime(2026,10,5,10,0,tzinfo=timezone.utc)
 
@@ -35,14 +36,21 @@ def activation():
 
 def snapshot():
     i=intent(); rid="or-"+hashlib.sha256((i.intent_id+i.execution_version).encode()).hexdigest()[:24]
-    return PreTradeSnapshotV385("SNP-386",BASE,i.intent_id,rid,"DCHAIN","POS","PORT","RISK","LIMITS","MARKET","LIQ","MODEL","STRATEGY","VERSIONS","FLAT","RECONCILED","GREEN",False)
+    return build_v385_submit_authorities(i, BASE).snapshot(i, "SNP-386")
 
 def evidence():
     return ConnectivityEvidenceV383(PreflightStatus.VERIFIED,"https://testnet.binancefuture.com","wss://ws-api.testnet.binancefuture.com/ws-api/v3","wss://ws-api.testnet.binancefuture.com/ws-api/v3","RESOLVED",BASE.timestamp()*1000,BASE.timestamp()*1000,0,"OK")
 
 def session(outcome=ExchangeOutcome.ACKNOWLEDGED):
     store=EventStore(); gw=Gateway(outcome)
-    auth=activation(); ctl=ControlledTestnetSubmitAuthorityV385(activation=auth,gateway=gw,event_store=store,clock=lambda:BASE)
+    auth=activation(); authorities=build_v385_submit_authorities(intent(), BASE)
+    ctl=ControlledTestnetSubmitAuthorityV385(
+        activation=auth, gateway=gw, event_store=store, clock=lambda:BASE,
+        risk_decision_ledger=authorities.risk_decision_ledger,
+        position_authority=authorities.position_authority,
+        market_data_authority=authorities.market_data_authority,
+        causal_ttl_authority=authorities.causal_ttl_authority,
+    )
     return OperatorSessionAuthorityV386(activation=auth,submitter=ctl,clock=lambda:BASE), gw
 
 def good_ud():

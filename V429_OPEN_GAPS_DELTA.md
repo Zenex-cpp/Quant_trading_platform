@@ -2,7 +2,7 @@
 
 ## Closed locally
 
-- M1–M5 final submit gates are fail-closed for missing authorities. RiskDecision, intent, and request deadline freshness are rechecked before replay or transport; UNKNOWN/missing position blocks orders; missing/stale market data and invalid/missing causal-TTL chains block OPEN/INCREASE. Runtime passes the durable risk ledger into the same final dispatcher. See `V429_M2_REMEDIATION_REPORT.md`.
+- M1–M5 gates are fail-closed across the V3.11 dispatcher and legacy V3.36/V3.79/V3.80/V3.84/V3.85 Testnet submit paths. The V3.85 runner checks the same durable RiskDecision, position, market-data and causal-TTL authorities; direct legacy adapters cannot submit; V3.36 accepts only the guarded dispatcher. See `V429_M1_M5_TRANSPORT_REMEDIATION.md`.
 - External reviewer key and unsigned evidence are read with POSIX directory descriptors and `O_NOFOLLOW` on every path component.
 - Input is required to be a regular file and bounded (1 MiB key, 16 MiB evidence); metadata is checked before and after the read.
 - Reviewer output paths reject symlinked ancestors, traversal, paths inside the checkout, and existing targets.

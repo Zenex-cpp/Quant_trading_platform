@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
-from typing import Any, Mapping
+from typing import TYPE_CHECKING, Any, Mapping
 import hashlib
 
 from trading_platform.execution.models import Fill, OrderIntent
@@ -21,6 +21,9 @@ from trading_platform.v17.evidence import canonical_json
 from trading_platform.v313.durable_correlation import DurableExecutionCorrelationStore
 from trading_platform.v321.durable_dispatch import DispatchAttemptState, DurableDispatchAttemptLedger, DispatchAttemptConflict
 from trading_platform.v322.durable_reconciliation import DurableDispatchReconciliationLedger, DispatchReconciliationConflict
+
+if TYPE_CHECKING:
+    from trading_platform.v311.dispatch_guard import GuardedExecutionDispatcher
 
 
 def _dec(value: Any, default: Decimal = Decimal("0")) -> Decimal:
@@ -255,19 +258,24 @@ class BinanceExecutionCorrelation:
     def submit_and_reconcile(self, *, intent: OrderIntent, client_order_id: str,
                              gateway: BinanceTestnetExecutionGateway,
                              credentials: RuntimeCredentialValues,
-                             exchange_submit) -> ExecutionObservation:
-        """Network boundary helper: submit once; on transport ambiguity, query without retrying.
+                             dispatcher: "GuardedExecutionDispatcher") -> ExecutionObservation:
+        """Dispatch only through the shared fail-closed M1–M5 order boundary.
 
-        `exchange_submit` is a callable accepting the committed OrderRequest and credentials;
-        in production this is `gateway.submit`. A transport exception never triggers a second
-        POST. The following GET is a reconciliation action keyed by the same clientOrderId.
+        On transport ambiguity this method performs a keyed read-only reconciliation;
+        it never retries the order submission.
         """
-        self.register(intent=intent, client_order_id=client_order_id)
-        req = self.bridge._requests.get(intent.intent_id)
-        if req is None:
-            raise ValueError("ORDER_REQUEST_NOT_COMMITTED")
+        if dispatcher.bridge is not self.bridge:
+            raise ValueError("DISPATCHER_BRIDGE_MISMATCH")
+        req = self.bridge.committed_request(intent.intent_id)
+        if req.request.client_order_id != client_order_id:
+            raise ValueError("CLIENT_ORDER_ID_REQUEST_MISMATCH")
+        self.register(
+            intent=intent,
+            client_order_id=client_order_id,
+            order_request_id=req.request.order_request_id,
+        )
         try:
-            obs: SubmitObservation = exchange_submit(req, credentials=credentials)
+            receipt = dispatcher.dispatch_submit(intent=intent, credentials=credentials)
         except ExchangeUncertain:
             self.bridge.mark_unknown(intent.intent_id, exchange_order_id=None, client_order_id=client_order_id)
             req_for_unknown = self.bridge._requests.get(intent.intent_id)
@@ -283,17 +291,15 @@ class BinanceExecutionCorrelation:
                         observed_at_ms=int(float(self._now_epoch()) * 1000),
                     )
             return self.reconcile_unknown(intent_id=intent.intent_id, gateway=gateway, credentials=credentials)
-        if obs.exchange_order_id:
-            self.bind_exchange_order(intent_id=intent.intent_id, exchange_order_id=obs.exchange_order_id)
-        status = {
-            ExchangeOutcome.ACKNOWLEDGED: "ACKNOWLEDGED",
-            ExchangeOutcome.REJECTED: "REJECTED",
-            ExchangeOutcome.CANCELLED: "CANCELLED",
-            ExchangeOutcome.UNKNOWN: "UNKNOWN",
-        }[obs.outcome]
-        return self.bridge.observe_ack(
-            intent_id=intent.intent_id, status=status,
-            exchange_order_id=obs.exchange_order_id, client_order_id=obs.client_order_id,
+        if receipt.exchange_order_id:
+            self.bind_exchange_order(intent_id=intent.intent_id, exchange_order_id=receipt.exchange_order_id)
+        return ExecutionObservation(
+            status=receipt.bridge_status,
+            intent_id=receipt.intent_id,
+            order_request_id=receipt.order_request_id,
+            exchange_order_id=receipt.exchange_order_id,
+            client_order_id=receipt.client_order_id,
+            reason=receipt.reason,
         )
 
     def _reconcile_dispatch_attempt_from_rest(self, *, intent_id: str, req: Any, observation: SubmitObservation, resolved_state: DispatchAttemptState) -> None:
@@ -330,12 +336,21 @@ class BinanceExecutionCorrelation:
         req = self.bridge._requests.get(intent_id)
         if req is None:
             raise ValueError("ORDER_REQUEST_NOT_COMMITTED")
+        request = req.request if hasattr(req, "request") else req
         self.bridge.assert_reconciliation_open(intent_id)
         try:
-            obs = gateway.query(symbol=req.symbol, client_order_id=req.client_order_id, credentials=credentials)
+            obs = gateway.query(
+                symbol=request.symbol,
+                client_order_id=request.client_order_id,
+                credentials=credentials,
+            )
         except ExchangeUncertain:
             raise
-        self.register(intent=self._intents[intent_id], client_order_id=req.client_order_id)
+        self.register(
+            intent=self._intents[intent_id],
+            client_order_id=request.client_order_id,
+            order_request_id=req.order_request_id,
+        )
         if obs.exchange_order_id:
             self.bind_exchange_order(intent_id=intent_id, exchange_order_id=obs.exchange_order_id)
         raw_status = str(obs.raw.get("status", "")).upper() if obs.raw else ""

@@ -1,9 +1,9 @@
 # V4.29 Change Impact
 
-- Scope: final order-dispatch authority for risk, position, market data and causal TTL, plus reviewer-side external file access for GitHub governance signing, CI milestone identity, compliance matrix, and workflow contract validation.
-- Modified code: `scripts/sign_github_governance_evidence.py`, V4.28 workflow-validator delegation, and the active GitHub Actions workflow.
+- Scope: final order-dispatch authority for risk, position, market data and causal TTL across current and legacy Testnet paths, plus reviewer-side external file access for GitHub governance signing, CI milestone identity, compliance matrix, and workflow contract validation.
+- Modified code: `src/trading_platform/v311/dispatch_guard.py`, `v36/user_execution.py`, `v379/execution_parity.py`, `v380/order_adapter.py`, `v384/testnet_execution_activation.py`, `v385/controlled_testnet_submit.py`, and the V4.29 validation contract.
 - New authority/helpers: `trading_platform.v429.external_file_safety` and `trading_platform.v429.workflow_contract`.
-- Final dispatch now rejects missing risk/position/market/causal authorities and expired RiskDecision, intent, or request deadline before gateway invocation. The runtime passes its durable risk ledger into this boundary.
+- Final dispatch now rejects missing risk/position/market/causal authorities and expired RiskDecision, intent, or request deadline before gateway invocation. V3.85 shares the same M1–M5 checks; older direct-submit adapters fail closed; V3.36 accepts only a guarded dispatcher.
 - Safety properties: no-follow descriptor traversal, bounded regular-file reads, consistency checks during read, no-overwrite output creation, `0600` output permissions, and fail-closed behavior on unsupported platforms.
-- Operational effect: none. No network calls, remote repository mutations, Testnet mutation, deployment activation, or Production mutation are added by V4.29.
+- Operational effect: the Testnet submit API now requires current durable authority evidence through the controlled path. Tests use fake gateways; no Testnet order, Production mutation or deployment activation is performed.
 - Reversibility: revert V4.29-specific runner, workflow and signer/helper changes; retain the V4.28 recovery archive as the direct baseline.

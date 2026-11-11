@@ -292,9 +292,7 @@ class BinanceTestnetOrderAdapter:
         now: datetime,
         reference_price: Decimal | None = None,
     ) -> SubmitObservation:
-        self._mutation_gate.authorize(intent=intent, reference_price=reference_price)
-        order = self.to_order_request(intent, now=now)
-        return self._gateway.submit(order, credentials=credentials)
+        raise PermissionError("CONTROLLED_SUBMIT_AUTHORITY_REQUIRED")
 
 
 

@@ -146,18 +146,17 @@ def test_deactivation_records_activation_before_clearing_runtime_binding():
     assert events[-1]["activation_id"] == activation_id
 
 
-def test_adapter_blocks_gateway_until_activation_and_forwards_credentials_only_on_submit():
+def test_adapter_never_bypasses_v385_authority_even_after_activation():
     a = authority()
     gateway = FakeGateway()
     adapter = BinanceTestnetExecutionAdapterV384(gateway, a)  # type: ignore[arg-type]
     creds = RuntimeCredentialValues(api_key="KEY", api_secret=b"SECRET")
-    with pytest.raises(PermissionError, match="ACTIVATION_NOT_ACTIVE"):
+    with pytest.raises(PermissionError, match="CONTROLLED_SUBMIT_AUTHORITY_REQUIRED"):
         adapter.submit(intent(), credentials=creds, now=BASE)
     activate(a)
-    obs = adapter.submit(intent(), credentials=creds, now=BASE)
-    assert obs.outcome is ExchangeOutcome.ACKNOWLEDGED
-    assert len(gateway.calls) == 1
-    assert gateway.calls[0][1].api_key == "KEY"
+    with pytest.raises(PermissionError, match="CONTROLLED_SUBMIT_AUTHORITY_REQUIRED"):
+        adapter.submit(intent(), credentials=creds, now=BASE)
+    assert gateway.calls == []
 
 
 def test_production_connectivity_endpoint_cannot_be_bound_as_testnet_proof():

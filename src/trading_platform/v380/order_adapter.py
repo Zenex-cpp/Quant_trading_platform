@@ -59,7 +59,8 @@ class BinanceTestnetOrderAdapterV380:
     def _client_order_id(intent: OrderIntent) -> str:
         return f"tp-{hashlib.sha256(intent.intent_id.encode()).hexdigest()[:24]}"
 
-    def to_order_request(self, intent: OrderIntent, *, now: datetime) -> OrderRequest:
+    @staticmethod
+    def to_order_request(intent: OrderIntent, *, now: datetime) -> OrderRequest:
         intent.validate(now)
         if intent.order_type is OrderType.LIMIT:
             if intent.price is None or intent.price <= 0:
@@ -68,7 +69,7 @@ class BinanceTestnetOrderAdapterV380:
                 raise ValueError("LIMIT_TIME_IN_FORCE_REQUIRED")
         elif intent.order_type is not OrderType.MARKET:
             raise ValueError("ORDER_TYPE_NOT_SUPPORTED")
-        client_order_id = self._client_order_id(intent)
+        client_order_id = BinanceTestnetOrderAdapterV380._client_order_id(intent)
         return OrderRequest(
             order_request_id=f"or-{hashlib.sha256((intent.intent_id + intent.execution_version).encode()).hexdigest()[:24]}",
             correlation_id=intent.decision_id,
@@ -95,6 +96,4 @@ class BinanceTestnetOrderAdapterV380:
         now: datetime,
         reference_price: Decimal | None = None,
     ) -> SubmitObservation:
-        self._mutation_gate.authorize(intent=intent, reference_price=reference_price)
-        request = self.to_order_request(intent, now=now)
-        return self._gateway.submit(request, credentials=credentials)
+        raise PermissionError("CONTROLLED_SUBMIT_AUTHORITY_REQUIRED")

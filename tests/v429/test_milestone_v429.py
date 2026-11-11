@@ -75,7 +75,7 @@ def test_v429_m1_matrix_points_to_testnet_read_only_guard_evidence():
     assert "trading_platform/testnet/session.py" in m1["code_reference"]
     assert "trading_platform/testnet/runner.py" in m1["code_reference"]
     assert "tests/test_testnet_read_only_boundary.py" in m1["test_reference"]
-    assert m1["evidence_reference"] == "V429_M1_REMEDIATION_REPORT.md"
+    assert m1["evidence_reference"] == "V429_M1_M5_TRANSPORT_REMEDIATION.md"
     assert "Independent review" in m1["unresolved_gap"]
 
 
@@ -86,7 +86,17 @@ def test_v429_m1_to_m5_matrix_points_to_final_dispatch_authority_evidence():
         assert rows[key]["implementation_status"] == "TESTED"
         assert "trading_platform/v311/dispatch_guard.py" in rows[key]["code_reference"]
         assert "tests/v318/test_dispatch_freshness.py" in rows[key]["test_reference"]
-        expected_report = "V429_M1_REMEDIATION_REPORT.md" if key == "M1" else "V429_M2_REMEDIATION_REPORT.md"
-        assert rows[key]["evidence_reference"] == expected_report
+        assert rows[key]["evidence_reference"] == "V429_M1_M5_TRANSPORT_REMEDIATION.md"
+        for code_path in (
+            "trading_platform/v36/user_execution.py",
+            "trading_platform/v379/execution_parity.py",
+            "trading_platform/v380/order_adapter.py",
+            "trading_platform/v384/testnet_execution_activation.py",
+            "trading_platform/v385/controlled_testnet_submit.py",
+        ):
+            assert code_path in rows[key]["code_reference"]
+        assert "tests/test_v385_controlled_testnet_submit.py" in rows[key]["test_reference"]
         assert "Independent review" in rows[key]["unresolved_gap"]
     assert "RISK_DECISION_LEDGER_REQUIRED" in (ROOT / "tests/v318/test_dispatch_freshness.py").read_text(encoding="utf-8")
+    assert "CONTROLLED_SUBMIT_AUTHORITY_REQUIRED" in (ROOT / "src/trading_platform/v380/order_adapter.py").read_text(encoding="utf-8")
+    assert "dispatcher: \"GuardedExecutionDispatcher\"" in (ROOT / "src/trading_platform/v36/user_execution.py").read_text(encoding="utf-8")

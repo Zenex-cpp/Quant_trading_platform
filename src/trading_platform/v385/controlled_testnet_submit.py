@@ -28,6 +28,11 @@ from trading_platform.v321.durable_dispatch import (
 )
 from trading_platform.v380.order_adapter import BinanceTestnetOrderAdapterV380
 from trading_platform.v35.binance_execution import RuntimeCredentialValues, SubmitObservation, ExchangeOutcome
+from trading_platform.v311.dispatch_guard import DispatchGuardDenied, assert_final_dispatch_authorities
+from trading_platform.v318.durable_decision import DurableRiskDecisionLedger
+from trading_platform.v331.position_authority import PositionAuthorityLedger
+from trading_platform.v332.market_authority import MarketDataAuthorityLedger
+from trading_platform.v333.causal_ttl import CausalTTLAuthorityLedger
 from trading_platform.v384 import TestnetExecutionActivationAuthorityV384
 
 
@@ -101,6 +106,8 @@ class PreTradeSnapshotV385:
     accounting_state: str
     reconciliation_state: str
     market_stale: bool
+    truth_hash: str = ""
+    requested_exposure: Decimal = Decimal("0")
 
     def validate(self, *, now: datetime) -> None:
         if now < self.captured_at:
@@ -109,10 +116,14 @@ class PreTradeSnapshotV385:
             self.snapshot_id, self.intent_id, self.order_request_id, self.decision_chain_hash,
             self.positions_hash, self.portfolio_hash, self.risk_hash, self.limits_hash,
             self.market_hash, self.liquidity_hash, self.model_health_hash,
-            self.strategy_health_hash, self.versions_hash,
+            self.strategy_health_hash, self.versions_hash, self.truth_hash,
         )
         if not all(required):
             raise ControlledSubmitError("PRE_TRADE_SNAPSHOT_FIELDS_REQUIRED")
+        if not isinstance(self.requested_exposure, Decimal):
+            raise ControlledSubmitError("PRE_TRADE_RISK_EXPOSURE_INVALID")
+        if not self.requested_exposure.is_finite() or self.requested_exposure <= 0:
+            raise ControlledSubmitError("PRE_TRADE_RISK_EXPOSURE_REQUIRED")
         if self.position_state == "UNKNOWN":
             raise ControlledSubmitError("POSITION_UNKNOWN")
         if self.accounting_state != "RECONCILED":
@@ -136,6 +147,7 @@ class PreTradeSnapshotLedgerV385:
     def capture(self, snapshot: PreTradeSnapshotV385) -> PreTradeSnapshotV385:
         payload = dict(snapshot.__dict__)
         payload["captured_at"] = snapshot.captured_at.isoformat()
+        payload["requested_exposure"] = str(snapshot.requested_exposure)
         result = self.store.append(
             event_id=f"pretrade:snapshot:{snapshot.snapshot_id}",
             occurred_at_ms=int(snapshot.captured_at.timestamp() * 1000),
@@ -152,6 +164,8 @@ class PreTradeSnapshotLedgerV385:
             if event.event_type == self.EVENT and event.payload.get("snapshot_id") == snapshot_id:
                 p = dict(event.payload)
                 p["captured_at"] = datetime.fromisoformat(str(p["captured_at"]))
+                p["requested_exposure"] = Decimal(str(p.get("requested_exposure", "0")))
+                p["truth_hash"] = str(p.get("truth_hash", ""))
                 return PreTradeSnapshotV385(**p)
         return None
 
@@ -177,18 +191,22 @@ class ControlledTestnetSubmitAuthorityV385:
         *,
         activation: TestnetExecutionActivationAuthorityV384,
         gateway,
+        risk_decision_ledger: DurableRiskDecisionLedger | None = None,
+        position_authority: PositionAuthorityLedger | None = None,
+        market_data_authority: MarketDataAuthorityLedger | None = None,
+        causal_ttl_authority: CausalTTLAuthorityLedger | None = None,
         event_store: EventStore | None = None,
         clock=lambda: datetime.now(timezone.utc),
     ) -> None:
         self.activation = activation
         self.gateway = gateway
+        self.risk_decision_ledger = risk_decision_ledger
+        self.position_authority = position_authority
+        self.market_data_authority = market_data_authority
+        self.causal_ttl_authority = causal_ttl_authority
         self.store = event_store or EventStore()
         self.snapshot_ledger = PreTradeSnapshotLedgerV385(self.store)
         self.dispatch_ledger = DurableDispatchAttemptLedger(self.store)
-        self.adapter = BinanceTestnetOrderAdapterV380(
-            gateway=gateway,
-            mutation_gate=_ActivationMutationGate(activation, clock),
-        )
         self.clock = clock
 
     def submit(
@@ -204,9 +222,40 @@ class ControlledTestnetSubmitAuthorityV385:
         pre_trade_snapshot.validate(now=now)
         if pre_trade_snapshot.intent_id != intent.intent_id:
             raise ControlledSubmitError("PRE_TRADE_SNAPSHOT_INTENT_MISMATCH")
-        request = self.adapter.to_order_request(intent, now=now)
+        request = BinanceTestnetOrderAdapterV380.to_order_request(intent, now=now)
         if pre_trade_snapshot.order_request_id != request.order_request_id:
             raise ControlledSubmitError("PRE_TRADE_SNAPSHOT_ORDER_REQUEST_MISMATCH")
+        if self.risk_decision_ledger is None:
+            raise ControlledSubmitError("RISK_DECISION_LEDGER_REQUIRED")
+        try:
+            risk_decision = self.risk_decision_ledger.get(intent.risk_decision_id)
+        except Exception as exc:
+            raise ControlledSubmitError(f"RISK_DECISION_LEDGER_INVALID:{exc}") from exc
+        if risk_decision is None:
+            raise ControlledSubmitError("RISK_DECISION_NOT_FOUND")
+        if pre_trade_snapshot.risk_hash != risk_decision.fingerprint:
+            raise ControlledSubmitError("PRE_TRADE_RISK_DECISION_FINGERPRINT_MISMATCH")
+        exposure_price = request.price if request.price is not None else reference_price
+        if exposure_price is None or not exposure_price.is_finite() or exposure_price <= 0:
+            raise ControlledSubmitError("RISK_EXPOSURE_REFERENCE_PRICE_REQUIRED")
+        requested_exposure = request.quantity * exposure_price
+        if pre_trade_snapshot.requested_exposure != requested_exposure:
+            raise ControlledSubmitError("PRE_TRADE_RISK_EXPOSURE_MISMATCH")
+        try:
+            assert_final_dispatch_authorities(
+                intent=intent,
+                now_ms=int(now.timestamp() * 1000),
+                request_deadline=request.deadline,
+                requested_exposure=requested_exposure,
+                truth_hash=pre_trade_snapshot.truth_hash,
+                risk_decision_ledger=self.risk_decision_ledger,
+                position_authority=self.position_authority,
+                market_data_authority=self.market_data_authority,
+                causal_ttl_authority=self.causal_ttl_authority,
+            )
+        except DispatchGuardDenied as exc:
+            raise ControlledSubmitError(str(exc)) from exc
+
         authorization = self.activation.authorize(intent=intent, reference_price=reference_price, now=now)
         if not authorization.allowed:
             raise ControlledSubmitError(authorization.reason)
@@ -257,14 +306,3 @@ class ControlledTestnetSubmitAuthorityV385:
             reason=None,
             snapshot_id=pre_trade_snapshot.snapshot_id,
         )
-
-
-class _ActivationMutationGate:
-    def __init__(self, activation: TestnetExecutionActivationAuthorityV384, clock) -> None:
-        self.activation = activation
-        self.clock = clock
-
-    def authorize(self, *, intent: OrderIntent, reference_price: Decimal | None = None) -> None:
-        result = self.activation.authorize(intent=intent, reference_price=reference_price, now=self.clock())
-        if not result.allowed:
-            raise PermissionError(result.reason)

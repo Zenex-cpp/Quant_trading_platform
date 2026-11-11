@@ -5,8 +5,15 @@ import pytest
 from trading_platform.execution.models import OrderIntent, OrderAction, OrderType, Side
 from trading_platform.core.ttl import ValidWindow
 from trading_platform.v34.execution_bridge import ExecutionBridge, BridgeStatus
+from trading_platform.v311.dispatch_guard import GuardedExecutionDispatcher
+from trading_platform.v310.runtime_orchestrator import OrchestrationState, RuntimeCycleSnapshot
 from trading_platform.v36.user_execution import BinanceExecutionCorrelation, parse_order_trade_update
 from trading_platform.execution.lifecycle import OrderExecutionState
+from trading_platform.execution.models import PositionState
+from trading_platform.v30.truth import AxisSnapshot, TruthComponent, TruthStatus, build_truth
+from trading_platform.v32.capability import CapabilityAuthority
+from trading_platform.v33.commit import CommitCoordinator
+from tests.dispatch_support import execution_authorities_for, risk_decision_ledger_for
 
 NOW = datetime(2026, 9, 13, tzinfo=timezone.utc)
 WINDOW = ValidWindow(NOW, NOW.replace(second=1))
@@ -108,13 +115,64 @@ class FakeGateway:
         return BinanceTestnetExecutionGateway.lifecycle_target(obs)
 
 
+def setup_guarded_dispatcher(gateway):
+    order_intent = intent()
+    commit = CommitCoordinator()
+    truth = build_truth(
+        observed_at_ns=1,
+        axes=AxisSnapshot("ACTIVE", "LIVE", "HEALTHY", "APPROVED", "ACTIVE", "CHAMPION"),
+        components=tuple(
+            TruthComponent(name, TruthStatus.VERIFIED, "OK")
+            for name in ("health", "provenance", "governance", "reconciliation", "accounting", "ledger")
+        ),
+        requested_risk=Decimal("10"),
+        caps={name: Decimal("10") for name in (
+            "health_cap", "deployment_cap", "accounting_cap", "reconciliation_cap",
+            "provenance_cap", "operator_cap",
+        )},
+    )
+    capability = commit.capabilities.issue(
+        truth=truth,
+        requested_risk=Decimal("3"),
+        decision_id=order_intent.risk_decision_id,
+        intent_payload=CommitCoordinator._payload(order_intent),
+        expires_at=NOW.replace(second=1),
+    )
+    bridge = ExecutionBridge(commit=commit)
+    bridge.commit_intent(
+        capability=capability,
+        intent=order_intent,
+        truth=truth,
+        now=NOW,
+        position_state=PositionState.FLAT,
+        market_window=WINDOW,
+        upstream_windows=[WINDOW],
+        risk_valid=True,
+    )
+    now_ms = int(NOW.timestamp() * 1000)
+    runtime = RuntimeCycleSnapshot(
+        OrchestrationState.ACTIVE, "ACTIVE", "OPEN", True, True, False, False, "TEST", 0, "OK",
+    )
+    dispatcher = GuardedExecutionDispatcher(
+        bridge=bridge,
+        gateway=gateway,
+        permission_snapshot=lambda: runtime,
+        **execution_authorities_for(order_intent, now_ms=now_ms),
+        risk_decision_ledger=risk_decision_ledger_for(bridge, order_intent, now_ms=now_ms),
+        clock_ms=lambda: now_ms,
+    )
+    correlation = BinanceExecutionCorrelation(bridge, now_epoch=lambda: NOW.timestamp())
+    return bridge, correlation, dispatcher
+
+
 def test_ambiguous_submit_uses_one_post_then_one_query_without_retry():
-    bridge, c = setup_bridge(None)
     g = FakeGateway({"status": "NEW", "orderId": 77, "executedQty": "0"})
+    bridge, c, dispatcher = setup_guarded_dispatcher(g)
+    committed_client_order_id = bridge.committed_request("intent-1").request.client_order_id
     from trading_platform.v35.binance_execution import RuntimeCredentialValues
-    r = c.submit_and_reconcile(intent=intent(), client_order_id="cid-1", gateway=g,
-                                credentials=RuntimeCredentialValues("k", b"s"), exchange_submit=g.submit)
-    assert g.calls == ["POST", ("GET", "BTCUSDT", "cid-1")]
+    r = c.submit_and_reconcile(intent=intent(), client_order_id=committed_client_order_id, gateway=g,
+                                credentials=RuntimeCredentialValues("k", b"s"), dispatcher=dispatcher)
+    assert g.calls == ["POST", ("GET", "BTCUSDT", committed_client_order_id)]
     assert r.status is BridgeStatus.OBSERVED
     assert bridge._lifecycles["intent-1"].state is OrderExecutionState.ACKNOWLEDGED
 
