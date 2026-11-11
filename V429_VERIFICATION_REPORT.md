@@ -27,6 +27,10 @@ This is a recovery extension built from the exact V4.28 recovery archive present
 - `RELEASE_HYGIENE=PASS`.
 - Durable preflight: `READY_FOR_MILESTONE`, decision ID `V429-LOCAL-03`, **49 input fingerprints**, no blockers.
 
+## Model-health source binding — M24, package 3.61.17
+
+`HealthAssessment` retains the evidence ID, capture time, TTL, verification flag and assessment time. Authority and capability fingerprints bind this source; commit rejects changed/expired evidence, and durable risk replay recomputes the source fingerprint and rejects mismatches or expired evidence at revalidation. The focused M24/health/durable/release-contract set passed **51 tests** on Windows/Python 3.14.4. The mandatory full runner passed with **1,307 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`; `.audit/V429_M24_SOURCE_BINDING_FINAL3_20261111.json` records `READY_FOR_MILESTONE`, `allowed=true`, pipeline PASS, no blockers and M24 in the impacted set. Inputs are synthetic; `verified=true` is not a signed trust claim. Trusted source identity, independent review and live operational health integration remain open; M24 stays `TESTED`.
+
 ## Decision-trace parity integrity — package 3.61.14
 
 Backtest/live trace comparison rejects empty traces, unsupported trace versions, mutable record sequences, invalid or repeated event offsets, non-chronological offsets and content hashes that do not bind the current trace payload. It compares complete per-offset record sequences, so duplicated offsets become mismatches instead of being overwritten by a dictionary. Focused decision, execution-parity, release-integrity and release-hygiene regressions passed **30 tests** on Windows/Python 3.14.7. The production inference adapter and independent M14 review remain unimplemented; this local result does not promote M14 beyond `TESTED` or change production readiness.

@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from hashlib import sha256
 import json
@@ -80,7 +80,11 @@ class CapabilityAuthority:
                                           "model_health_floor": str(model_health_floor),
                                           "model_health_method": model_health_method,
                                           "model_health_method_version": model_health_method_version,
-                                          "model_health_assessment_id": model_health_assessment_id})
+                                          "model_health_assessment_id": model_health_assessment_id,
+                                          "model_health_assessment_fingerprint": (
+                                              None if model_health_assessment is None
+                                              else model_health_assessment.source_fingerprint
+                                          )})
         cap_id = f"cap:{decision.decision_id}:{fp[:24]}"
         return TradeCapability(cap_id, decision, TradeCapability.fingerprint(intent_payload), expires_at, False, model_health_assessment)
 
@@ -105,6 +109,8 @@ class CapabilityAuthority:
                 raise CapabilityError("MODEL_HEALTH_ASSESSMENT_CHANGED")
             if model_health_assessment != capability.model_health_assessment:
                 raise CapabilityError("MODEL_HEALTH_SOURCE_CHANGED")
+            if not model_health_assessment.source_fresh_at(self._datetime_to_epoch_ns(now)):
+                raise CapabilityError("MODEL_HEALTH_SOURCE_EXPIRED")
         elif model_health is not None or model_health_assessment is not None or model_health_assessment_id is not None:
             raise CapabilityError("MODEL_HEALTH_UNEXPECTED_PROVENANCE")
         if TradeCapability.fingerprint(intent_payload) != capability.intent_fingerprint:
@@ -120,3 +126,11 @@ class CapabilityAuthority:
         self._consumed.add(capability.capability_id)
         return TradeCapability(capability.capability_id, capability.authority, capability.intent_fingerprint,
                                capability.expires_at, consumed=True, model_health_assessment=capability.model_health_assessment)
+
+    @staticmethod
+    def _datetime_to_epoch_ns(value: datetime) -> int:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise CapabilityError("MODEL_HEALTH_REVALIDATION_TIMEZONE_REQUIRED")
+        utc_value = value.astimezone(timezone.utc)
+        delta = utc_value - datetime(1970, 1, 1, tzinfo=timezone.utc)
+        return ((delta.days * 86400 + delta.seconds) * 1_000_000_000) + delta.microseconds * 1_000

@@ -34,5 +34,6 @@
 - M14's signed JSON model adapter is locally tested and bound to the durable runtime compatibility grant, but V3.75 remains decision-only; production inference integration and independent runtime review remain unverified.
 - M9 now supports persistent Windows Credential Manager storage, metadata-only ledger replay and fingerprint verification before resolution. Dedicated production service identity/process isolation, actual OS-store deployment, independent attestation and operational evidence remain open; the in-memory backend is test-only.
 - M10 now serializes EventStore connection access across threads, streams readers under the lock, and verifies concurrent appends preserve the hash chain. Independent storage tamper review and operational backup/DR evidence remain open.
+- M24 now carries model-health source identity and freshness through runtime and durable risk authorization, and blocks changed or expired evidence. The local `verified` flag is not a signed trust claim; trusted source identity, independent attestation and live production integration remain open.
 - Independent methodology review and operational evidence are still required to promote M26 from `TESTED` to `VERIFIED`.
 - Independent review of holdout replacement/revalidation and external operational audit evidence for M27: `NOT_VERIFIED`; M27 is `TESTED`, not `VERIFIED`.

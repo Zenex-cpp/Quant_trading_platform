@@ -55,6 +55,7 @@ class AuthorityDecision:
     model_health_method: str | None = None
     model_health_method_version: str | None = None
     model_health_assessment_id: str | None = None
+    model_health_assessment_fingerprint: str | None = None
     model_health_assessment: HealthAssessment | None = None
     risk_state: str = "NORMAL"
     risk_state_risk_factor: Decimal = Decimal("1")
@@ -98,6 +99,7 @@ class AuthorityDecision:
         model_health_method: str | None = None,
         model_health_method_version: str | None = None,
         model_health_assessment_id: str | None = None,
+        model_health_assessment_fingerprint: str | None = None,
         model_health_assessment: HealthAssessment | None = None,
         risk_state_risk_factor: Decimal = Decimal("1"),
         recovery_event_id: str | None = None,
@@ -142,7 +144,10 @@ class AuthorityDecision:
                 "model_health_method": model_health_method,
                 "model_health_method_version": model_health_method_version,
                 "model_health_assessment_id": model_health_assessment_id,
-                "model_health_assessment_state": None if model_health_assessment is None else model_health_assessment.state.value,
+                "model_health_assessment_fingerprint": model_health_assessment_fingerprint,
+                "model_health_assessment_state": None if model_health_assessment is None else getattr(
+                    model_health_assessment.state, "value", str(model_health_assessment.state)
+                ),
                 "model_health_assessment_evidence_fresh": None if model_health_assessment is None else model_health_assessment.evidence_fresh,
                 "model_health_assessment_drift_critical": None if model_health_assessment is None else model_health_assessment.drift_critical,
                 "model_health_assessment_quality_ok": None if model_health_assessment is None else model_health_assessment.quality_ok,
@@ -175,6 +180,9 @@ class AuthorityDecision:
             model_health_method=model_health_method,
             model_health_method_version=model_health_method_version,
             model_health_assessment_id=model_health_assessment_id,
+            model_health_assessment_fingerprint=(
+                None if model_health_assessment is None else getattr(model_health_assessment, "source_fingerprint", None)
+            ),
             model_health_assessment=model_health_assessment,
             risk_state=str(truth.risk_state),
             risk_state_risk_factor=Decimal(str(risk_state_risk_factor)),
@@ -255,6 +263,9 @@ class RuntimeAuthority:
                 model_health_method=None if model_health_binding is None else model_health_binding.method,
                 model_health_method_version=None if model_health_binding is None else model_health_binding.method_version,
                 model_health_assessment_id=model_health_assessment_id,
+                model_health_assessment_fingerprint=(
+                    None if model_health_assessment is None else getattr(model_health_assessment, "source_fingerprint", None)
+                ),
                 model_health_assessment=model_health_assessment,
                 risk_state_risk_factor=state_factor,
                 recovery_event_id=None if recovery_event is None else recovery_event.recovery_event_id,
@@ -330,6 +341,7 @@ class RuntimeAuthority:
                     floor=model_health_floor,
                     method=model_health_method,
                     method_version=model_health_method_version,
+                    now_ns=truth.observed_at_ns,
                 )
             except ModelHealthRiskError as exc:
                 return build(f"MODEL_HEALTH_RISK_BLOCKED:{exc}", AuthorityStatus.DENIED)

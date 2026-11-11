@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 
-from trading_platform.v25.health import HealthAssessment, HealthState
+from trading_platform.v25.health import EvidenceFreshness, HealthAssessment, HealthState
 from trading_platform.v351.model_health_registry import get_production_model_health_method
 
 
@@ -22,6 +22,7 @@ class ModelHealthRiskBinding:
     method: str
     method_version: str
     assessment_id: str
+    source_fingerprint: str
     health_state: HealthState
 
     @property
@@ -39,17 +40,32 @@ def _decimal(value: Decimal | int | float | str, error: str) -> Decimal:
     return out
 
 
-def _validate_assessment(assessment: HealthAssessment, assessment_id: str) -> None:
+def _validate_assessment(assessment: HealthAssessment, assessment_id: str, now_ns: int | None = None) -> None:
     if not assessment_id:
         raise ModelHealthRiskError("MODEL_HEALTH_ASSESSMENT_ID_REQUIRED")
-    if assessment.assessment_id != assessment_id:
+    if getattr(assessment, "assessment_id", None) != assessment_id:
         raise ModelHealthRiskError("MODEL_HEALTH_ASSESSMENT_ID_MISMATCH")
-    if not assessment.evidence_fresh:
+    if not getattr(assessment, "evidence_fresh", False):
         raise ModelHealthRiskError("MODEL_HEALTH_EVIDENCE_STALE")
-    if assessment.drift_critical or not assessment.quality_ok:
+    if getattr(assessment, "drift_critical", True) or not getattr(assessment, "quality_ok", False):
         raise ModelHealthRiskError("MODEL_HEALTH_ASSESSMENT_NOT_SAFE")
-    if assessment.state not in {HealthState.HEALTHY, HealthState.DEGRADED}:
-        raise ModelHealthRiskError(f"MODEL_HEALTH_STATE_NOT_APPLICABLE:{assessment.state.value}")
+    state = getattr(assessment, "state", HealthState.UNKNOWN)
+    if state not in {HealthState.HEALTHY, HealthState.DEGRADED}:
+        state_name = getattr(state, "value", str(state))
+        raise ModelHealthRiskError(f"MODEL_HEALTH_STATE_NOT_APPLICABLE:{state_name}")
+    source_evidence = getattr(assessment, "source_evidence", None)
+    assessed_at_ns = getattr(assessment, "assessed_at_ns", None)
+    if not isinstance(source_evidence, EvidenceFreshness) or assessed_at_ns is None:
+        raise ModelHealthRiskError("MODEL_HEALTH_SOURCE_PROVENANCE_REQUIRED")
+    source_fresh_at = getattr(assessment, "source_fresh_at", None)
+    if not callable(source_fresh_at):
+        raise ModelHealthRiskError("MODEL_HEALTH_SOURCE_PROVENANCE_REQUIRED")
+    if not source_fresh_at(assessed_at_ns):
+        raise ModelHealthRiskError("MODEL_HEALTH_SOURCE_EVIDENCE_INVALID")
+    if now_ns is not None and not source_fresh_at(now_ns):
+        raise ModelHealthRiskError("MODEL_HEALTH_SOURCE_EXPIRED")
+    if not getattr(assessment, "source_fingerprint", None):
+        raise ModelHealthRiskError("MODEL_HEALTH_SOURCE_FINGERPRINT_REQUIRED")
 
 
 def conservative_model_health_factor_decimal(
@@ -77,6 +93,7 @@ def bind_model_health_to_risk(
     floor: Decimal | int | float | str = Decimal("0"),
     method: str = "CONSERVATIVE_LINEAR",
     method_version: str = "1",
+    now_ns: int | None = None,
 ) -> ModelHealthRiskBinding:
     if not method or not method_version:
         raise ModelHealthRiskError("MODEL_HEALTH_METHOD_IDENTITY_REQUIRED")
@@ -84,7 +101,7 @@ def bind_model_health_to_risk(
         get_production_model_health_method(method, method_version)
     except ValueError as exc:
         raise ModelHealthRiskError(str(exc)) from exc
-    _validate_assessment(assessment, assessment_id)
+    _validate_assessment(assessment, assessment_id, now_ns)
     baseline = _decimal(baseline_risk, "INVALID_BASELINE_RISK")
     if baseline < 0:
         raise ModelHealthRiskError("INVALID_BASELINE_RISK")
@@ -103,6 +120,7 @@ def bind_model_health_to_risk(
         method=method,
         method_version=method_version,
         assessment_id=assessment_id,
+        source_fingerprint=str(getattr(assessment, "source_fingerprint")),
         health_state=assessment.state,
     )
 

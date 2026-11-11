@@ -174,6 +174,23 @@ def test_v429_m10_matrix_points_to_thread_safe_durable_event_ledger():
     assert '"M10"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")
 
 
+def test_v429_m24_matrix_points_to_fingerprinted_durable_health_source():
+    with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
+        m24 = next(row for row in csv.DictReader(stream) if row["machine_check_id"] == "M24")
+    assert m24["implementation_status"] == "TESTED"
+    assert "trading_platform/v25/health.py" in m24["code_reference"]
+    assert "trading_platform/v31/authority.py" in m24["code_reference"]
+    assert "trading_platform/v318/durable_decision.py" in m24["code_reference"]
+    assert "trading_platform/v32/capability.py" in m24["code_reference"]
+    assert "trading_platform/v351/model_health_risk_authority.py" in m24["code_reference"]
+    assert "tests/test_v351_m24_model_health.py" in m24["test_reference"]
+    assert "tests/v25/test_drift_health.py" in m24["test_reference"]
+    assert "tests/v318/test_durable_decision.py" in m24["test_reference"]
+    assert m24["evidence_reference"] == "V429_M24_REMEDIATION_REPORT.md"
+    assert "signed" in m24["unresolved_gap"].lower()
+    assert '"M24"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")
+
+
 def test_v429_m25_matrix_points_to_isolated_public_archive_downloader():
     with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
         m25 = next(row for row in csv.DictReader(stream) if row["machine_check_id"] == "M25")

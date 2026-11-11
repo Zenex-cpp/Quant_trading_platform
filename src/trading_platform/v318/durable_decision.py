@@ -8,7 +8,7 @@ import json
 from typing import Any, Mapping
 
 from trading_platform.v21.event_store import EventStore
-from trading_platform.v25.health import HealthAssessment, HealthState
+from trading_platform.v25.health import EvidenceFreshness, HealthAssessment, HealthState
 
 
 class RiskDecisionConflict(RuntimeError):
@@ -87,6 +87,12 @@ class RiskDecisionRecord:
     model_health_evidence_fresh: bool | None = None
     model_health_drift_critical: bool | None = None
     model_health_quality_ok: bool | None = None
+    model_health_source_evidence_id: str | None = None
+    model_health_source_captured_at_ns: int | None = None
+    model_health_source_ttl_ns: int | None = None
+    model_health_source_verified: bool | None = None
+    model_health_assessed_at_ns: int | None = None
+    model_health_source_fingerprint: str | None = None
     risk_state_factor: Decimal = Decimal("1")
     recovery_event_id: str | None = None
 
@@ -141,6 +147,12 @@ class RiskDecisionRecord:
             "model_health_evidence_fresh": self.model_health_evidence_fresh,
             "model_health_drift_critical": self.model_health_drift_critical,
             "model_health_quality_ok": self.model_health_quality_ok,
+            "model_health_source_evidence_id": self.model_health_source_evidence_id,
+            "model_health_source_captured_at_ns": self.model_health_source_captured_at_ns,
+            "model_health_source_ttl_ns": self.model_health_source_ttl_ns,
+            "model_health_source_verified": self.model_health_source_verified,
+            "model_health_assessed_at_ns": self.model_health_assessed_at_ns,
+            "model_health_source_fingerprint": self.model_health_source_fingerprint,
             "risk_state_factor": str(self.risk_state_factor),
             "recovery_event_id": self.recovery_event_id,
         }
@@ -170,6 +182,7 @@ class RiskDecisionGateSnapshot:
     model_health: Decimal | None = None
     model_health_risk_factor: Decimal | None = None
     model_health_assessment_id: str | None = None
+    model_health_source_fingerprint: str | None = None
 
 
 class DurableRiskDecisionLedger:
@@ -239,6 +252,7 @@ class DurableRiskDecisionLedger:
         drawdown: Decimal | None = None,
         model_health: Decimal | None = None,
         model_health_assessment_id: str | None = None,
+        model_health_assessment: HealthAssessment | None = None,
     ) -> RiskDecisionGateSnapshot:
         decision = self.get(decision_id)
         if decision is None:
@@ -290,7 +304,15 @@ class DurableRiskDecisionLedger:
                 raise RiskDecisionConflict("RISK_DECISION_MODEL_HEALTH_ASSESSMENT_REQUIRED")
             if model_health_assessment_id != decision.model_health_assessment_id:
                 raise RiskDecisionConflict("RISK_DECISION_MODEL_HEALTH_ASSESSMENT_STALE")
-        elif model_health is not None or model_health_assessment_id is not None:
+            if model_health_assessment is None:
+                raise RiskDecisionConflict("RISK_DECISION_MODEL_HEALTH_SOURCE_REQUIRED")
+            if model_health_assessment.assessment_id != decision.model_health_assessment_id:
+                raise RiskDecisionConflict("RISK_DECISION_MODEL_HEALTH_ASSESSMENT_STALE")
+            if model_health_assessment.source_fingerprint != decision.model_health_source_fingerprint:
+                raise RiskDecisionConflict("RISK_DECISION_MODEL_HEALTH_SOURCE_STALE")
+            if not model_health_assessment.source_fresh_at(now_ms * 1_000_000):
+                raise RiskDecisionConflict("RISK_DECISION_MODEL_HEALTH_SOURCE_EXPIRED")
+        elif model_health is not None or model_health_assessment_id is not None or model_health_assessment is not None:
             raise RiskDecisionConflict("RISK_DECISION_MODEL_HEALTH_PROVENANCE_MISSING")
         if decision.truth_hash != truth_hash:
             raise RiskDecisionConflict("RISK_DECISION_TRUTH_HASH_STALE")
@@ -321,6 +343,7 @@ class DurableRiskDecisionLedger:
             model_health=decision.model_health,
             model_health_risk_factor=decision.model_health_risk_factor,
             model_health_assessment_id=decision.model_health_assessment_id,
+            model_health_source_fingerprint=decision.model_health_source_fingerprint,
         )
 
     @staticmethod
@@ -419,8 +442,22 @@ class DurableRiskDecisionLedger:
                 raise ValueError("MODEL_HEALTH_ASSESSMENT_PROVENANCE_REQUIRED")
             if decision.model_health_evidence_fresh is not True or decision.model_health_drift_critical is not False or decision.model_health_quality_ok is not True:
                 raise ValueError("MODEL_HEALTH_ASSESSMENT_NOT_SAFE")
+            if (
+                not decision.model_health_source_evidence_id
+                or decision.model_health_source_captured_at_ns is None
+                or decision.model_health_source_ttl_ns is None
+                or decision.model_health_source_verified is not True
+                or decision.model_health_assessed_at_ns is None
+                or not decision.model_health_source_fingerprint
+            ):
+                raise ValueError("MODEL_HEALTH_SOURCE_PROVENANCE_INCOMPLETE")
             try:
-                from trading_platform.v351.model_health_risk_authority import bind_model_health_to_risk
+                source_evidence = EvidenceFreshness(
+                    evidence_id=decision.model_health_source_evidence_id,
+                    captured_at_ns=decision.model_health_source_captured_at_ns,
+                    ttl_ns=decision.model_health_source_ttl_ns,
+                    verified=decision.model_health_source_verified,
+                )
                 assessment = HealthAssessment(
                     state=HealthState(str(decision.model_health_state)),
                     evidence_fresh=bool(decision.model_health_evidence_fresh),
@@ -428,12 +465,24 @@ class DurableRiskDecisionLedger:
                     quality_ok=bool(decision.model_health_quality_ok),
                     reason="DURABLE_RESTORED",
                     assessment_id=str(decision.model_health_assessment_id),
+                    source_evidence=source_evidence,
+                    assessed_at_ns=decision.model_health_assessed_at_ns,
                 )
+                if assessment.source_fingerprint != decision.model_health_source_fingerprint:
+                    raise ValueError("MODEL_HEALTH_SOURCE_FINGERPRINT_MISMATCH")
+                created_at_ns = decision.created_at_ms * 1_000_000
+                if decision.model_health_assessed_at_ns > created_at_ns or not assessment.source_fresh_at(created_at_ns):
+                    raise ValueError("MODEL_HEALTH_SOURCE_NOT_FRESH_AT_DECISION")
+            except Exception as exc:
+                raise ValueError("INVALID_MODEL_HEALTH_SOURCE_PROVENANCE") from exc
+            try:
+                from trading_platform.v351.model_health_risk_authority import bind_model_health_to_risk
                 binding = bind_model_health_to_risk(
                     model_health=decision.model_health, baseline_risk=requested,
                     assessment=assessment, assessment_id=decision.model_health_assessment_id,
                     max_model_health=decision.model_health_max, floor=decision.model_health_floor,
                     method=decision.model_health_method, method_version=decision.model_health_method_version,
+                    now_ns=created_at_ns,
                 )
             except Exception as exc:
                 raise ValueError("INVALID_MODEL_HEALTH_RISK_BINDING") from exc
@@ -441,7 +490,14 @@ class DurableRiskDecisionLedger:
                 raise ValueError("MODEL_HEALTH_RISK_FACTOR_MISMATCH")
             if allowed > binding.allowed_risk:
                 raise ValueError("RISK_ALLOWED_EXCEEDS_MODEL_HEALTH_CAP")
-        elif any(v is not None for v in (decision.model_health_max, decision.model_health_risk_factor, decision.model_health_method, decision.model_health_method_version, decision.model_health_assessment_id, decision.model_health_state, decision.model_health_evidence_fresh, decision.model_health_drift_critical, decision.model_health_quality_ok)):
+        elif any(v is not None for v in (
+            decision.model_health_max, decision.model_health_risk_factor, decision.model_health_method,
+            decision.model_health_method_version, decision.model_health_assessment_id, decision.model_health_state,
+            decision.model_health_evidence_fresh, decision.model_health_drift_critical, decision.model_health_quality_ok,
+            decision.model_health_source_evidence_id, decision.model_health_source_captured_at_ns,
+            decision.model_health_source_ttl_ns, decision.model_health_source_verified,
+            decision.model_health_assessed_at_ns, decision.model_health_source_fingerprint,
+        )):
             raise ValueError("MODEL_HEALTH_PROVENANCE_INCOMPLETE")
         elif decision.model_health_floor != Decimal("0"):
             raise ValueError("MODEL_HEALTH_FLOOR_WITHOUT_MODEL_HEALTH")
@@ -519,6 +575,12 @@ class DurableRiskDecisionLedger:
                 model_health_evidence_fresh=None if payload.get("model_health_evidence_fresh") is None else bool(payload["model_health_evidence_fresh"]),
                 model_health_drift_critical=None if payload.get("model_health_drift_critical") is None else bool(payload["model_health_drift_critical"]),
                 model_health_quality_ok=None if payload.get("model_health_quality_ok") is None else bool(payload["model_health_quality_ok"]),
+                model_health_source_evidence_id=None if payload.get("model_health_source_evidence_id") is None else str(payload["model_health_source_evidence_id"]),
+                model_health_source_captured_at_ns=None if payload.get("model_health_source_captured_at_ns") is None else int(payload["model_health_source_captured_at_ns"]),
+                model_health_source_ttl_ns=None if payload.get("model_health_source_ttl_ns") is None else int(payload["model_health_source_ttl_ns"]),
+                model_health_source_verified=None if payload.get("model_health_source_verified") is None else bool(payload["model_health_source_verified"]),
+                model_health_assessed_at_ns=None if payload.get("model_health_assessed_at_ns") is None else int(payload["model_health_assessed_at_ns"]),
+                model_health_source_fingerprint=None if payload.get("model_health_source_fingerprint") is None else str(payload["model_health_source_fingerprint"]),
                 risk_state_factor=Decimal(str(payload.get("risk_state_factor", "1"))),
                 recovery_event_id=None if payload.get("recovery_event_id") is None else str(payload["recovery_event_id"]),
             )
