@@ -10,6 +10,10 @@ Python package 3.61.12 adds a bounded, local-only `market-data audit-csv` path f
 
 On package 3.61.12, the Windows/Python 3.14.7 focused CSV/CLI/release-integrity set passed **15 tests**; the mandatory full V4.29 runner passed with **1,262 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`. Preflight was `READY_FOR_MILESTONE`, `allowed=true`, and had no blocking reasons. All audit fixtures are synthetic; this does not close DATASET-01 source comparison or production-readiness gates.
 
+Python package 3.61.13 adds optional local comparison of two OHLCV CSVs for DATASET-01. The command creates a contract for each source with complete timestamps, normalizes join keys to UTC event time and uppercase symbol, records coverage differences and per-field OHLCV discrepancies, and supports bounded absolute/relative tolerances. A match does not prove source independence or licensing; no real user CSVs are present.
+
+On package 3.61.13, the focused CSV/CLI/release-integrity set passed **22 tests**; the mandatory full V4.29 runner passed with **1,269 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`. Preflight was `READY_FOR_MILESTONE`, `allowed=true`, with no blocking reasons. No hosted CI result for this branch commit is recorded here.
+
 On package 3.61.11, the Windows/Python 3.14.7 mandatory V4.29 runner passed with **1,255 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`; preflight was `READY_FOR_MILESTONE`, `allowed=true`, with M9, M14 and M25 impacted and no blocking reasons. The focused market-data, segmentation, workflow-contract, matrix and release-integrity suite passed **43 tests**. GitHub hosted CI has not run for this local patch.
 
 Python package `3.61.5` makes the final dispatcher require current risk, position, market-data, and causal-TTL authorities before a new risk-increasing order can reach its gateway. The runtime now passes the durable RiskDecision ledger, and V4.29 CI preflights M1–M5 for this boundary. See `V429_M2_REMEDIATION_REPORT.md`.

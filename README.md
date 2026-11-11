@@ -1,7 +1,7 @@
 # Quant Trading Platform
 
 **Repository release train:** `V4.29-RECOVERY`  
-**Python distribution version:** `3.61.12` (a separate versioning scheme).
+**Python distribution version:** `3.61.13` (a separate versioning scheme).
 
 The current repository is a recovery extension based on the available V4.28 recovery archive. Byte-for-byte canonical lineage to V4.23 and V4.26 is **not established** because those source archives are not available in the project.
 
@@ -16,9 +16,9 @@ The current repository is a recovery extension based on the available V4.28 reco
 - V3.75 live/shadow prediction calls now require current durable compatibility authority across all seven runtime dimensions.
 - Research credential scanning now traverses slotted objects, Python-mangled secret fields and NumPy object arrays; the direct tuning-data view applies the same boundary.
 - The explicit market-data command imports checksummed USD-M Futures daily archives into immutable, audited snapshots. Public archive access is isolated from Research and requires a non-commercial research attestation.
-- DATASET-01 provides a bounded local-only audit CLI for user/vendor OHLCV CSVs. It emits a DatasetContract and report when timestamps are complete, while explicitly withholding source comparison, license assessment, and authority. No actual user market-data CSV is present.
+- DATASET-01 provides a bounded local-only audit CLI for user/vendor OHLCV CSVs. It emits a DatasetContract and can compare a second CSV by UTC timestamp and symbol, reporting OHLCV divergences and coverage differences. Source independence, license assessment, and authority still require review. No actual user market-data CSV is present.
 - Latest hosted validation of `main` before the local M14, M9, CLI and data-import changes, post-merge PR #20: successful ([run 43004773712](https://github.com/Zenex-cpp/Quant_trading_platform/actions/runs/43004773712)).
-- Latest full local Windows/Python 3.14.7 validation on package `3.61.12`: **1,262 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`; preflight `READY_FOR_MILESTONE`, `allowed=true`, no blocking reasons, with the fixed V4.29 control set including M9, M14 and M25. POSIX-only signer checks remain enabled in Linux CI; symlink checks skip only when the host cannot create symlinks.
+- Latest full local Windows/Python 3.14.7 validation on package `3.61.13`: **1,269 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`; preflight `READY_FOR_MILESTONE`, `allowed=true`, no blocking reasons, with the fixed V4.29 control set including M9, M14 and M25. POSIX-only signer checks remain enabled in Linux CI; symlink checks skip only when the host cannot create symlinks.
 - Validation does not execute exchange orders or certify production readiness. `external_evidence=false`, `activation_flag=NOT_SET`, and `production_ready=false` remain in force.
 
 The hosted governance audit is intentionally non-fatal while signed, trusted external evidence is absent. A green CI job does not mean the trust anchor, independent evidence, operational controls, or production approval have been satisfied.
@@ -59,13 +59,13 @@ Store the output outside the repository checkout. The importer refuses to place 
 
 ## Audit a user/vendor CSV for DATASET-01
 
-The local-only `market-data audit-csv` command checks a user/vendor OHLCV CSV, writes a new JSON report, and creates a `DatasetContract` when every row has a valid timezone-aware event time. It records coverage, hashes, lineage, quality findings and an optional operator anomaly note. The input is never copied, and the command makes no network requests. The report path must be outside the repository and must not already exist.
+The local-only `market-data audit-csv` command checks a user/vendor OHLCV CSV, writes a new JSON report, and creates a `DatasetContract` when every row has a valid timezone-aware event time. It records coverage, hashes, lineage and quality findings. Add `--compare-input` and `--compare-source-label` to compare a second local CSV by `(event_time normalized to UTC, symbol trimmed and uppercased)`, with exact values by default or explicitly bounded absolute/relative tolerances. Both datasets receive contracts when their time coverage is complete. The report lists per-field differences, unmatched rows, quality findings and operator anomaly notes for each source. Inputs are never copied and the command makes no network requests. The report path must be outside the repository and must not already exist.
 
 ```text
-trading-platform market-data audit-csv --input ..\market-data\historical.csv --source-label "Vendor name" --report ..\audit\DATASET-01-report.json --anomaly-note "Document known gaps or revisions"
+trading-platform market-data audit-csv --input ..\market-data\vendor-a.csv --source-label "Vendor A" --compare-input ..\market-data\vendor-b.csv --compare-source-label "Vendor B" --report ..\audit\DATASET-01-report.json --anomaly-note "Document known gaps or revisions" --compare-anomaly-note "Document comparator revisions"
 ```
 
-The audit cannot infer source licensing, compare a single CSV to an independent source, or authorize definitive use. Its report marks those controls as unresolved and keeps `production_ready=false`. No user market-data CSV is currently present in this checkout, so DATASET-01 itself has not yet been audited.
+The comparison can report agreement or divergence but cannot prove the sources are independent, infer licensing, or authorize definitive use. A nonzero command exit requires review of quality, coverage, or comparison findings. Reports keep `production_ready=false`. No user market-data CSV is currently present in this checkout, so DATASET-01 has not yet been audited against real sources.
 
 ## Source documents
 
@@ -85,6 +85,6 @@ The audit cannot infer source licensing, compare a single CSV to an independent 
 - [`V429_RECONSTRUCTION_NOTE.md`](V429_RECONSTRUCTION_NOTE.md) records the available source lineage.
 - [`docs/V429_EXTERNAL_SIGNER_HARDENING.md`](docs/V429_EXTERNAL_SIGNER_HARDENING.md) describes the external signer’s platform requirements.
 
-The 3.61.4 safety patch restricts the legacy Testnet evidence session and runner to read-only `GET` requests and the approved Testnet host allowlist. Version 3.61.5 closed missing-authority bypasses at the V3.11 dispatcher; 3.61.6 closes alternate Testnet submit paths; 3.61.7 binds Champion promotion to exact durable PASS-gate runs and revalidates them at use; 3.61.8 guards V3.75 live/shadow prediction calls with current compatibility authority; 3.61.9 closes credential-scanning gaps for slotted wrappers and object arrays; 3.61.10 adds the installed CLI and offline §178 acceptance command; 3.61.11 adds checksummed historical archive import for non-commercial research; 3.61.12 adds the DATASET-01 local CSV audit command. See [`V429_M1_REMEDIATION_REPORT.md`](V429_M1_REMEDIATION_REPORT.md), [`V429_M2_REMEDIATION_REPORT.md`](V429_M2_REMEDIATION_REPORT.md), [`V429_M1_M5_TRANSPORT_REMEDIATION.md`](V429_M1_M5_TRANSPORT_REMEDIATION.md), [`V429_M7_REMEDIATION_REPORT.md`](V429_M7_REMEDIATION_REPORT.md), [`V429_M14_REMEDIATION_REPORT.md`](V429_M14_REMEDIATION_REPORT.md), [`V429_M9_REMEDIATION_REPORT.md`](V429_M9_REMEDIATION_REPORT.md), [`V429_M25_PUBLIC_DATA_REPORT.md`](V429_M25_PUBLIC_DATA_REPORT.md), [`V429_DATASET_01_CSV_AUDIT_REPORT.md`](V429_DATASET_01_CSV_AUDIT_REPORT.md), and [`V429_PIT_E2E_REMEDIATION_REPORT.md`](V429_PIT_E2E_REMEDIATION_REPORT.md).
+The 3.61.4 safety patch restricts the legacy Testnet evidence session and runner to read-only `GET` requests and the approved Testnet host allowlist. Version 3.61.5 closed missing-authority bypasses at the V3.11 dispatcher; 3.61.6 closes alternate Testnet submit paths; 3.61.7 binds Champion promotion to exact durable PASS-gate runs and revalidates them at use; 3.61.8 guards V3.75 live/shadow prediction calls with current compatibility authority; 3.61.9 closes credential-scanning gaps for slotted wrappers and object arrays; 3.61.10 adds the installed CLI and offline §178 acceptance command; 3.61.11 adds checksummed historical archive import for non-commercial research; 3.61.12 adds DATASET-01 CSV audits; 3.61.13 adds bounded two-source comparison. See [`V429_M1_REMEDIATION_REPORT.md`](V429_M1_REMEDIATION_REPORT.md), [`V429_M2_REMEDIATION_REPORT.md`](V429_M2_REMEDIATION_REPORT.md), [`V429_M1_M5_TRANSPORT_REMEDIATION.md`](V429_M1_M5_TRANSPORT_REMEDIATION.md), [`V429_M7_REMEDIATION_REPORT.md`](V429_M7_REMEDIATION_REPORT.md), [`V429_M14_REMEDIATION_REPORT.md`](V429_M14_REMEDIATION_REPORT.md), [`V429_M9_REMEDIATION_REPORT.md`](V429_M9_REMEDIATION_REPORT.md), [`V429_M25_PUBLIC_DATA_REPORT.md`](V429_M25_PUBLIC_DATA_REPORT.md), [`V429_DATASET_01_CSV_AUDIT_REPORT.md`](V429_DATASET_01_CSV_AUDIT_REPORT.md), and [`V429_PIT_E2E_REMEDIATION_REPORT.md`](V429_PIT_E2E_REMEDIATION_REPORT.md).
 
 `package_manifest_v429.txt` is the immutable manifest for the historical V4.29 archive; it is not a manifest of later changes on `main`.

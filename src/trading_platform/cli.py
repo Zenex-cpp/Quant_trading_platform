@@ -62,7 +62,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="audit a local user/vendor OHLCV CSV and write a DatasetContract report",
         description=(
             "Local-only audit of a user/vendor CSV. No network access or source-file copy. "
-            "A single-source audit does not assess licensing, perform source comparison, or authorize definitive use."
+            "Optionally compare a second local CSV. Source independence and licensing still require review."
         ),
     )
     audit_csv.add_argument("--input", required=True, help="path to the local CSV file")
@@ -70,6 +70,11 @@ def build_parser() -> argparse.ArgumentParser:
     audit_csv.add_argument("--report", required=True, help="new JSON report path outside the repository checkout")
     audit_csv.add_argument("--dataset-id", default="DATASET-01", help="dataset identifier (default: DATASET-01)")
     audit_csv.add_argument("--anomaly-note", help="optional operator note documenting known anomalies")
+    audit_csv.add_argument("--compare-input", help="optional independent-source CSV for local comparison")
+    audit_csv.add_argument("--compare-source-label", help="source label required with --compare-input")
+    audit_csv.add_argument("--compare-anomaly-note", help="optional operator note for the comparison source")
+    audit_csv.add_argument("--absolute-tolerance", default="0", help="absolute OHLCV comparison tolerance (default: exact)")
+    audit_csv.add_argument("--relative-tolerance", default="0", help="relative OHLCV comparison tolerance (default: exact)")
     return parser
 
 
@@ -124,22 +129,33 @@ def main(argv: Sequence[str] | None = None) -> int:
                 report_path=args.report,
                 dataset_id=args.dataset_id,
                 anomaly_note=args.anomaly_note,
+                comparison_anomaly_note=args.compare_anomaly_note,
+                comparison_input_path=args.compare_input,
+                comparison_source_label=args.compare_source_label,
+                absolute_tolerance=args.absolute_tolerance,
+                relative_tolerance=args.relative_tolerance,
             )
         except (UserCsvAuditError, OSError, ValueError) as exc:
             print(f"DATASET_CSV_AUDIT=FAILED {type(exc).__name__}:{exc}", file=sys.stderr)
             return 2
         payload = {
-            "status": "AUDITED",
+            "status": "AUDITED" if result.exit_code == 0 else "REVIEW_REQUIRED",
             "dataset_id": args.dataset_id,
             "row_count": result.row_count,
             "quality_status": result.quality_status.value,
             "source_sha256": result.source_sha256,
             "dataset_contract_created": result.dataset_contract is not None,
             "report_path": str(result.report_path),
-            "source_comparison": "NOT_PERFORMED_SINGLE_SOURCE",
-            "dataset_authority": "NOT_AUTHORIZED_BY_SINGLE_SOURCE_AUDIT",
+            "source_comparison": result.source_comparison_status,
+            "dataset_authority": (
+                "NOT_AUTHORIZED_BY_SINGLE_SOURCE_AUDIT"
+                if args.compare_input is None
+                else "NOT_AUTHORIZED_BY_LOCAL_SOURCE_COMPARISON"
+            ),
             "network_used": False,
             "production_ready": False,
+            "review_required": result.exit_code != 0,
+            "report_written": True,
         }
         print(json.dumps(payload, sort_keys=True, indent=2))
         return result.exit_code

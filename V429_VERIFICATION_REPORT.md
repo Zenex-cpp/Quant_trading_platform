@@ -49,3 +49,9 @@ This patch does not change external evidence or production readiness. M25 remain
 Package 3.61.12 adds the local-only user/vendor CSV audit command. No DATASET-01 source file is present in this checkout. Synthetic tests verify contract creation, coverage and hashes, critical/malformed data handling, incomplete temporal coverage, exclusive report creation, repository path refusal, and no-network CLI behavior. This does not count as an audit of a real market dataset or complete source comparison; the source license and definitive-use authority remain unresolved.
 
 Focused CSV/CLI/release-integrity verification passed **15 tests**. The full mandatory Windows/Python 3.14.7 V4.29 runner passed with **1,262 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`; durable preflight was `READY_FOR_MILESTONE`, `allowed=true`, with no blockers. `external_evidence=false`, `production_ready=false`, and `activation_flag=NOT_SET` remain unchanged.
+
+## DATASET-01 paired-source comparison — 2026-11-11
+
+Package 3.61.13 extends the local CSV audit to compare two bounded local OHLCV CSVs, create separate contracts, normalize timestamp/symbol join keys, report coverage/value differences, and apply explicit bounded numeric tolerances. Automated tests use synthetic files and do not establish source independence, licensing, or the quality of the absent real dataset.
+
+Focused CSV/CLI/release-integrity verification passed **22 tests**. The full mandatory Windows/Python 3.14.7 runner passed with **1,269 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`; durable preflight was `READY_FOR_MILESTONE`, `allowed=true`, with no blockers. `external_evidence=false`, `production_ready=false`, and `activation_flag=NOT_SET` remain unchanged.

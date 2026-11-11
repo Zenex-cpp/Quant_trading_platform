@@ -17,7 +17,7 @@
 - M26 has a durable statistical-method registry and hash-bound applicability ledger. Registry records survive restart, failed assumptions are durably recorded as `METHOD_NOT_APPLICABLE`, and the guarded executor blocks the evaluator before it can produce a result.
 - M27 now replays durable holdout-compromise incidents when the access context starts, completing interrupted dependency invalidation before the context is returned. Restart coverage checks persisted blocking through evidence, gates, candidates and promotions.
 - M25 now has an application-level public archive zone and a bounded, checksummed, immutable USD-M kline importer. Research still has no egress; the importer requires explicit acknowledgement for non-commercial historical research. The current public-data terms exclude live proprietary/commercial use, so this source cannot be used for the intended live trading path.
-- DATASET-01 has a bounded local-only CSV audit command and report format. The user/vendor CSV itself is absent from the checkout, so no real dataset has been audited; independent source comparison, source-license assessment, operator anomaly review, and definitive-use authority remain open.
+- DATASET-01 has a bounded local-only CSV audit and paired-source comparison command. The user/vendor CSVs themselves are absent from the checkout, so no real dataset has been audited or compared; source independence, source-license assessment, actual anomaly review, and definitive-use authority remain open.
 
 ## Still open
 
