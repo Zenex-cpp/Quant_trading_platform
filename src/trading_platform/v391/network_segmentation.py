@@ -15,6 +15,8 @@ from urllib.parse import urlparse
 
 from trading_platform.ops.network_policy import PRODUCTION_HOSTS, TESTNET_HOSTS
 
+PUBLIC_MARKET_DATA_HOSTS_V391 = frozenset({"data.binance.vision"})
+
 
 class SegmentationDecisionV391(str, Enum):
     ALLOW = "ALLOW"
@@ -27,12 +29,14 @@ class SegmentationBoundaryErrorV391(PermissionError):
 
 class NetworkZoneV391(str, Enum):
     RESEARCH = "RESEARCH"
+    PUBLIC_MARKET_DATA = "PUBLIC_MARKET_DATA"
     TESTNET_EXECUTION = "TESTNET_EXECUTION"
     PRODUCTION_TRADING = "PRODUCTION_TRADING"
 
 
 DEFAULT_ALLOWED_HOSTS_V391: dict[NetworkZoneV391, frozenset[str]] = {
     NetworkZoneV391.RESEARCH: frozenset(),
+    NetworkZoneV391.PUBLIC_MARKET_DATA: PUBLIC_MARKET_DATA_HOSTS_V391,
     NetworkZoneV391.TESTNET_EXECUTION: frozenset(TESTNET_HOSTS),
     NetworkZoneV391.PRODUCTION_TRADING: frozenset(PRODUCTION_HOSTS),
 }
@@ -73,6 +77,11 @@ class NetworkSegmentationPolicyV391:
                         raise SegmentationBoundaryErrorV391("PRODUCTION_ZONE_ENDPOINT_NOT_ALLOWLISTED")
                     if canonical in normalized_test:
                         raise SegmentationBoundaryErrorV391("PRODUCTION_TESTNET_ENDPOINT_OVERLAP")
+                elif zone is NetworkZoneV391.PUBLIC_MARKET_DATA:
+                    if canonical not in PUBLIC_MARKET_DATA_HOSTS_V391:
+                        raise SegmentationBoundaryErrorV391("PUBLIC_DATA_ZONE_ENDPOINT_NOT_ALLOWLISTED")
+                    if canonical in normalized_prod or canonical in normalized_test:
+                        raise SegmentationBoundaryErrorV391("PUBLIC_DATA_TRADING_ENDPOINT_OVERLAP")
 
     @staticmethod
     def _host(endpoint: str) -> str:
@@ -110,6 +119,9 @@ class NetworkSegmentationPolicyV391:
             },
             "research_to_production": "DENY",
             "research_to_testnet": "DENY",
+            "research_to_public_market_data": "DENY",
+            "public_market_data_hosts": sorted(self.allowed_hosts.get(NetworkZoneV391.PUBLIC_MARKET_DATA, frozenset())),
+            "public_market_data_to_trading": "DENY",
             "testnet_to_production": "DENY",
             "production_to_testnet": "DENY",
             "wildcards": "DENY",

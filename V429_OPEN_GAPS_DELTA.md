@@ -16,6 +16,7 @@
 - M16 has durable configuration-resolution checks at the final Testnet dispatch and deployment activation boundaries. The resolution ID and fingerprint are bound into Operational Truth, authority decisions and durable request/commit/activation records. Dispatch and activation validate ledger presence, status, fingerprint and expiry; conflict, mismatch, missing records and expiry fail closed. See `V429_M16_REMEDIATION_REPORT.md`.
 - M26 has a durable statistical-method registry and hash-bound applicability ledger. Registry records survive restart, failed assumptions are durably recorded as `METHOD_NOT_APPLICABLE`, and the guarded executor blocks the evaluator before it can produce a result.
 - M27 now replays durable holdout-compromise incidents when the access context starts, completing interrupted dependency invalidation before the context is returned. Restart coverage checks persisted blocking through evidence, gates, candidates and promotions.
+- M25 now has an application-level public archive zone and a bounded, checksummed, immutable USD-M kline importer. Research still has no egress; the importer requires explicit acknowledgement for non-commercial historical research. The current public-data terms exclude live proprietary/commercial use, so this source cannot be used for the intended live trading path.
 
 ## Still open
 
@@ -25,6 +26,7 @@
 - Independent reviewer identity, public-key trust ceremony and trust anchor: `NOT_CONFIGURED`.
 - Canonical V4.23 and V4.26 byte-for-byte lineage: `NOT_ESTABLISHED`.
 - Production security assessment, monitoring/on-call, network segmentation, secret store, backup/DR, authenticated Testnet, production rollback, independent approval and production sign-off: `NOT_VERIFIED`.
+- M25 remains `TESTED`, not `VERIFIED`: actual host/VPC/container routing enforcement is not configured or independently evidenced. A commercially licensed market-data source is required before any production or commercial strategy use; the public archive importer's non-commercial scope is recorded in its manifest.
 - Independent review and broader production integration of all configuration sources are still required to promote M16 from `TESTED` to `VERIFIED`.
 - Independent review and operational promotion evidence are still required to promote M7 from `TESTED` to `VERIFIED`.
 - M14 production inference integration and independent runtime review remain unverified; V3.75 is decision-only and no production model inference adapter exists in this checkout.

@@ -147,3 +147,16 @@ def test_v429_m9_matrix_points_to_research_credential_boundary():
     assert m9["evidence_reference"] == "V429_M9_REMEDIATION_REPORT.md"
     assert "operational proof" in m9["unresolved_gap"]
     assert '"M9"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")
+
+
+def test_v429_m25_matrix_points_to_isolated_public_archive_downloader():
+    with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
+        m25 = next(row for row in csv.DictReader(stream) if row["machine_check_id"] == "M25")
+    assert m25["implementation_status"] == "TESTED"
+    assert "trading_platform/v391/network_segmentation.py" in m25["code_reference"]
+    assert "trading_platform/data/binance_public_data.py" in m25["code_reference"]
+    assert "tests/test_binance_public_data_import.py" in m25["test_reference"]
+    assert "tests/v391/test_network_segmentation.py" in m25["test_reference"]
+    assert m25["evidence_reference"] == "V429_M25_PUBLIC_DATA_REPORT.md"
+    assert "Infrastructure" in m25["unresolved_gap"]
+    assert '"M25"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")

@@ -37,3 +37,9 @@ The V4.29 matrix contains 42 requirements: `TESTED=37`, `IMPLEMENTED=2`, `PARTIA
 All new filesystem tests use local temporary directories and synthetic Ed25519 keys. No live GitHub repository was queried and no hosted GitHub Actions run was observed. Independent reviewer identity and trust-anchor ceremony remain unverified/not configured. This release verifies application behavior; it does not certify production readiness.
 
 `external_evidence=false`, `activation_flag=NOT_SET`, and `production_ready=false` remain unchanged.
+
+## Follow-up verification — 2026-11-11
+
+Package 3.61.11 adds the M25-scoped public historical-data importer and its application-level egress zone. The focused importer, segmentation, workflow-contract, compliance-matrix and release-integrity suite passed **43 tests**. The mandatory Windows/Python 3.14.7 runner passed with **1,255 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`; durable preflight returned `READY_FOR_MILESTONE`, `allowed=true`, with M9, M14 and M25 impacted and no blockers.
+
+This patch does not change external evidence or production readiness. M25 remains `TESTED` pending infrastructure routing proof. No Binance data was downloaded; the public data source is limited by its current terms to non-commercial historical research and cannot supply the intended live/commercial strategy. Hosted GitHub CI and the current remote-main revision still require confirmation.

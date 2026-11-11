@@ -17,7 +17,7 @@ def test_v429_ci_workflow_contract_passes_and_preserves_capture_artifact_compati
     assert "V428_MILESTONE_PREFLIGHT.json" in text
     assert "V428_MILESTONE_PREFLIGHT.sqlite3" in text
     assert "--impacted-requirement M1" in text
-    for requirement_id in ("M2", "M3", "M4", "M5", "M7", "M9", "M14"):
+    for requirement_id in ("M2", "M3", "M4", "M5", "M7", "M9", "M14", "M25"):
         assert f"--impacted-requirement {requirement_id}" in text
 
 
@@ -26,8 +26,10 @@ def test_v429_workflow_contract_rejects_legacy_entrypoint_or_warn_only_artifacts
     altered = text.replace("scripts/run_milestone_validation_v429.py", "scripts/run_milestone_validation.py")
     altered = altered.replace("if-no-files-found: error", "if-no-files-found: warn")
     altered = altered.replace("--impacted-requirement M1", "--impacted-requirement M2")
+    altered = altered.replace("--impacted-requirement M25", "--impacted-requirement M3")
     blockers = set(validate_workflow_contract_v429(altered))
     assert "WORKFLOW_CONTROLLED_ENTRYPOINT_MISSING" in blockers
     assert "WORKFLOW_ENTRYPOINT_INVOCATION_MISSING" in blockers
     assert "WORKFLOW_AUDIT_ARTIFACT_MISSING_MUST_FAIL" in blockers
     assert "WORKFLOW_M1_IMPACT_MISSING" in blockers
+    assert "WORKFLOW_M25_IMPACT_MISSING" in blockers

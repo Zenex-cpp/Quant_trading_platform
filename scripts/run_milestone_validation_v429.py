@@ -28,7 +28,7 @@ EXPECTED_MILESTONE_ID = "V4.29-RECOVERY"
 EXPECTED_BASELINE_VERSION = "V4.28-RECOVERY"
 EXPECTED_MATRIX_PATH = "compliance_v429.csv"
 EXPECTED_BASELINE_HASH_PATH = "V428_BASELINE_ARCHIVE_SHA256.txt"
-EXPECTED_IMPACTED_IDS = ("CI-PREFLIGHT-01", "M1", "M2", "M3", "M4", "M5", "M7", "M9", "M14", "REPO-GOV-01", "REPO-GOV-02", "REPO-GOV-03", "REPO-GOV-CAPTURE-01", "REPO-GOV-SIGN-01", "REPO-GOV-PATH-01", "REPO-GOV-PATH-02", "REPO-GOV-PATH-03", "REPO-GOV-PATH-04")
+EXPECTED_IMPACTED_IDS = ("CI-PREFLIGHT-01", "M1", "M2", "M3", "M4", "M5", "M7", "M9", "M14", "M25", "REPO-GOV-01", "REPO-GOV-02", "REPO-GOV-03", "REPO-GOV-CAPTURE-01", "REPO-GOV-SIGN-01", "REPO-GOV-PATH-01", "REPO-GOV-PATH-02", "REPO-GOV-PATH-03", "REPO-GOV-PATH-04")
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 if str(ROOT / "src") not in sys.path:
@@ -62,6 +62,9 @@ CONTRACT_FILES = (
     "V429_M7_REMEDIATION_REPORT.md",
     "V429_M9_REMEDIATION_REPORT.md",
     "V429_M14_REMEDIATION_REPORT.md",
+    "V429_M25_PUBLIC_DATA_REPORT.md",
+    "V390_M25_NETWORK_ISOLATION.md",
+    "07_BINANCE_REFERENCE.md",
     "V428_RECONSTRUCTION_NOTE.md",
     "V424_RECONSTRUCTION_NOTE.md",
     "V425_RECONSTRUCTION_NOTE.md",
@@ -89,6 +92,8 @@ CONTRACT_FILES = (
     "src/trading_platform/security/credentials.py",
     "src/trading_platform/security/permissions.py",
     "src/trading_platform/data/holdout.py",
+    "src/trading_platform/data/binance_public_data.py",
+    "src/trading_platform/v391/network_segmentation.py",
     "src/trading_platform/research/pipeline.py",
     "src/trading_platform/v334/champion_authority.py",
     "src/trading_platform/v341/compatibility_authority.py",
@@ -108,6 +113,7 @@ CONTRACT_FILES = (
     "src/trading_platform/cli.py",
     "src/trading_platform/v358/e2e_acceptance.py",
     "README.md",
+    "V429_VERIFICATION_REPORT.md",
     "V429_PIT_E2E_REMEDIATION_REPORT.md",
     "tests/v422/test_milestone_compliance_preflight.py",
     "tests/v423/test_milestone_entrypoint.py",
@@ -125,6 +131,8 @@ CONTRACT_FILES = (
     "tests/v334_test_champion_authority.py",
     "tests/test_v341_m14_compatibility_authority.py",
     "tests/test_cli.py",
+    "tests/test_binance_public_data_import.py",
+    "tests/v391/test_network_segmentation.py",
     "tests/test_v358_e2e_acceptance.py",
     "tests/v336_test_production_credentials.py",
     "tests/v335/test_tuning_surface.py",

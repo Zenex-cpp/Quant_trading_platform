@@ -4,6 +4,10 @@
 
 V4.29 hardens the independent Ed25519 signer against symlinked ancestor paths, input-file replacement during reads, unbounded external evidence inputs, and accidental overwrite of a pre-existing signed output. It also creates a V4.29-specific mandatory milestone runner and CI workflow contract.
 
+Python package 3.61.11 adds a bounded importer for Binance USD-M Futures daily kline archives, verifies the official SHA-256 sidecars, validates/normalizes rows, and writes immutable snapshots with raw archive lineage and a dataset quality manifest. It adds a separate exact-host public-data egress zone while keeping Research deny-all. The command requires an explicit non-commercial research attestation because the reviewed Binance Vision terms exclude live proprietary/commercial trading and paid signal distribution. M25 remains TESTED pending infrastructure route evidence. No real dataset is downloaded by tests.
+
+On package 3.61.11, the Windows/Python 3.14.7 mandatory V4.29 runner passed with **1,255 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`; preflight was `READY_FOR_MILESTONE`, `allowed=true`, with M9, M14 and M25 impacted and no blocking reasons. The focused market-data, segmentation, workflow-contract, matrix and release-integrity suite passed **43 tests**. GitHub hosted CI has not run for this local patch.
+
 Python package `3.61.5` makes the final dispatcher require current risk, position, market-data, and causal-TTL authorities before a new risk-increasing order can reach its gateway. The runtime now passes the durable RiskDecision ledger, and V4.29 CI preflights M1–M5 for this boundary. See `V429_M2_REMEDIATION_REPORT.md`.
 
 Python package `3.61.6` closes alternate Testnet submit paths through the V3.36/V3.79/V3.80/V3.84/V3.85 adapters. The V3.85 controlled submit shares the final M1–M5 authority checks; older direct-submit adapters fail closed. See `V429_M1_M5_TRANSPORT_REMEDIATION.md`.
