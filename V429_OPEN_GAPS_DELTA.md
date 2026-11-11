@@ -31,7 +31,8 @@
 - M25 remains `TESTED`, not `VERIFIED`: actual host/VPC/container routing enforcement is not configured or independently evidenced. A commercially licensed market-data source is required before any production or commercial strategy use; the public archive importer's non-commercial scope is recorded in its manifest.
 - Independent review and broader production integration of all configuration sources are still required to promote M16 from `TESTED` to `VERIFIED`.
 - Independent review and operational promotion evidence are still required to promote M7 from `TESTED` to `VERIFIED`.
-- M14 production inference integration and independent runtime review remain unverified; V3.75 is decision-only and no production model inference adapter exists in this checkout.
-- M9's production credential vault remains in-process and in-memory in this recovery build. External credential-store, separate-process isolation and operational proof are required for `VERIFIED`.
+- M14's signed JSON model adapter is locally tested and bound to the durable runtime compatibility grant, but V3.75 remains decision-only; production inference integration and independent runtime review remain unverified.
+- M9 now supports persistent Windows Credential Manager storage, metadata-only ledger replay and fingerprint verification before resolution. Dedicated production service identity/process isolation, actual OS-store deployment, independent attestation and operational evidence remain open; the in-memory backend is test-only.
+- M10 now serializes EventStore connection access across threads, streams readers under the lock, and verifies concurrent appends preserve the hash chain. Independent storage tamper review and operational backup/DR evidence remain open.
 - Independent methodology review and operational evidence are still required to promote M26 from `TESTED` to `VERIFIED`.
 - Independent review of holdout replacement/revalidation and external operational audit evidence for M27: `NOT_VERIFIED`; M27 is `TESTED`, not `VERIFIED`.

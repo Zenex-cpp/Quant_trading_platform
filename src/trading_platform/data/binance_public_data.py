@@ -103,7 +103,7 @@ def _https_get(url: str, limit: int) -> bytes:
     ):
         raise PublicDataImportError("PUBLIC_DATA_URL_OUTSIDE_ALLOWLIST")
     opener = build_opener(ProxyHandler({}), _RejectRedirects())
-    request = Request(url, method="GET", headers={"User-Agent": "trading-platform-public-data/3.61.15"})
+    request = Request(url, method="GET", headers={"User-Agent": "trading-platform-public-data/3.61.16"})
     try:
         with opener.open(request, timeout=20) as response:
             if response.geturl() != url:

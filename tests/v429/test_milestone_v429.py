@@ -152,12 +152,26 @@ def test_v429_m9_matrix_points_to_research_credential_boundary():
         m9 = next(row for row in csv.DictReader(stream) if row["machine_check_id"] == "M9")
     assert m9["implementation_status"] == "TESTED"
     assert "trading_platform/security/credentials.py" in m9["code_reference"]
+    assert "trading_platform/security/credential_backends.py" in m9["code_reference"]
     assert "trading_platform/data/holdout.py" in m9["code_reference"]
     assert "tests/v336_test_production_credentials.py" in m9["test_reference"]
+    assert "tests/test_credential_backends.py" in m9["test_reference"]
     assert "tests/v335/test_tuning_surface.py" in m9["test_reference"]
     assert m9["evidence_reference"] == "V429_M9_REMEDIATION_REPORT.md"
-    assert "operational proof" in m9["unresolved_gap"]
+    assert "process isolation" in m9["unresolved_gap"]
     assert '"M9"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")
+
+
+def test_v429_m10_matrix_points_to_thread_safe_durable_event_ledger():
+    with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
+        m10 = next(row for row in csv.DictReader(stream) if row["machine_check_id"] == "M10")
+    assert m10["implementation_status"] == "TESTED"
+    assert "trading_platform/v21/event_store.py" in m10["code_reference"]
+    assert "trading_platform/security/credentials.py" in m10["code_reference"]
+    assert "tests/test_event_store_thread_safety.py" in m10["test_reference"]
+    assert m10["evidence_reference"] == "V429_M10_REMEDIATION_REPORT.md"
+    assert "independent storage tamper review" in m10["unresolved_gap"]
+    assert '"M10"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")
 
 
 def test_v429_m25_matrix_points_to_isolated_public_archive_downloader():

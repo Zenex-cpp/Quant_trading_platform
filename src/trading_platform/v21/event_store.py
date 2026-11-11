@@ -1,8 +1,10 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from functools import wraps
 from hashlib import sha256
 import json, sqlite3
+from threading import RLock
 from typing import Any, Iterable, Mapping
 
 
@@ -12,6 +14,15 @@ def canonical_json(value: Any) -> bytes:
 
 def sha256_json(value: Any) -> str:
     return sha256(canonical_json(value)).hexdigest()
+
+
+def _store_locked(method):
+    @wraps(method)
+    def wrapped(self, *args, **kwargs):
+        with self._lock:
+            return method(self, *args, **kwargs)
+
+    return wrapped
 
 
 @dataclass(frozen=True)
@@ -33,9 +44,10 @@ class AppendResult:
 
 
 class EventStore:
-    """Durable append-only event store with hash chaining and idempotent event IDs."""
+    """Thread-safe append-only event store with hash chaining and idempotent IDs."""
     def __init__(self, path: str = ":memory:") -> None:
-        self._db = sqlite3.connect(path)
+        self._lock = RLock()
+        self._db = sqlite3.connect(path, check_same_thread=False)
         self._db.execute("PRAGMA journal_mode=WAL")
         self._db.execute("PRAGMA synchronous=FULL")
         self._db.execute("""
@@ -65,6 +77,7 @@ class EventStore:
         """)
         self._db.commit()
 
+    @_store_locked
     def close(self) -> None:
         """Close the SQLite connection so the store can be cleanly reopened."""
         self._db.close()
@@ -75,6 +88,7 @@ class EventStore:
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         self.close()
 
+    @_store_locked
     def append(self, *, event_id: str, occurred_at_ms: int, event_type: str,
                aggregate_id: str, payload: Mapping[str, Any]) -> AppendResult:
         existing = self._db.execute(
@@ -105,6 +119,7 @@ class EventStore:
         event = LedgerEvent(event_id, sequence, occurred_at_ms, event_type, aggregate_id, dict(payload), prev_hash, event_hash)
         return AppendResult(event, False)
 
+    @_store_locked
     def append_exclusive(
         self,
         *,
@@ -179,6 +194,7 @@ class EventStore:
             self._db.rollback()
             raise
 
+    @_store_locked
     def append_atomic(self, events: Iterable[Mapping[str, Any]]) -> tuple[LedgerEvent, ...]:
         """Append a non-empty batch in one SQLite transaction.
 
@@ -244,13 +260,15 @@ class EventStore:
         return tuple(built)
 
     def iter_events(self, *, start_sequence: int = 1) -> Iterable[LedgerEvent]:
-        rows = self._db.execute(
-            "SELECT sequence,event_id,occurred_at_ms,event_type,aggregate_id,payload_json,prev_hash,event_hash FROM events WHERE sequence>=? ORDER BY sequence",
-            (start_sequence,),
-        )
-        for row in rows:
-            yield self._row_to_event(row)
+        with self._lock:
+            rows = self._db.execute(
+                "SELECT sequence,event_id,occurred_at_ms,event_type,aggregate_id,payload_json,prev_hash,event_hash FROM events WHERE sequence>=? ORDER BY sequence",
+                (start_sequence,),
+            )
+            for row in rows:
+                yield self._row_to_event(row)
 
+    @_store_locked
     def get(self, event_id: str) -> LedgerEvent | None:
         row = self._db.execute(
             "SELECT sequence,event_id,occurred_at_ms,event_type,aggregate_id,payload_json,prev_hash,event_hash FROM events WHERE event_id=?",
@@ -258,6 +276,7 @@ class EventStore:
         ).fetchone()
         return self._row_to_event(row) if row else None
 
+    @_store_locked
     def verify_chain(self) -> bool:
         previous = "GENESIS"
         expected_sequence = 1
@@ -273,6 +292,7 @@ class EventStore:
             expected_sequence += 1
         return True
 
+    @_store_locked
     def latest_sequence(self) -> int:
         row = self._db.execute("SELECT COALESCE(MAX(sequence),0) FROM events").fetchone()
         return int(row[0])

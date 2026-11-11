@@ -36,6 +36,14 @@ The mandatory full V4.29 runner passed with **1,273 passed, 26 skipped**, `RELEA
 ## Signed model artifact runtime — package 3.61.15
 
 The local Ed25519-signed JSON model loader validates signature and content hash before parsing a bounded, non-executable model manifest. Schema, version, runtime/dependency/configuration compatibility and prediction constraints are checked; a loaded model used by V3.75 must match the M14 grant's artifact ID and hash. Focused verification passed **76 tests**. The mandatory V4.29 runner passed with **1,291 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`; final preflight `.audit/V429_M15_FINAL3_PREFLIGHT_20261111.json` is `READY_FOR_MILESTONE`, `allowed=true`, no blockers, with M14/M15 included. Independent trust-root review and production deployment remain open.
+
+## Persistent credential backend — package 3.61.16
+
+The M9 vault now requires an explicitly persistent backend for production and includes a Windows Credential Manager adapter. The event ledger stores metadata and fingerprints only; active/revoked records replay from the ledger, and resolution verifies the fetched material before returning it. The focused credential/backend, credential-boundary, ledger-concurrency, secret-store policy and release-contract suite passed **62 tests** on Windows/Python 3.14.4. The mandatory runner passed with **1,306 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`; final preflight `.audit/V429_M9_M10_CREDENTIAL_FINAL2_20261111.json` records `READY_FOR_MILESTONE`, `allowed=true`, and no blockers. The Codex sandbox denied a direct native Credential Manager probe with `ERROR_ACCESS_DENIED` before any write, so no real OS credential was written and adapter tests rely on a synthetic API. Dedicated service identity, process isolation and independent deployment attestation remain open.
+
+## Thread-safe durable ledger — M10, package 3.61.16
+
+EventStore now serializes access to each SQLite connection across threads, and iteration holds the lock while streaming rows without copying the full ledger. Credential resolution and revocation serialize through the vault lock; distinct reads at one timestamp receive unique audit IDs. The concurrent append/hash-chain, same-timestamp audit, and resolve/revoke race regressions are included in the 62-test focused suite and the **1,306 passed, 26 skipped** full run above. Independent storage tamper review and operational backup/DR evidence remain open.
 - The final archive extraction test and exact inventory/hash comparison are recorded in the external sidecar `V429_ARCHIVE_VERIFICATION.json`.
 
 ## Compliance status
@@ -44,7 +52,7 @@ The V4.29 matrix contains 42 requirements: `TESTED=37`, `IMPLEMENTED=2`, `PARTIA
 
 ## Evidence boundary
 
-All new filesystem tests use local temporary directories and synthetic Ed25519 keys. No live GitHub repository was queried and no hosted GitHub Actions run was observed. Independent reviewer identity and trust-anchor ceremony remain unverified/not configured. This release verifies application behavior; it does not certify production readiness.
+All new filesystem tests use local temporary directories and synthetic Ed25519 keys. A live GitHub refresh was attempted but returned no repository data: `gh auth status` reports an invalid token for `Zenex-cpp`, and `git ls-remote` could not resolve `github.com`. No hosted Actions result for this local package revision was observed. Independent reviewer identity and trust-anchor ceremony remain unverified/not configured. This release verifies application behavior; it does not certify production readiness.
 
 `external_evidence=false`, `activation_flag=NOT_SET`, and `production_ready=false` remain unchanged.
 
