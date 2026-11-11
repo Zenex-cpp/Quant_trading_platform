@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "trading-platform"
-version = "3.61.14"
+version = "3.61.15"
 description = "Specification-first quantitative trading platform with mandatory Champion gate authority, causal TTL enforcement, dependency invalidation, final-holdout access control, and unified operational truth across governance, deployment, health, provenance, accounting, reconciliation, and risk"
 requires-python = ">=3.10"
 

@@ -32,6 +32,10 @@ This is a recovery extension built from the exact V4.28 recovery archive present
 Backtest/live trace comparison rejects empty traces, unsupported trace versions, mutable record sequences, invalid or repeated event offsets, non-chronological offsets and content hashes that do not bind the current trace payload. It compares complete per-offset record sequences, so duplicated offsets become mismatches instead of being overwritten by a dictionary. Focused decision, execution-parity, release-integrity and release-hygiene regressions passed **30 tests** on Windows/Python 3.14.7. The production inference adapter and independent M14 review remain unimplemented; this local result does not promote M14 beyond `TESTED` or change production readiness.
 
 The mandatory full V4.29 runner passed with **1,273 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`. Durable preflight `.audit/V429_M14_PARITY_PREFLIGHT_20261111.json` records `READY_FOR_MILESTONE`, `allowed=true`, no blocking reasons, pipeline PASS, and release-hygiene PASS. It retains `external_evidence=false`, `production_ready=false`, and `activation_flag=NOT_SET`.
+
+## Signed model artifact runtime — package 3.61.15
+
+The local Ed25519-signed JSON model loader validates signature and content hash before parsing a bounded, non-executable model manifest. Schema, version, runtime/dependency/configuration compatibility and prediction constraints are checked; a loaded model used by V3.75 must match the M14 grant's artifact ID and hash. Focused verification passed **76 tests**. The mandatory V4.29 runner passed with **1,291 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`; final preflight `.audit/V429_M15_FINAL3_PREFLIGHT_20261111.json` is `READY_FOR_MILESTONE`, `allowed=true`, no blockers, with M14/M15 included. Independent trust-root review and production deployment remain open.
 - The final archive extraction test and exact inventory/hash comparison are recorded in the external sidecar `V429_ARCHIVE_VERIFICATION.json`.
 
 ## Compliance status

@@ -136,6 +136,17 @@ def test_v429_m14_matrix_points_to_guarded_runtime_execution():
     assert '"M14"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")
 
 
+def test_v429_m15_matrix_points_to_signed_model_artifact_loading():
+    with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
+        m15 = next(row for row in csv.DictReader(stream) if row["machine_check_id"] == "M15")
+    assert m15["implementation_status"] == "TESTED"
+    assert "trading_platform/model/artifact_runtime.py" in m15["code_reference"]
+    assert "tests/test_model_artifact_runtime.py" in m15["test_reference"]
+    assert m15["evidence_reference"] == "V429_M15_REMEDIATION_REPORT.md"
+    assert "trust-root" in m15["unresolved_gap"]
+    assert '"M15"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")
+
+
 def test_v429_m9_matrix_points_to_research_credential_boundary():
     with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
         m9 = next(row for row in csv.DictReader(stream) if row["machine_check_id"] == "M9")

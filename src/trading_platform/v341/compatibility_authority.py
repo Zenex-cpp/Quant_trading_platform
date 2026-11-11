@@ -350,6 +350,20 @@ class CompatibilityGuardedArtifactExecutor:
         self.assert_valid(now=now)
         return executable(*args, **kwargs)
 
+    def execute_artifact(
+        self,
+        executable: Callable[..., Any],
+        *args: Any,
+        artifact_id: str,
+        artifact_hashes: Sequence[str],
+        now: datetime,
+        **kwargs: Any,
+    ) -> Any:
+        """Execute an artifact only when its identity matches the durable grant."""
+        if artifact_id != self._artifact_id or tuple(artifact_hashes) != self._artifact_hashes:
+            raise CompatibilityAuthorityInvalid("ARTIFACT_EXECUTABLE_BINDING_MISMATCH")
+        return self.execute(executable, *args, now=now, **kwargs)
+
     def assert_valid(self, *, now: datetime) -> CompatibilityAuthorization:
         report = self._report_provider()
         if not isinstance(report, CompatibilityReport):

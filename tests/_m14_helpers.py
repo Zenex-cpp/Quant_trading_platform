@@ -43,6 +43,8 @@ def authorize_runtime_executor(
     report_provider: Callable[[], CompatibilityReport] = compatible_report,
     authorization_id: str = "RUNTIME-COMPAT-1",
     expires_at: datetime | None = None,
+    artifact_id: str = "MODEL-ARTIFACT-1",
+    artifact_hashes: tuple[str, ...] = ("sha256:model-artifact-1",),
 ) -> CompatibilityGuardedArtifactExecutor:
     store = EventStore()
     dependencies = DependencyInvalidationLedger(store)
@@ -51,8 +53,8 @@ def authorize_runtime_executor(
     expires_at = expires_at or now + timedelta(hours=2)
     record, _ = ledger.authorize(
         authorization_id=authorization_id,
-        artifact_id="MODEL-ARTIFACT-1",
-        artifact_hashes=("sha256:model-artifact-1",),
+        artifact_id=artifact_id,
+        artifact_hashes=artifact_hashes,
         code_version="CODE-1",
         configuration_version="CONFIG-1",
         execution_model_version="PARITY-BASE",

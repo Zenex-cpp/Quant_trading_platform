@@ -28,7 +28,7 @@ EXPECTED_MILESTONE_ID = "V4.29-RECOVERY"
 EXPECTED_BASELINE_VERSION = "V4.28-RECOVERY"
 EXPECTED_MATRIX_PATH = "compliance_v429.csv"
 EXPECTED_BASELINE_HASH_PATH = "V428_BASELINE_ARCHIVE_SHA256.txt"
-EXPECTED_IMPACTED_IDS = ("CI-PREFLIGHT-01", "M1", "M2", "M3", "M4", "M5", "M7", "M9", "M14", "M25", "REPO-GOV-01", "REPO-GOV-02", "REPO-GOV-03", "REPO-GOV-CAPTURE-01", "REPO-GOV-SIGN-01", "REPO-GOV-PATH-01", "REPO-GOV-PATH-02", "REPO-GOV-PATH-03", "REPO-GOV-PATH-04")
+EXPECTED_IMPACTED_IDS = ("CI-PREFLIGHT-01", "M1", "M2", "M3", "M4", "M5", "M7", "M9", "M14", "M15", "M25", "REPO-GOV-01", "REPO-GOV-02", "REPO-GOV-03", "REPO-GOV-CAPTURE-01", "REPO-GOV-SIGN-01", "REPO-GOV-PATH-01", "REPO-GOV-PATH-02", "REPO-GOV-PATH-03", "REPO-GOV-PATH-04")
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 if str(ROOT / "src") not in sys.path:
@@ -62,6 +62,7 @@ CONTRACT_FILES = (
     "V429_M7_REMEDIATION_REPORT.md",
     "V429_M9_REMEDIATION_REPORT.md",
     "V429_M14_REMEDIATION_REPORT.md",
+    "V429_M15_REMEDIATION_REPORT.md",
     "V429_M25_PUBLIC_DATA_REPORT.md",
     "V429_DATASET_01_CSV_AUDIT_REPORT.md",
     "V390_M25_NETWORK_ISOLATION.md",
@@ -100,6 +101,8 @@ CONTRACT_FILES = (
     "src/trading_platform/v334/champion_authority.py",
     "src/trading_platform/v341/compatibility_authority.py",
     "src/trading_platform/v375/decision_parity.py",
+    "src/trading_platform/model/__init__.py",
+    "src/trading_platform/model/artifact_runtime.py",
     "src/trading_platform/v379/execution_parity.py",
     "src/trading_platform/v341/__init__.py",
     "src/trading_platform/v408/gate_promotion.py",
@@ -132,6 +135,8 @@ CONTRACT_FILES = (
     "tests/v429/test_workflow_contract_v429.py",
     "tests/v334_test_champion_authority.py",
     "tests/test_v341_m14_compatibility_authority.py",
+    "tests/test_model_artifact_runtime.py",
+    "tests/_m14_helpers.py",
     "tests/test_cli.py",
     "tests/test_binance_public_data_import.py",
     "tests/test_user_csv_audit.py",

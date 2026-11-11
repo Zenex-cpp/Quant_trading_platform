@@ -294,6 +294,26 @@ class LiveDecisionEngine:
             raise ParityInputError("RUNTIME_CLOCK_TIMEZONE_REQUIRED")
         return self._compatibility_executor.execute(executable, *args, now=now)
 
+    def _execute_prediction_stage(self, executable: Callable, *args: Any) -> Any:
+        """Bind signed model objects to the exact artifact named by M14 authority."""
+        contract = getattr(executable, "contract", None)
+        artifact_hash = getattr(executable, "artifact_hash", None)
+        if contract is None and artifact_hash is None:
+            return self._execute_stage(executable, *args)
+        artifact_id = getattr(contract, "model_id", None)
+        if not isinstance(artifact_id, str) or not isinstance(artifact_hash, str):
+            raise ParityInputError("RUNTIME_MODEL_ARTIFACT_BINDING_REQUIRED")
+        now = self._now_provider()
+        if not isinstance(now, datetime) or now.tzinfo is None:
+            raise ParityInputError("RUNTIME_CLOCK_TIMEZONE_REQUIRED")
+        return self._compatibility_executor.execute_artifact(
+            executable,
+            *args,
+            artifact_id=artifact_id,
+            artifact_hashes=(artifact_hash,),
+            now=now,
+        )
+
     def run(
         self,
         market_events: Sequence[MarketEvent],
@@ -313,7 +333,7 @@ class LiveDecisionEngine:
 
             feature = self._execute_stage(self._stages.feature_fn, event)
             regime = self._execute_stage(self._stages.regime_fn, event, feature)
-            prediction = self._execute_stage(self._stages.prediction_fn, event, feature, regime)
+            prediction = self._execute_prediction_stage(self._stages.prediction_fn, event, feature, regime)
             signal = self._execute_stage(self._stages.signal_fn, event, prediction)
             opportunity = self._execute_stage(self._stages.opportunity_fn, event, signal, regime)
             portfolio = self._execute_stage(self._stages.portfolio_fn, event, opportunity, position_quantity)
