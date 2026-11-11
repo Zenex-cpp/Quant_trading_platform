@@ -9,6 +9,7 @@ from trading_platform.v345.evidence_snapshot_authority import EvidenceSnapshotAu
 from trading_platform.v25.health import HealthAssessment, HealthState
 from trading_platform.v26.governance import *
 from trading_platform.promotion.contracts import ModelRole, OperationalMode, DeploymentState, PromotionBundle
+from tests.champion_gate_support import register_pass_gates
 
 def h(state=HealthState.HEALTHY, drift=False, reason="HEALTHY"): return HealthAssessment(state,True,drift,True,reason,"a1")
 def m(role=ModelRole.CHAMPION, mode=OperationalMode.LIVE, hs=HealthState.HEALTHY): return GovernedModel("m1","1",role,mode,DeploymentState.ACTIVE,hs,GovernanceStatus.ELIGIBLE,True,True,Decimal("100"))
@@ -17,7 +18,8 @@ NOW=datetime(2026,9,23,tzinfo=timezone.utc)
 def gate_ctx(candidate="m2"):
     store=EventStore()
     dep=DependencyInvalidationLedger(store)
-    auth,_=ChampionGateAuthorityLedger.authorize(authorization_id="CA1",model_id=candidate,model_version="1",candidate_id=candidate,required_gate_ids=("G1",),passed_gate_ids=("G1",),promotion_id="P1",valid_from=NOW,expires_at=NOW+timedelta(hours=1),reviewer="reviewer",recorded_at_ms=1,dependency_authority=dep,store=store)
+    register_pass_gates(store=store,dependency_authority=dep,gate_ids=("G1",),candidate_version="1",now=NOW,recorded_at_ms=1,run_prefix="V26")
+    auth,_=ChampionGateAuthorityLedger.authorize(authorization_id="CA1",model_id=candidate,model_version="1",candidate_id=candidate,required_gate_ids=("G1",),promotion_id="P1",now=NOW,valid_from=NOW,expires_at=NOW+timedelta(hours=1),reviewer="reviewer",recorded_at_ms=1,dependency_authority=dep,store=store)
     snap=build_snapshot("SNAP1",("EV1",),{"candidate":candidate},("G1",),("P1",candidate), ("1",), ("h",), ("METHOD",),("A1",),{"candidate":candidate})
     snapshot_auth,_=EvidenceSnapshotAuthorityLedger(store).authorize(snapshot=snap,promotion_id="P1",bundle_id="P1",model_version="1",valid_from=NOW,expires_at=NOW+timedelta(hours=1),reviewer="reviewer",recorded_at_ms=2,dependency_authority=dep)
     promo_bundle=PromotionBundle("P1","S","1","F","T","C","E","CODE","SNAP",("G1",),("h",),"A1",{"candidate":candidate},"RB","HASH",NOW)

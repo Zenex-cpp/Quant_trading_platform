@@ -24,7 +24,7 @@ EXPECTED_MILESTONE_ID = "V4.29-RECOVERY"
 EXPECTED_BASELINE_VERSION = "V4.28-RECOVERY"
 EXPECTED_MATRIX_PATH = "compliance_v429.csv"
 EXPECTED_BASELINE_HASH_PATH = "V428_BASELINE_ARCHIVE_SHA256.txt"
-EXPECTED_IMPACTED_IDS = ("CI-PREFLIGHT-01", "M1", "M2", "M3", "M4", "M5", "REPO-GOV-01", "REPO-GOV-02", "REPO-GOV-03", "REPO-GOV-CAPTURE-01", "REPO-GOV-SIGN-01", "REPO-GOV-PATH-01", "REPO-GOV-PATH-02", "REPO-GOV-PATH-03", "REPO-GOV-PATH-04")
+EXPECTED_IMPACTED_IDS = ("CI-PREFLIGHT-01", "M1", "M2", "M3", "M4", "M5", "M7", "REPO-GOV-01", "REPO-GOV-02", "REPO-GOV-03", "REPO-GOV-CAPTURE-01", "REPO-GOV-SIGN-01", "REPO-GOV-PATH-01", "REPO-GOV-PATH-02", "REPO-GOV-PATH-03", "REPO-GOV-PATH-04")
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 if str(ROOT / "src") not in sys.path:
@@ -55,6 +55,7 @@ CONTRACT_FILES = (
     "V429_M1_REMEDIATION_REPORT.md",
     "V429_M2_REMEDIATION_REPORT.md",
     "V429_M1_M5_TRANSPORT_REMEDIATION.md",
+    "V429_M7_REMEDIATION_REPORT.md",
     "V428_RECONSTRUCTION_NOTE.md",
     "V424_RECONSTRUCTION_NOTE.md",
     "V425_RECONSTRUCTION_NOTE.md",
@@ -78,6 +79,8 @@ CONTRACT_FILES = (
     "src/trading_platform/v429/__init__.py",
     "src/trading_platform/v429/external_file_safety.py",
     "src/trading_platform/v429/workflow_contract.py",
+    "src/trading_platform/v334/champion_authority.py",
+    "src/trading_platform/v408/gate_promotion.py",
     "src/trading_platform/v311/dispatch_guard.py",
     "src/trading_platform/v312/execution_runtime.py",
     "src/trading_platform/v36/user_execution.py",
@@ -101,6 +104,16 @@ CONTRACT_FILES = (
     "tests/v429/test_milestone_v429.py",
     "tests/v429/test_signer_hardening_v429.py",
     "tests/v429/test_workflow_contract_v429.py",
+    "tests/v334_test_champion_authority.py",
+    "tests/test_v344_m17_gate_reuse.py",
+    "tests/test_v345_m18_evidence_snapshot.py",
+    "tests/test_v346_m19_promotion_bundle.py",
+    "tests/v26/test_governance.py",
+    "tests/v27/test_governance_rollback.py",
+    "tests/v325/test_deployment_activation.py",
+    "tests/v398/test_critical_promotion.py",
+    "tests/v408/test_gate_promotion.py",
+    "tests/champion_gate_support.py",
     "tests/dispatch_support.py",
     "tests/v311/test_dispatch_guard.py",
     "tests/v312/test_execution_runtime.py",

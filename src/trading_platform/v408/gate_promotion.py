@@ -202,6 +202,8 @@ class GatePromotionAuthorizationLedgerV408:
             dependency_authority.assert_clear(dependencies)
             dependency_authority.assert_unchanged_since(auth.dependency_checkpoint, dependencies)
         except DependencyInvalidationBlocked as exc:
+            if "DEPENDENCY_INVALIDATION_AFTER_CHECKPOINT" in str(exc):
+                raise CriticalPromotionGateErrorV408("GATE_REUSE_REQUIRES_RERUN") from exc
             raise CriticalPromotionGateErrorV408("GATE_REUSE_BLOCKED_AFTER_INVALIDATION") from exc
         except DependencyInvalidationError as exc:
             raise CriticalPromotionGateErrorV408("GATE_REUSE_REQUIRES_RERUN") from exc

@@ -36,6 +36,7 @@ def validate_workflow_contract_v429(text: str) -> tuple[str, ...]:
         "WORKFLOW_M3_IMPACT_MISSING": "--impacted-requirement M3",
         "WORKFLOW_M4_IMPACT_MISSING": "--impacted-requirement M4",
         "WORKFLOW_M5_IMPACT_MISSING": "--impacted-requirement M5",
+        "WORKFLOW_M7_IMPACT_MISSING": "--impacted-requirement M7",
     }
     for reason, needle in required.items():
         if needle not in normalized:

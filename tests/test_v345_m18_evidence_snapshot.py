@@ -21,6 +21,7 @@ from trading_platform.v25.health import HealthState
 from tests._m18_helpers import authorize_evidence_snapshot, evidence_snapshot_for
 from tests._m19_helpers import authorize_promotion_bundle
 from tests.v329.test_dependency_authority import graph, evidence_index
+from tests.champion_gate_support import register_pass_gates
 
 NOW = datetime(2026, 9, 24, 10, 0, tzinfo=timezone.utc)
 
@@ -122,9 +123,13 @@ def test_snapshot_is_stale_after_invalidating_change_even_after_revalidation():
 def test_champion_registry_requires_evidence_snapshot():
     store = EventStore()
     dep = DependencyInvalidationLedger(store)
+    register_pass_gates(
+        store=store, dependency_authority=dep, gate_ids=("G1",),
+        candidate_version="1", now=NOW, recorded_at_ms=1, run_prefix="M18-MISSING-SNAPSHOT",
+    )
     gate, _ = ChampionGateAuthorityLedger.authorize(
         authorization_id="CA-M18", model_id="m2", model_version="1", candidate_id="m2",
-        required_gate_ids=("G1",), passed_gate_ids=("G1",), promotion_id="P1",
+        required_gate_ids=("G1",), promotion_id="P1", now=NOW,
         valid_from=NOW, expires_at=NOW + timedelta(hours=1), reviewer="reviewer", recorded_at_ms=1,
         dependency_authority=dep, store=store,
     )
@@ -143,9 +148,13 @@ def test_champion_registry_requires_evidence_snapshot():
 def test_champion_registry_accepts_bound_evidence_snapshot():
     store = EventStore()
     dep = DependencyInvalidationLedger(store)
+    register_pass_gates(
+        store=store, dependency_authority=dep, gate_ids=("G1",),
+        candidate_version="1", now=NOW, recorded_at_ms=1, run_prefix="M18-BOUND-SNAPSHOT",
+    )
     gate, _ = ChampionGateAuthorityLedger.authorize(
         authorization_id="CA-M18-2", model_id="m2", model_version="1", candidate_id="m2",
-        required_gate_ids=("G1",), passed_gate_ids=("G1",), promotion_id="P1",
+        required_gate_ids=("G1",), promotion_id="P1", now=NOW,
         valid_from=NOW, expires_at=NOW + timedelta(hours=1), reviewer="reviewer", recorded_at_ms=1,
         dependency_authority=dep, store=store,
     )
