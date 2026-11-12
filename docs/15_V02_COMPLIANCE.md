@@ -15,4 +15,4 @@ V0.2 closes these concrete gaps:
 - event schema registration;
 - evidence snapshot structure.
 
-Remaining blockers include durable transactional storage, full dependency graph propagation, venue reconciliation, final holdout access controls, failure injection and independent production review.
+Dependency invalidation now closes transitively across artifact nodes, evidence source/dependency references, gates, candidates and promotions in the registries supplied to each invalidation. Remaining blockers include production-wide registry completeness, signed evidence and independent review, venue reconciliation, final holdout operational proof, failure injection and production review.

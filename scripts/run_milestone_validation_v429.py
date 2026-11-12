@@ -28,7 +28,7 @@ EXPECTED_MILESTONE_ID = "V4.29-RECOVERY"
 EXPECTED_BASELINE_VERSION = "V4.28-RECOVERY"
 EXPECTED_MATRIX_PATH = "compliance_v429.csv"
 EXPECTED_BASELINE_HASH_PATH = "V428_BASELINE_ARCHIVE_SHA256.txt"
-EXPECTED_IMPACTED_IDS = ("CI-PREFLIGHT-01", "M1", "M2", "M3", "M4", "M5", "M7", "M9", "M10", "M14", "M15", "M21", "M22", "M23", "M24", "M25", "REPO-GOV-01", "REPO-GOV-02", "REPO-GOV-03", "REPO-GOV-CAPTURE-01", "REPO-GOV-SIGN-01", "REPO-GOV-PATH-01", "REPO-GOV-PATH-02", "REPO-GOV-PATH-03", "REPO-GOV-PATH-04")
+EXPECTED_IMPACTED_IDS = ("CI-PREFLIGHT-01", "M1", "M2", "M3", "M4", "M5", "M7", "M9", "M10", "M14", "M15", "M18", "M21", "M22", "M23", "M24", "M25", "REPO-GOV-01", "REPO-GOV-02", "REPO-GOV-03", "REPO-GOV-CAPTURE-01", "REPO-GOV-SIGN-01", "REPO-GOV-PATH-01", "REPO-GOV-PATH-02", "REPO-GOV-PATH-03", "REPO-GOV-PATH-04")
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 if str(ROOT / "src") not in sys.path:
@@ -64,6 +64,7 @@ CONTRACT_FILES = (
     "V429_M10_REMEDIATION_REPORT.md",
     "V429_M14_REMEDIATION_REPORT.md",
     "V429_M15_REMEDIATION_REPORT.md",
+    "V429_M18_REMEDIATION_REPORT.md",
     "V429_M21_REMEDIATION_REPORT.md",
     "V429_M22_REMEDIATION_REPORT.md",
     "V429_M23_REMEDIATION_REPORT.md",
@@ -83,7 +84,9 @@ CONTRACT_FILES = (
     "v04_calibration_registry.csv",
     "docs/19_V04_MODEL_TARGET_CALIBRATION.md",
     "docs/20_V04_COMPLIANCE.md",
+    "docs/15_V02_COMPLIANCE.md",
     "src/trading_platform/model/calibration.py",
+    "src/trading_platform/evidence/graph.py",
     "src/trading_platform/model/contracts.py",
     "src/trading_platform/v348/uncertainty_assessment.py",
     "src/trading_platform/v348/uncertainty_risk_authority.py",
@@ -94,6 +97,7 @@ CONTRACT_FILES = (
     "src/trading_platform/v318/durable_decision.py",
     "src/trading_platform/v311/dispatch_guard.py",
     "tests/test_v04_model.py",
+    "tests/test_v09.py",
     "tests/test_v348_m21_uncertainty_risk.py",
     "tests/_m21_calibration_helpers.py",
     "tests/test_model_artifact_runtime.py",

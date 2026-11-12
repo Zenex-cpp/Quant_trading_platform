@@ -22,11 +22,13 @@ This is a recovery extension built from the exact V4.28 recovery archive present
 
 ## Verification results
 
-- Latest local package `3.61.21` validation on Windows/Python 3.12: **1,337 passed, 26 skipped**, mandatory runner exit code `0`, `RELEASE_HYGIENE=PASS`.
-- `.audit/V429_M21_FINAL3_20261112.json`: `READY_FOR_MILESTONE`, `allowed=true`, `pipeline_status=PASS`, zero blockers, M21 in the impacted set, and **161 contract-input hashes** captured in the preflight.
+- Latest local package `3.61.22` validation on Windows/Python 3.12: **1,341 passed, 26 skipped**, mandatory runner exit code `0`, `RELEASE_HYGIENE=PASS`.
+- `.audit/V429_M18_FINAL_20261112.json`: `READY_FOR_MILESTONE`, `allowed=true`, `pipeline_status=PASS`, zero blockers, M18/M21 in the impacted set, and **165 contract-input hashes** captured in the preflight.
 - M21 remains `TESTED`. `external_evidence=false`, `production_ready=false`, and `activation_flag=NOT_SET`.
 
 M21's model manifest no longer sets runtime calibration state. A separately computed `CalibrationReport` is required to lift `UNKNOWN`; its fingerprint and source/sample metadata are bound to the assessment. This protects decision identity but is not a signature over upstream data or producer.
+
+M18 propagates invalidation to a fixed point across graph artifacts, evidence references, gates, candidates and promotions. The recorded revalidation targets are exact for the supplied registries; production-wide registry completeness remains unverified.
 
 Initial V4.29 baseline results:
 

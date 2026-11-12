@@ -235,6 +235,17 @@ def test_v429_m21_matrix_points_to_source_bound_uncertainty_and_calibration():
     assert '"M21"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")
 
 
+def test_v429_m18_matrix_points_to_transitive_evidence_invalidation():
+    with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
+        m18 = next(row for row in csv.DictReader(stream) if row["machine_check_id"] == "M18")
+    assert m18["implementation_status"] == "TESTED"
+    assert "trading_platform/evidence/graph.py" in m18["code_reference"]
+    assert "test_v09.py" in m18["test_reference"]
+    assert m18["evidence_reference"] == "V429_M18_REMEDIATION_REPORT.md"
+    assert "independent review" in m18["unresolved_gap"].lower()
+    assert '"M18"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")
+
+
 def test_v429_m25_matrix_points_to_isolated_public_archive_downloader():
     with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
         m25 = next(row for row in csv.DictReader(stream) if row["machine_check_id"] == "M25")

@@ -19,6 +19,7 @@
 - M25 now has an application-level public archive zone and a bounded, checksummed, immutable USD-M kline importer. Research still has no egress; the importer requires explicit acknowledgement for non-commercial historical research. The current public-data terms exclude live proprietary/commercial use, so this source cannot be used for the intended live trading path.
 - DATASET-01 has a bounded local-only CSV audit and paired-source comparison command. The user/vendor CSVs themselves are absent from the checkout, so no real dataset has been audited or compared; source independence, source-license assessment, actual anomaly review, and definitive-use authority remain open.
 - M23 derives dynamic drawdown from a hash-chained accounting-equity history with an explicit opening snapshot and history-evidence ID. The source fingerprint is carried through runtime authority, execution capability, and durable risk-decision validation; raw scalar drawdown inputs fail closed at the risk boundary. Synthetic initialization flags do not authenticate the historical source, so independent history attestation and production accounting integration remain open. See `V429_M23_REMEDIATION_REPORT.md`.
+- M18 now computes transitive invalidation over registered graph/evidence/gate/candidate/promotion references and records exact revalidation IDs. Production registry completeness, signed evidence, independent review and deployment-wide impact evidence remain open; see `V429_M18_REMEDIATION_REPORT.md`.
 
 ## Still open
 
