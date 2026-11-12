@@ -1,7 +1,7 @@
 # Quant Trading Platform
 
 **Repository release train:** `V4.29-RECOVERY`  
-**Python distribution version:** `3.61.30` (a separate versioning scheme).
+**Python distribution version:** `3.61.31` (a separate versioning scheme).
 
 The current repository is a recovery extension based on the available V4.28 recovery archive. Byte-for-byte canonical lineage to V4.23 and V4.26 is **not established** because those source archives are not available in the project.
 
@@ -87,6 +87,7 @@ The comparison can report agreement or divergence but cannot prove the sources a
 - [V5.0 Model Card and Strategy Card Templates](docs/61_V5_MODEL_AND_STRATEGY_CARDS.md)
 - [V5.0 Safety and Incident Matrices](docs/62_V5_SAFETY_AND_INCIDENT_MATRICES.md)
 - [V5.0 Research Registries](docs/63_V5_RESEARCH_REGISTRIES.md)
+- [V5.0 Permission Model](docs/64_V5_PERMISSION_MODEL.md)
 - [`MASTER PROMPT.txt`](MASTER%20PROMPT.txt) is the normative system specification.
 - [`V429_VERIFICATION_REPORT.md`](V429_VERIFICATION_REPORT.md) records the recovery build and verification boundary.
 - [`V429_OPEN_GAPS_DELTA.md`](V429_OPEN_GAPS_DELTA.md) lists unresolved external and operational gates.
@@ -108,7 +109,7 @@ The 3.61.4 safety patch restricts the legacy Testnet evidence session and runner
 
 ## V5.0 first-delivery work
 
-Version 3.61.29 added the prompt §179 traceability register, the immutable machine-readable Strategy Card template, and safety/research registries. The register audits all 55 required artifacts and marks incomplete specifications as PARTIAL or OPEN. Version 3.61.30 binds state-transition idempotency keys to the full transition specification and rejects conflicting reuse. It does not claim production readiness or external verification.
+Version 3.61.29 added the prompt §179 traceability register, the immutable machine-readable Strategy Card template, and safety/research registries. Version 3.61.30 binds state-transition idempotency keys to the full transition specification and rejects conflicting reuse. Version 3.61.31 makes §155 role/capability checks fail closed, publishes and tests the full 9 × 9 matrix, and separates credential configuration from production-trading access. FD-44 remains partial because resource-wide entitlement and trusted identity assignment are not present. These changes do not claim production readiness or external verification.
 
 The final local V4.29 runner passed with 1,363 tests passed, 26 skipped, and release hygiene PASS. The preflight remains offline: external evidence is false, production readiness is false, and activation is not set.
 

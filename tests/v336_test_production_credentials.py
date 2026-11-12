@@ -41,6 +41,27 @@ def test_research_cannot_register_or_revoke_production_credentials():
         vault.register(credential_id="p", version="v1", api_key="K", api_secret=b"S", valid_from_ms=1, actor_role="RESEARCH")
 
 
+def test_production_trading_cannot_manage_credential_configuration():
+    _, vault, ref = vault_and_ref()
+    with pytest.raises(ProductionCredentialAccessError, match="RESEARCH_FORBIDDEN"):
+        vault.register(
+            credential_id="other",
+            version="v1",
+            api_key="K",
+            api_secret=b"S",
+            valid_from_ms=1,
+            actor_role="PRODUCTION_TRADING",
+        )
+    with pytest.raises(ProductionCredentialAccessError, match="RESEARCH_FORBIDDEN"):
+        vault.revoke(
+            credential_id=ref.credential_id,
+            version=ref.version,
+            now_ms=20,
+            actor_role="PRODUCTION_TRADING",
+        )
+    assert vault.metadata(ref).status is CredentialStatus.ACTIVE
+
+
 def test_research_cannot_resolve_production_credentials():
     store, vault, ref = vault_and_ref()
     with pytest.raises(ProductionCredentialAccessError, match="RESEARCH_FORBIDDEN"):
@@ -138,7 +159,7 @@ def test_expired_and_revoked_credentials_fail_closed():
     with pytest.raises(ProductionCredentialAccessError, match="EXPIRED"):
         vault.resolve(ref, actor_role="PRODUCTION_TRADING", now_ms=110)
     _, vault, ref = vault_and_ref()
-    vault.revoke(credential_id=ref.credential_id, version=ref.version, now_ms=20, actor_role="PRODUCTION_TRADING")
+    vault.revoke(credential_id=ref.credential_id, version=ref.version, now_ms=20, actor_role="SECURITY_ADMIN")
     assert vault.metadata(ref).status is CredentialStatus.REVOKED
     with pytest.raises(ProductionCredentialAccessError, match="REVOKED"):
         vault.resolve(ref, actor_role="PRODUCTION_TRADING", now_ms=21)
@@ -194,7 +215,7 @@ def test_metadata_and_revocation_replay_from_durable_ledger(tmp_path):
         credential_id=ref.credential_id,
         version=ref.version,
         now_ms=21,
-        actor_role="PRODUCTION_TRADING",
+        actor_role="SECURITY_ADMIN",
     )
     reopened_store.close()
 
@@ -275,7 +296,7 @@ def test_revocation_serializes_after_in_flight_credential_resolution():
                 credential_id=ref.credential_id,
                 version=ref.version,
                 now_ms=21,
-                actor_role="PRODUCTION_TRADING",
+                actor_role="SECURITY_ADMIN",
             )
         except Exception as exc:  # surfaced in the main test thread below
             errors.append(exc)

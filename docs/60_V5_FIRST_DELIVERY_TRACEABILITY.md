@@ -14,7 +14,7 @@ These statuses describe repository artifacts. They do not certify external revie
 
 The audit contains exactly 55 unique §179 entries. Counts are checked by tests/test_v5_first_delivery_traceability.py and the manifest plus register are hashed by the V4.29 milestone runner.
 
-The first audit found concrete documentary gaps in the error taxonomy, fail-safe and precedence matrices, incident severity matrix, and research registries. Those artifacts have now been added and are marked PRESENT. The remaining PARTIAL entries include state-transition tables; safety monotonicity; event payload schemas; source-of-truth, risk-state, causal-dependency, and gate-dependency matrices; a full risk reservation flow; decision TTL policy; a complete statistical method inventory; consolidated threat and permission models; and unified recovery/restart and disaster-recovery plans.
+The first audit found concrete documentary gaps in the error taxonomy, fail-safe and precedence matrices, incident severity matrix, and research registries. Those artifacts have now been added and are marked PRESENT. The remaining PARTIAL entries include state-transition tables; safety monotonicity; event payload schemas; source-of-truth, risk-state, causal-dependency, and gate-dependency matrices; a full risk reservation flow; decision TTL policy; a complete statistical method inventory; consolidated threat model; a permission model with resource-wide entitlements and trusted identity assignment; and unified recovery/restart and disaster-recovery plans.
 
 Current register status: 39 PRESENT, 16 PARTIAL, and 0 OPEN. PRESENT records artifact coverage only; the research registries are SPECIFICATION_ONLY and no empirical performance threshold is approved.
 

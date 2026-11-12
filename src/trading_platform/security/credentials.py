@@ -273,7 +273,7 @@ class ProductionCredentialVault:
             )
 
     def revoke(self, *, credential_id: str, version: str, now_ms: int, actor_role: str) -> None:
-        role = self._assert_authorized(actor_role)
+        role = self._assert_management_access(actor_role)
         if not isinstance(now_ms, int) or isinstance(now_ms, bool) or now_ms < 0:
             raise ValueError("PRODUCTION_CREDENTIAL_REVOCATION_TIME_INVALID")
         key = (credential_id, version)
@@ -366,16 +366,9 @@ class ProductionCredentialVault:
 
     def _assert_management_access(self, actor_role: str) -> str:
         role = self._normalized_role(actor_role)
-        if role not in {Capability.SECURITY_ADMIN.value, Capability.PRODUCTION_TRADING.value}:
+        if role not in {Capability.SECURITY_ADMIN.value, Capability.CONFIGURATION.value}:
             raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_RESEARCH_FORBIDDEN")
         assert_capability(role, Capability.CONFIGURATION)
-        return role
-
-    def _assert_authorized(self, actor_role: str) -> str:
-        role = self._normalized_role(actor_role)
-        if role != Capability.PRODUCTION_TRADING.value:
-            raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_RESEARCH_FORBIDDEN")
-        assert_capability(role, Capability.PRODUCTION_TRADING)
         return role
 
     def __audit_deny(self, ref: ProductionCredentialRef, actor_role: str, now_ms: int, reason: str) -> None:
@@ -420,7 +413,8 @@ class ProductionCredentialVault:
                     role = payload.get("actor_role", "UNKNOWN")
                     if role != "UNKNOWN" and role not in {
                         Capability.SECURITY_ADMIN.value,
-                        Capability.PRODUCTION_TRADING.value,
+                        Capability.CONFIGURATION.value,
+                        Capability.PRODUCTION_TRADING.value,  # accepted for legacy ledgers
                     }:
                         raise ValueError
                     status = CredentialStatus(payload["status"])
@@ -449,7 +443,11 @@ class ProductionCredentialVault:
                     credential_id = payload["credential_id"]
                     version = payload["version"]
                     role = payload["actor_role"]
-                    if event.aggregate_id != credential_id or role != Capability.PRODUCTION_TRADING.value:
+                    if event.aggregate_id != credential_id or role not in {
+                        Capability.CONFIGURATION.value,
+                        Capability.SECURITY_ADMIN.value,
+                        Capability.PRODUCTION_TRADING.value,  # accepted for legacy ledgers
+                    }:
                         raise ValueError
                     key = (credential_id, version)
                     prior = records[key]
