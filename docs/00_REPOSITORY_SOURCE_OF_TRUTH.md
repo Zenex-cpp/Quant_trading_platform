@@ -6,6 +6,8 @@ The canonical runtime Python package is:
 
 `src/trading_platform/`
 
+The full directory and file-family map is maintained in `docs/66_V5_REPOSITORY_STRUCTURE.md` and `schemas/v5_repository_structure.csv`.
+
 The repository now uses an explicit `src/` layout. The package-discovery configuration in `pyproject.toml` and the pytest import path both point to `src/`. The release wheel and installed package are built from this tree.
 
 ## Completed migration

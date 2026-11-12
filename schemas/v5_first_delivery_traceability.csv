@@ -1,6 +1,6 @@
 item_id,deliverable,status,primary_reference,implementation_reference,remaining_gap
 FD-01,System Architecture,PRESENT,docs/01_ARCHITECTURE.md,,
-FD-02,Repository Structure,PARTIAL,docs/00_REPOSITORY_SOURCE_OF_TRUTH.md,,Repository source layout is documented but the full repository map is not.
+FD-02,Repository Structure,PRESENT,docs/66_V5_REPOSITORY_STRUCTURE.md;schemas/v5_repository_structure.csv,tests/test_v5_repository_structure.py,
 FD-03,State Orthogonality Model,PRESENT,docs/02_STATE_MODEL.md,,
 FD-04,State Compatibility Matrix,PRESENT,schemas/state_compatibility_matrix.csv,src/trading_platform/state/compatibility.py,
 FD-05,State/Action Matrix,PRESENT,docs/14_STATE_ACTION_CONTRACT.md;schemas/state_action_matrix.csv,src/trading_platform/state/actions.py,
