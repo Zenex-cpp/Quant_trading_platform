@@ -6,7 +6,7 @@ bytes; callers must supply the public key from their configured trust policy.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from hashlib import sha256
 import json
@@ -67,7 +67,10 @@ def _reject_nonstandard_json(value: str) -> None:
 def _finite_number(value: Any, field: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float, Decimal)):
         raise ModelArtifactLoadError(f"MODEL_ARTIFACT_{field}_NUMBER_REQUIRED")
-    result = float(value)
+    try:
+        result = float(value)
+    except OverflowError as exc:
+        raise ModelArtifactLoadError(f"MODEL_ARTIFACT_{field}_FINITE_REQUIRED") from exc
     if not math.isfinite(result):
         raise ModelArtifactLoadError(f"MODEL_ARTIFACT_{field}_FINITE_REQUIRED")
     return result
@@ -105,6 +108,16 @@ class SignedLinearModelV1:
     calibration_state: str
     prediction_ttl_seconds: int
     artifact_hash: str
+    _signature_verified: bool = field(default=False, init=False, repr=False, compare=False)
+
+    @property
+    def signature_verified(self) -> bool:
+        """Whether this instance came from the signature-checking loader."""
+        return self._signature_verified
+
+    def _require_signature_verification(self) -> None:
+        if not self._signature_verified:
+            raise ModelArtifactLoadError("MODEL_ARTIFACT_SIGNATURE_VERIFICATION_REQUIRED")
 
     def _feature_vector(self, features: Mapping[str, Any]) -> tuple[float, ...]:
         if not isinstance(features, Mapping):
@@ -120,6 +133,7 @@ class SignedLinearModelV1:
         *,
         timestamp: datetime,
     ) -> Prediction:
+        self._require_signature_verification()
         if not isinstance(timestamp, datetime) or timestamp.tzinfo is None:
             raise ModelArtifactLoadError("MODEL_PREDICTION_TIMEZONE_REQUIRED")
         vector = self._feature_vector(features)
@@ -295,7 +309,7 @@ def load_signed_linear_model_v1(
     ):
         raise ModelArtifactLoadError("MODEL_ARTIFACT_PREDICTION_TTL_INVALID")
 
-    return SignedLinearModelV1(
+    model = SignedLinearModelV1(
         contract=contract,
         target_version=target_version,
         coefficients=coefficients,
@@ -305,3 +319,5 @@ def load_signed_linear_model_v1(
         prediction_ttl_seconds=ttl,
         artifact_hash=artifact_hash,
     )
+    object.__setattr__(model, "_signature_verified", True)
+    return model

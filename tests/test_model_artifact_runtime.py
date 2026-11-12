@@ -20,6 +20,7 @@ from trading_platform.v373.backtest_engine import BacktestStageFunctions, Market
 from trading_platform.v341.compatibility_authority import CompatibilityAuthorityInvalid
 from trading_platform.v375.decision_parity import (
     LiveDecisionEngine,
+    ParityInputError,
     capture_backtest_decision_trace,
     compare_decision_traces,
 )
@@ -123,6 +124,27 @@ def test_signed_linear_artifact_loads_and_predicts_deterministically():
     assert model.artifact_hash == model.contract.artifact_hash
 
 
+def test_direct_or_copied_model_instances_cannot_bypass_signature_verification():
+    loaded = _load()
+    forged = SignedLinearModelV1(
+        contract=loaded.contract,
+        target_version=loaded.target_version,
+        coefficients=(1000.0, 10.0),
+        intercept=10.0,
+        uncertainty=loaded.uncertainty,
+        calibration_state=loaded.calibration_state,
+        prediction_ttl_seconds=loaded.prediction_ttl_seconds,
+        artifact_hash=loaded.artifact_hash,
+    )
+    copied = replace(loaded, intercept=10.0)
+
+    assert loaded.signature_verified is True
+    for unverified in (forged, copied):
+        assert unverified.signature_verified is False
+        with pytest.raises(ModelArtifactLoadError, match="MODEL_ARTIFACT_SIGNATURE_VERIFICATION_REQUIRED"):
+            unverified.predict({"close": 100, "volume": 10}, timestamp=NOW)
+
+
 def test_signature_and_hash_are_checked_before_model_data_is_loaded():
     raw, signature, public_key, contract = _signed_artifact()
     with pytest.raises(ModelArtifactLoadError, match="MODEL_ARTIFACT_SIGNATURE_INVALID"):
@@ -220,6 +242,7 @@ def test_untrusted_key_malformed_json_and_oversized_artifact_fail_closed():
         ({"target_version": "TARGET-V2"}, "MODEL_ARTIFACT_TARGET_VERSION_MISMATCH"),
         ({"coefficients": {"close": 0.5}}, "MODEL_ARTIFACT_COEFFICIENT_SCHEMA_MISMATCH"),
         ({"coefficients": {"close": float("nan"), "volume": 0.1}}, "MODEL_ARTIFACT_NONFINITE_JSON_NUMBER"),
+        ({"intercept": 10 ** 400}, "MODEL_ARTIFACT_INTERCEPT_FINITE_REQUIRED"),
         ({"prediction_ttl_seconds": 0}, "MODEL_ARTIFACT_PREDICTION_TTL_INVALID"),
         ({"prediction_ttl_seconds": 700000}, "MODEL_ARTIFACT_PREDICTION_TTL_INVALID"),
         ({"uncertainty": 1.1}, "MODEL_ARTIFACT_UNCERTAINTY_INVALID"),
@@ -338,3 +361,51 @@ def test_m14_grant_must_bind_the_loaded_model_id_and_hash():
 
     with pytest.raises(CompatibilityAuthorityInvalid, match="ARTIFACT_EXECUTABLE_BINDING_MISMATCH"):
         engine.run((event,), (Decimal("0"),))
+
+
+def test_m14_rejects_model_object_with_matching_hash_but_no_verified_signature():
+    model = replace(_load(), intercept=10.0)
+    event = MarketEvent(
+        event_offset=0,
+        event_time=NOW,
+        symbol="BTCUSDT",
+        open=Decimal("100"),
+        high=Decimal("100"),
+        low=Decimal("100"),
+        close=Decimal("100"),
+        volume=Decimal("10"),
+    )
+    stages = BacktestStageFunctions(
+        feature_fn=lambda current: {"close": current.close, "volume": current.volume},
+        regime_fn=lambda current, feature: "TREND",
+        prediction_fn=model,
+        signal_fn=lambda current, prediction: True,
+        opportunity_fn=lambda current, signal, regime: {},
+        portfolio_fn=lambda current, opportunity, quantity: {},
+        risk_fn=lambda current, decision, quantity: {},
+        intent_fn=lambda current, risk: None,
+    )
+    engine = LiveDecisionEngine(
+        stages,
+        compatibility_executor=authorize_runtime_executor(
+            NOW,
+            artifact_id=model.contract.model_id,
+            artifact_hashes=(model.artifact_hash,),
+        ),
+        now_provider=lambda: NOW,
+    )
+
+    with pytest.raises(ParityInputError, match="RUNTIME_MODEL_SIGNATURE_VERIFICATION_REQUIRED"):
+        engine.run((event,), (Decimal("0"),))
+
+    spoofed = type(
+        "SpoofedSignedModel",
+        (),
+        {
+            "contract": model.contract,
+            "artifact_hash": model.artifact_hash,
+            "signature_verified": True,
+        },
+    )()
+    with pytest.raises(ParityInputError, match="RUNTIME_MODEL_SIGNATURE_VERIFICATION_REQUIRED"):
+        engine._execute_prediction_stage(spoofed, event, {}, "TREND")

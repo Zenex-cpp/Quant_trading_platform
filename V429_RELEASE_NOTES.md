@@ -2,6 +2,8 @@
 
 ## Summary
 
+Python package **3.61.27** closes a local M14 signature-verification bypass. `SignedLinearModelV1` prediction requires an instance created by the Ed25519-checking loader; direct construction, dataclass copies and duck-typed objects claiming verification are rejected before the V3.75 prediction call. Oversized numeric conversion fails with a bounded model error. The focused M14/model/parity/release regression passed **53 tests**; the mandatory V4.29 runner passed with **1,353 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`. `.audit/V428_MILESTONE_PREFLIGHT.json` records `READY_FOR_MILESTONE`, `allowed=true`, zero blockers and 170 input hashes. M14 remains `TESTED`; production key distribution, inference service, independent review and deployment remain open.
+
 V4.29 hardens the independent Ed25519 signer against symlinked ancestor paths, input-file replacement during reads, unbounded external evidence inputs, and accidental overwrite of a pre-existing signed output. It also creates a V4.29-specific mandatory milestone runner and CI workflow contract.
 
 Python package 3.61.22 closes an M18 transitive invalidation gap: affected evidence now propagates through its source/dependency references and then through gates, candidates and promotions. Durable records enumerate exact revalidation targets. The V4.29 runner and CI include M18. Production-wide registry completeness and independent review remain open.

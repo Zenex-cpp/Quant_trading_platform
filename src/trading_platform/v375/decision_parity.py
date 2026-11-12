@@ -300,6 +300,10 @@ class LiveDecisionEngine:
         artifact_hash = getattr(executable, "artifact_hash", None)
         if contract is None and artifact_hash is None:
             return self._execute_stage(executable, *args)
+        from trading_platform.model.artifact_runtime import SignedLinearModelV1
+
+        if type(executable) is not SignedLinearModelV1 or executable.signature_verified is not True:
+            raise ParityInputError("RUNTIME_MODEL_SIGNATURE_VERIFICATION_REQUIRED")
         artifact_id = getattr(contract, "model_id", None)
         if not isinstance(artifact_id, str) or not isinstance(artifact_hash, str):
             raise ParityInputError("RUNTIME_MODEL_ARTIFACT_BINDING_REQUIRED")

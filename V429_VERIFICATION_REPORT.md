@@ -22,7 +22,9 @@ This is a recovery extension built from the exact V4.28 recovery archive present
 
 ## Verification results
 
-- Latest local package 3.61.26 validation on Windows/Python 3.14.7: **1,350 passed, 26 skipped**, mandatory runner exit code 0, RELEASE_HYGIENE=PASS.
+- Latest local package 3.61.27 validation on Windows/Python 3.14.7: **1,353 passed, 26 skipped**, mandatory runner exit code 0, RELEASE_HYGIENE=PASS.
+- Focused M14/model/parity/release regression: **53 passed**. A loaded model is the only accepted signed-model runtime object; direct construction, dataclass copies and duck-typed metadata fail before prediction, and oversized numeric conversion returns a bounded model error.
+- `.audit/V428_MILESTONE_PREFLIGHT.json`: `READY_FOR_MILESTONE`, `allowed=true`, `pipeline_status=PASS`, `release_hygiene=PASS`, zero blockers and **170 contract-input hashes**.
 - Focused Python 3.10 syntax/M21/release-integrity/hygiene coverage: **28 passed**. The syntax test checks every src/ and scripts/ Python file with the minimum-version grammar plus a same-quote f-string regression.
 - `.audit/V429_PY310_COMPAT_FINAL_20261112.json`: `READY_FOR_MILESTONE`, `allowed=true`, `pipeline_status=PASS`, zero blockers, and **170 contract-input hashes** including the new compatibility test.
 - The previous package 3.61.25 result remains recorded in .audit/V429_CLI_CACHE_FINAL_20261112.json: **1,348 passed, 26 skipped**, RELEASE_HYGIENE=PASS, with 169 contract-input hashes.
@@ -35,6 +37,8 @@ M18 propagates invalidation to a fixed point across graph artifacts, evidence re
 M25's V391 application policy now allows exact configured hosts only over HTTPS/WSS on the default TLS port and rejects URL userinfo, malformed ports, invalid zones and non-string endpoints. The application policy is not proof of host/VPC/container enforcement, DNS integrity or actual route separation; M25 remains `TESTED`.
 
 M11's final submit now requires its side-effect journal to use a file-backed SQLite EventStore before a new transport call. The runtime accepts a durable dispatch-attempt ledger; when persistent storage is omitted, it blocks before gateway invocation. This closes the local restart/re-entry path but does not authenticate venue-side idempotency or prove live exactly-once behavior.
+
+M14 now rejects a signed-model object unless it is the exact runtime type returned by the Ed25519-checking loader and carries the loader's verification state. This blocks ordinary constructor, copy and duck-typing bypasses at the live prediction seam. It does not establish a trusted production key source or service deployment; M14 remains `TESTED`.
 
 The source-checkout `scripts/run_offline_acceptance.py` launcher disables bytecode before importing the platform. Its subprocess regression unsets `PYTHONDONTWRITEBYTECODE`, runs an isolated copy of the source tree, verifies the §178 acceptance payload passes, and confirms no cache directories were written. This keeps a normal offline acceptance run from making the next release-hygiene check fail.
 

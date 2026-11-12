@@ -14,6 +14,7 @@ Deployment activation already required a durable compatibility authorization, bu
 - Added M14 to the fixed V4.29 preflight impact set and CI workflow contract.
 - Hardened backtest/live decision-trace comparison: only the supported trace version and non-empty immutable traces with unique ordered offsets and a valid content hash can pass. Comparison preserves duplicate rows when checking event parity and returns explicit validation errors for malformed or tampered traces.
 - Added a bounded signed-model runtime seam: prediction-stage model objects expose their artifact ID and content hash, and the M14 executor requires those values to match the durable authorization before calling the model.
+- Closed the local constructor bypass: only instances returned by the Ed25519-checking loader are marked signature-verified; direct construction and ordinary dataclass copies cannot predict, and the V3.75 M14 boundary rejects an unverified model before invoking it. Numeric conversion overflow in signed coefficients and runtime features also fails with a bounded model error.
 
 ## Verification boundary
 
@@ -21,4 +22,4 @@ V3.75 remains a decision-only live/shadow runner and does not submit orders. The
 
 M14 remains `TESTED`, not `VERIFIED`. Tests use synthetic compatibility reports and local durable event stores. No Testnet/Production order or deployment was activated. `external_evidence=false`, `production_ready=false`, and `activation_flag=NOT_SET` remain in force.
 
-The earlier M14-focused Windows/Python 3.14.7 compatibility, live/shadow, invalidation and release-contract regressions passed **65 tests**. Package 3.61.15 additionally covers signed-model binding; the latest 76-test focused and 1,291-test full results are recorded in `V429_M15_REMEDIATION_REPORT.md`.
+The focused M14/model/parity/release regression passed **53 tests** on Windows/Python 3.14.7. The full V4.29 runner on package 3.61.27 passed **1,353 tests, 26 skipped**, with `RELEASE_HYGIENE=PASS`; `.audit/V428_MILESTONE_PREFLIGHT.json` records `READY_FOR_MILESTONE`, `allowed=true`, pipeline PASS, zero blockers and **170 input hashes**. The signed model remains a local format: trusted-key distribution, production inference service, independent review and deployment integration remain open.
