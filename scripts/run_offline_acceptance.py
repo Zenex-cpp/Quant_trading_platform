@@ -5,6 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 import sys
 
+# This source-checkout entrypoint must not leave bytecode in the repository;
+# the mandatory release-hygiene check rejects generated cache directories.
+sys.dont_write_bytecode = True
+
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "src"
 if str(SOURCE) not in sys.path:

@@ -22,8 +22,8 @@ This is a recovery extension built from the exact V4.28 recovery archive present
 
 ## Verification results
 
-- Latest local package `3.61.24` validation on Windows/Python 3.14.7: **1,347 passed, 26 skipped**, mandatory runner exit code `0`, `RELEASE_HYGIENE=PASS`.
-- `.audit/V429_M11_DURABLE_RECHECK_20261112.json`: `READY_FOR_MILESTONE`, `allowed=true`, `pipeline_status=PASS`, zero blockers, M10/M11/M18/M21/M25 in the impacted set, and **169 contract-input hashes** captured in the preflight.
+- Latest local package `3.61.25` validation on Windows/Python 3.14.7: **1,348 passed, 26 skipped**, mandatory runner exit code `0`, `RELEASE_HYGIENE=PASS`.
+- `.audit/V429_CLI_CACHE_FINAL_20261112.json`: `READY_FOR_MILESTONE`, `allowed=true`, `pipeline_status=PASS`, zero blockers, M10/M11/M18/M21/M25 in the impacted set, and **169 contract-input hashes** captured in the preflight.
 - M10, M11, M18, M21 and M25 remain `TESTED`. `external_evidence=false`, `production_ready=false`, and `activation_flag=NOT_SET`.
 
 M21's model manifest no longer sets runtime calibration state. A separately computed `CalibrationReport` is required to lift `UNKNOWN`; its fingerprint and source/sample metadata are bound to the assessment. This protects decision identity but is not a signature over upstream data or producer.
@@ -33,6 +33,8 @@ M18 propagates invalidation to a fixed point across graph artifacts, evidence re
 M25's V391 application policy now allows exact configured hosts only over HTTPS/WSS on the default TLS port and rejects URL userinfo, malformed ports, invalid zones and non-string endpoints. The application policy is not proof of host/VPC/container enforcement, DNS integrity or actual route separation; M25 remains `TESTED`.
 
 M11's final submit now requires its side-effect journal to use a file-backed SQLite EventStore before a new transport call. The runtime accepts a durable dispatch-attempt ledger; when persistent storage is omitted, it blocks before gateway invocation. This closes the local restart/re-entry path but does not authenticate venue-side idempotency or prove live exactly-once behavior.
+
+The source-checkout `scripts/run_offline_acceptance.py` launcher disables bytecode before importing the platform. Its subprocess regression unsets `PYTHONDONTWRITEBYTECODE`, runs an isolated copy of the source tree, verifies the §178 acceptance payload passes, and confirms no cache directories were written. This keeps a normal offline acceptance run from making the next release-hygiene check fail.
 
 Initial V4.29 baseline results:
 
