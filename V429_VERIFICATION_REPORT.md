@@ -22,8 +22,10 @@ This is a recovery extension built from the exact V4.28 recovery archive present
 
 ## Verification results
 
-- Latest local package `3.61.25` validation on Windows/Python 3.14.7: **1,348 passed, 26 skipped**, mandatory runner exit code `0`, `RELEASE_HYGIENE=PASS`.
-- `.audit/V429_CLI_CACHE_FINAL_20261112.json`: `READY_FOR_MILESTONE`, `allowed=true`, `pipeline_status=PASS`, zero blockers, M10/M11/M18/M21/M25 in the impacted set, and **169 contract-input hashes** captured in the preflight.
+- Latest local package `3.61.26` validation on Windows/Python 3.14.7: **1,349 passed, 26 skipped**, mandatory runner exit code `0`, `RELEASE_HYGIENE=PASS`.
+- Focused Python 3.10 syntax/M21/release-integrity/hygiene coverage: **27 passed**. The syntax test parses every `src/` and `scripts/` Python file with Python 3.10 grammar.
+- `.audit/V429_PY310_COMPAT_FINAL_20261112.json`: `READY_FOR_MILESTONE`, `allowed=true`, `pipeline_status=PASS`, zero blockers, and **170 contract-input hashes** including the new compatibility test.
+- The previous package `3.61.25` result remains recorded in `.audit/V429_CLI_CACHE_FINAL_20261112.json`: **1,348 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`, with 169 contract-input hashes.
 - M10, M11, M18, M21 and M25 remain `TESTED`. `external_evidence=false`, `production_ready=false`, and `activation_flag=NOT_SET`.
 
 M21's model manifest no longer sets runtime calibration state. A separately computed `CalibrationReport` is required to lift `UNKNOWN`; its fingerprint and source/sample metadata are bound to the assessment. This protects decision identity but is not a signature over upstream data or producer.

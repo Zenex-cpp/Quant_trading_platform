@@ -209,6 +209,7 @@ CONTRACT_FILES = (
     "tests/v387/test_first_testnet_order.py",
     "tests/test_v362_release_integrity.py",
     "tests/test_v365_release_hygiene.py",
+    "tests/test_python_syntax_compatibility.py",
     "tests/v317/test_dispatch_risk_gate.py",
     "tests/v318/test_dispatch_freshness.py",
     "tests/v320/test_dispatch_order_request.py",

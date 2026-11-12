@@ -136,7 +136,12 @@ class UncertaintyAssessment:
             observed_at_ns=_epoch_ns(prediction.timestamp),
             valid_until_ns=_epoch_ns(prediction.expires_at),
         )
-        assessment_id = f"UA-{sha256(json.dumps(provisional._identity_payload(), sort_keys=True, separators=(",", ":")).encode()).hexdigest()[:24]}"
+        identity_json = json.dumps(
+            provisional._identity_payload(),
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+        assessment_id = f"UA-{sha256(identity_json).hexdigest()[:24]}"
         return cls(**{**provisional.__dict__, "assessment_id": assessment_id})
 
     def _identity_payload(self) -> dict[str, Any]:
