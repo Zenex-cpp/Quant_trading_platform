@@ -13,6 +13,11 @@
 - This does not close FD-10/FD-11: the V2.1 generic EventStore and later durable authority-ledger event families still need a complete producer/consumer inventory, payload schemas, and validation integration.
 - The prompt requires a `compatibility_mode` field but does not set its policy. Registrations use `NONE` and make no forward/backward compatibility claim.
 
+## FD-16 source-of-truth matrix — 12 November 2026
+
+- Package 3.61.37 adds the 25-domain source-of-truth register and a test for domain coverage, repository paths, and fail-closed conflict boundaries. FD-16 is PRESENT as a §179 repository artifact; status does not mean every listed authority is operationally configured.
+- Raw market/account records, independent data-source proof, trusted actor/reviewer identity, host time synchronization, durable EventStore wiring across all services, protected-branch proof, and production integrations remain external or incomplete as identified per row in `schemas/v5_source_of_truth_matrix.csv`.
+
 ## Closed locally
 
 - M1–M5 gates are fail-closed across the V3.11 dispatcher and legacy V3.36/V3.79/V3.80/V3.84/V3.85 Testnet submit paths. The V3.85 runner checks the same durable RiskDecision, position, market-data and causal-TTL authorities; direct legacy adapters cannot submit; V3.36 accepts only the guarded dispatcher. See `V429_M1_M5_TRANSPORT_REMEDIATION.md`.

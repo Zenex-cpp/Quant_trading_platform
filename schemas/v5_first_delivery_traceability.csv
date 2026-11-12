@@ -14,7 +14,7 @@ FD-12,Idempotency Contract,PRESENT,docs/06_IDEMPOTENCY.md,src/trading_platform/e
 FD-13,Clock Contract,PRESENT,docs/25_V07_REALTIME.md,,
 FD-14,PIT Contract,PRESENT,docs/04_PIT.md;docs/16_V03_DATA_INTEGRITY.md,,
 FD-15,Data Quality Contract,PRESENT,docs/16_V03_DATA_INTEGRITY.md;schemas/data_contract_registry.csv,src/trading_platform/data/quality.py,
-FD-16,Source-of-Truth Matrix,PARTIAL,docs/00_REPOSITORY_SOURCE_OF_TRUTH.md;docs/16_V03_DATA_INTEGRITY.md,,Repository and data provenance are described separately; there is no cross-domain authority matrix.
+FD-16,Source-of-Truth Matrix,PRESENT,docs/70_V5_SOURCE_OF_TRUTH.md;schemas/v5_source_of_truth_matrix.csv,tests/test_v5_source_of_truth_matrix.py,
 FD-17,Error Taxonomy,PRESENT,docs/62_V5_SAFETY_AND_INCIDENT_MATRICES.md;schemas/v5_error_taxonomy.csv,,
 FD-18,Fail-Safe Matrix,PRESENT,docs/62_V5_SAFETY_AND_INCIDENT_MATRICES.md;schemas/v5_fail_safe_matrix.csv,,
 FD-19,Failure Precedence Matrix,PRESENT,docs/62_V5_SAFETY_AND_INCIDENT_MATRICES.md;schemas/v5_failure_precedence.csv,,

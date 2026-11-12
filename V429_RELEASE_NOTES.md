@@ -1,5 +1,12 @@
 # Trading Platform V4.29 Recovery — Release Notes
 
+## Package 3.61.37 — Cross-domain source-of-truth matrix
+
+- Added a 25-domain §179 matrix defining authoritative records, identity/version bindings, derived views, conflict actions, and external/persistence boundaries.
+- Added a contract test for complete domain coverage, valid repository references, and fail-closed conflict handling.
+- FD-16 is now PRESENT as a repository artifact. External market/account truth, trusted reviewer identity, persistent-store wiring, production integrations, and independent evidence remain unverified.
+- Verification: Python 3.14.7 fixed V4.29 runner passed with 1,398 passed, 26 skipped and `RELEASE_HYGIENE=PASS`. Preflight was `READY_FOR_MILESTONE`, `allowed=true`, with 230 input hashes and zero blockers; `external_evidence=false`, `production_ready=false`, `activation_flag=NOT_SET`.
+
 ## Package 3.61.36 — Typed event schemas and registry
 
 - Added a canonical envelope JSON Schema and runtime validation for required identifiers, aware timestamps, chronology, and non-negative optional sequence numbers. Realtime `MarketEvent` now uses the same envelope class.
