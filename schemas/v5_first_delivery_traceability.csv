@@ -1,0 +1,56 @@
+item_id,deliverable,status,primary_reference,implementation_reference,remaining_gap
+FD-01,System Architecture,PRESENT,docs/01_ARCHITECTURE.md,,
+FD-02,Repository Structure,PARTIAL,docs/00_REPOSITORY_SOURCE_OF_TRUTH.md,,Repository source layout is documented but the full repository map is not.
+FD-03,State Orthogonality Model,PRESENT,docs/02_STATE_MODEL.md,,
+FD-04,State Compatibility Matrix,PRESENT,schemas/state_compatibility_matrix.csv,src/trading_platform/state/compatibility.py,
+FD-05,State/Action Matrix,PRESENT,docs/14_STATE_ACTION_CONTRACT.md;schemas/state_action_matrix.csv,src/trading_platform/state/actions.py,
+FD-06,State Transition Tables,PARTIAL,,src/trading_platform/state/transition.py,Transition code exists but a canonical transition-table artifact is absent.
+FD-07,Global Invariants Catalog,PRESENT,docs/03_INVARIANTS.md,,
+FD-08,Safety Monotonicity Matrix,PARTIAL,docs/03_INVARIANTS.md,src/trading_platform/risk/monotonicity.py,A consolidated matrix covering all safety dimensions and actions is missing.
+FD-09,Configuration Precedence Matrix,PRESENT,docs/10_CONFIG_PRECEDENCE.md;schemas/config_precedence.csv,,
+FD-10,Event Envelope/Payload Schemas,PARTIAL,,src/trading_platform/events/envelope.py,Envelope code exists but a complete versioned payload-schema set is missing.
+FD-11,Event Schema Registry,PARTIAL,,src/trading_platform/events/registry.py,Registry implementation exists but the complete registered event inventory is not published as a canonical artifact.
+FD-12,Idempotency Contract,PRESENT,docs/06_IDEMPOTENCY.md,src/trading_platform/events/idempotency.py;src/trading_platform/state/transition.py,
+FD-13,Clock Contract,PRESENT,docs/25_V07_REALTIME.md,,
+FD-14,PIT Contract,PRESENT,docs/04_PIT.md;docs/16_V03_DATA_INTEGRITY.md,,
+FD-15,Data Quality Contract,PRESENT,docs/16_V03_DATA_INTEGRITY.md;schemas/data_contract_registry.csv,src/trading_platform/data/quality.py,
+FD-16,Source-of-Truth Matrix,PARTIAL,docs/00_REPOSITORY_SOURCE_OF_TRUTH.md;docs/16_V03_DATA_INTEGRITY.md,,Repository and data provenance are described separately; there is no cross-domain authority matrix.
+FD-17,Error Taxonomy,PRESENT,docs/62_V5_SAFETY_AND_INCIDENT_MATRICES.md;schemas/v5_error_taxonomy.csv,,
+FD-18,Fail-Safe Matrix,PRESENT,docs/62_V5_SAFETY_AND_INCIDENT_MATRICES.md;schemas/v5_fail_safe_matrix.csv,,
+FD-19,Failure Precedence Matrix,PRESENT,docs/62_V5_SAFETY_AND_INCIDENT_MATRICES.md;schemas/v5_failure_precedence.csv,,
+FD-20,Incident Severity x Scope Matrix,PRESENT,docs/62_V5_SAFETY_AND_INCIDENT_MATRICES.md;schemas/v5_incident_severity_scope.csv,,
+FD-21,Risk State Model,PARTIAL,docs/02_STATE_MODEL.md,src/trading_platform/risk/budget.py,"Risk-related state is implemented but is not specified as a complete state model."
+FD-22,Risk Budget Model,PRESENT,docs/11_RISK_BUDGET.md;docs/24_V06_PORTFOLIO.md,src/trading_platform/risk/budget.py,
+FD-23,Risk Reservation Flow,PARTIAL,docs/11_RISK_BUDGET.md,src/trading_platform/risk/budget.py,"The reservation lifecycle is named but the complete actor/event/recovery flow is not documented."
+FD-24,Decision TTL Contract,PARTIAL,docs/08_FIRST_DELIVERY.md,src/trading_platform/core/ttl.py;src/trading_platform/core/decision.py,"A TTL primitive exists but its decision-class policy and expiry precedence are not specified."
+FD-25,Causal Dependency Graph,PARTIAL,docs/01_ARCHITECTURE.md,src/trading_platform/contracts/causal.py,"Causal checks exist but a canonical end-to-end dependency graph artifact is absent."
+FD-26,Evidence State Model,PRESENT,docs/29_V09_RESEARCH_EVIDENCE.md,src/trading_platform/evidence/model.py,
+FD-27,Evidence Dependency Graph,PRESENT,docs/29_V09_RESEARCH_EVIDENCE.md,src/trading_platform/evidence/graph.py,
+FD-28,Evidence Invalidation Design,PRESENT,docs/30_V09_COMPLIANCE.md,src/trading_platform/evidence/graph.py,
+FD-29,Statistical Method Registry,PARTIAL,docs/19_V04_MODEL_TARGET_CALIBRATION.md,src/trading_platform/research/methods.py,"Method contracts exist but there is no complete versioned inventory of approved statistical methods."
+FD-30,Metric Applicability Registry,PRESENT,docs/63_V5_RESEARCH_REGISTRIES.md;schemas/v5_metric_applicability_registry.csv,,
+FD-31,Objective Function Registry,PRESENT,docs/63_V5_RESEARCH_REGISTRIES.md;schemas/v5_objective_function_registry.csv,,
+FD-32,Benchmark Registry,PRESENT,docs/63_V5_RESEARCH_REGISTRIES.md;schemas/v5_benchmark_registry.csv,,
+FD-33,Model Card Template,PRESENT,docs/61_V5_MODEL_AND_STRATEGY_CARDS.md,src/trading_platform/research/model_card.py,
+FD-34,Strategy Card Template,PRESENT,docs/61_V5_MODEL_AND_STRATEGY_CARDS.md,src/trading_platform/research/strategy_card.py,
+FD-35,Artifact Compatibility Matrix,PRESENT,docs/59_V341_ARTIFACT_COMPATIBILITY_AUTHORITY.md,src/trading_platform/promotion/compatibility.py,
+FD-36,Accounting State Model,PRESENT,docs/05_ACCOUNTING_REPLAY.md;docs/12_EXECUTION_ACCOUNTING.md;docs/46_V24_ACCOUNTING_PNL.md,src/trading_platform/accounting/ledger.py,
+FD-37,Accounting Invariants,PRESENT,docs/03_INVARIANTS.md;docs/05_ACCOUNTING_REPLAY.md;docs/12_EXECUTION_ACCOUNTING.md,src/trading_platform/accounting/invariants.py,
+FD-38,Reconciliation Model,PRESENT,docs/12_EXECUTION_ACCOUNTING.md;docs/27_V08_EXECUTION_RECONCILIATION.md;docs/42_V20_REST_WS_RECONCILIATION.md;docs/52_V322_DURABLE_DISPATCH_RECONCILIATION.md,src/trading_platform/accounting/reconciliation.py,
+FD-39,Promotion Bundle Specification,PRESENT,docs/31_V10_PROMOTION_ARCHITECTURE.md,src/trading_platform/promotion/contracts.py,
+FD-40,Holdout Access Policy,PRESENT,docs/21_V05_RESEARCH_MODEL_LAB.md;docs/18_V03_COMPLETION.md,src/trading_platform/data/holdout.py,
+FD-41,Gate Dependency Matrix,PARTIAL,docs/30_V09_COMPLIANCE.md;docs/31_V10_PROMOTION_ARCHITECTURE.md,,"Gate dependencies are described but no exhaustive gate-by-dependency matrix is published."
+FD-42,Gate Invalidation Policy,PRESENT,docs/30_V09_COMPLIANCE.md,src/trading_platform/gates/contracts.py,
+FD-43,Threat Model,PARTIAL,docs/31_V10_PROMOTION_ARCHITECTURE.md,,"Security boundaries are stated but a threat inventory with actors/assets/mitigations is missing."
+FD-44,Permission Model,PARTIAL,,src/trading_platform/security/permissions.py,"Runtime permission checks exist but a role/capability/resource matrix is missing."
+FD-45,Network Segmentation Model,PRESENT,V390_M25_NETWORK_ISOLATION.md,src/trading_platform/ops/network_policy.py,
+FD-46,Research Branch Model,PRESENT,docs/29_V09_RESEARCH_EVIDENCE.md,src/trading_platform/research/ledger.py,
+FD-47,Knowledge Base Model,PRESENT,docs/29_V09_RESEARCH_EVIDENCE.md,src/trading_platform/research/knowledge.py,
+FD-48,Change Impact Model,PRESENT,V429_CHANGE_IMPACT.md,,
+FD-49,Research Cost Model,PRESENT,docs/29_V09_RESEARCH_EVIDENCE.md,src/trading_platform/research/ledger.py,
+FD-50,Compliance Matrix,PRESENT,compliance_v429.csv,,
+FD-51,Test Plan,PRESENT,docs/13_CONTRACT_TEST_PLAN_V02.md,scripts/run_milestone_validation_v429.py,
+FD-52,Failure-Injection Plan,PRESENT,docs/33_V10_FAILURE_INJECTION.md,,
+FD-53,Recovery/Restart Plan,PARTIAL,docs/42_V20_REST_WS_RECONCILIATION.md;docs/43_V21_EVENT_SOURCED_REPLAY.md;docs/44_V22_CHECKPOINTS.md;docs/45_V23_GAP_RECOVERY.md;docs/52_V322_DURABLE_DISPATCH_RECONCILIATION.md,,"Recovery contracts exist but no unified restart runbook covers all services and failure classes."
+FD-54,Disaster Recovery Plan,PARTIAL,docs/32_V10_OPERATIONAL_HARDENING.md,src/trading_platform/ops/backup_restore.py,"Backup/restore primitives and readiness checks exist but RPO/RTO, backup custody and restore exercises are not specified in one plan."
+FD-55,Open Gaps Register,PRESENT,V429_OPEN_GAPS_DELTA.md,,

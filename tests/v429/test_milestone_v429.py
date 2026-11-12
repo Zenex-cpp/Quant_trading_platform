@@ -18,6 +18,27 @@ def test_v429_milestone_runner_matrix_workflow_and_security_controls_are_aligned
     for value in ("V4.29-RECOVERY", "V4.28-RECOVERY", "compliance_v429.csv", "V428_BASELINE_ARCHIVE_SHA256.txt"):
         assert value in runner
         assert value in workflow
+    for value in (
+        "docs/60_V5_FIRST_DELIVERY_TRACEABILITY.md",
+        "docs/61_V5_MODEL_AND_STRATEGY_CARDS.md",
+        "docs/62_V5_SAFETY_AND_INCIDENT_MATRICES.md",
+        "docs/63_V5_RESEARCH_REGISTRIES.md",
+        "docs/06_IDEMPOTENCY.md",
+        "schemas/v5_first_delivery_traceability.csv",
+        "schemas/v5_error_taxonomy.csv",
+        "schemas/v5_fail_safe_matrix.csv",
+        "schemas/v5_failure_precedence.csv",
+        "schemas/v5_incident_severity_scope.csv",
+        "schemas/v5_metric_applicability_registry.csv",
+        "schemas/v5_objective_function_registry.csv",
+        "schemas/v5_benchmark_registry.csv",
+        "src/trading_platform/research/strategy_card.py",
+        "src/trading_platform/state/transition.py",
+        "tests/test_v02_foundation.py",
+        "tests/test_v5_first_delivery_traceability.py",
+        "tests/test_strategy_card.py",
+    ):
+        assert value in runner
     for value in ("src/trading_platform/v429/external_file_safety.py", "tests/v429/test_external_file_safety_v429.py", "tests/v429/test_signer_hardening_v429.py"):
         assert value in runner
 

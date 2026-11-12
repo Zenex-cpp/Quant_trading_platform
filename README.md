@@ -1,7 +1,7 @@
 # Quant Trading Platform
 
 **Repository release train:** `V4.29-RECOVERY`  
-**Python distribution version:** `3.61.28` (a separate versioning scheme).
+**Python distribution version:** `3.61.30` (a separate versioning scheme).
 
 The current repository is a recovery extension based on the available V4.28 recovery archive. Byte-for-byte canonical lineage to V4.23 and V4.26 is **not established** because those source archives are not available in the project.
 
@@ -81,6 +81,12 @@ The comparison can report agreement or divergence but cannot prove the sources a
 
 ## Source documents
 
+- [Idempotency Contract](docs/06_IDEMPOTENCY.md)
+
+- [V5.0 §179 First Delivery Traceability](docs/60_V5_FIRST_DELIVERY_TRACEABILITY.md)
+- [V5.0 Model Card and Strategy Card Templates](docs/61_V5_MODEL_AND_STRATEGY_CARDS.md)
+- [V5.0 Safety and Incident Matrices](docs/62_V5_SAFETY_AND_INCIDENT_MATRICES.md)
+- [V5.0 Research Registries](docs/63_V5_RESEARCH_REGISTRIES.md)
 - [`MASTER PROMPT.txt`](MASTER%20PROMPT.txt) is the normative system specification.
 - [`V429_VERIFICATION_REPORT.md`](V429_VERIFICATION_REPORT.md) records the recovery build and verification boundary.
 - [`V429_OPEN_GAPS_DELTA.md`](V429_OPEN_GAPS_DELTA.md) lists unresolved external and operational gates.
@@ -98,5 +104,12 @@ The comparison can report agreement or divergence but cannot prove the sources a
 - [`docs/V429_EXTERNAL_SIGNER_HARDENING.md`](docs/V429_EXTERNAL_SIGNER_HARDENING.md) describes the external signer’s platform requirements.
 
 The 3.61.4 safety patch restricts the legacy Testnet evidence session and runner to read-only `GET` requests and the approved Testnet host allowlist. Version 3.61.5 closed missing-authority bypasses at the V3.11 dispatcher; 3.61.6 closes alternate Testnet submit paths; 3.61.7 binds Champion promotion to exact durable PASS-gate runs and revalidates them at use; 3.61.8 guards V3.75 live/shadow prediction calls with current compatibility authority; 3.61.9 closes credential-scanning gaps for slotted wrappers and object arrays; 3.61.10 adds the installed CLI and offline §178 acceptance command; 3.61.11 adds checksummed historical archive import for non-commercial research; 3.61.12 adds DATASET-01 CSV audits; 3.61.13 adds bounded two-source comparison; 3.61.14 rejects malformed, duplicate, reordered, empty or hash-invalid backtest/live decision traces; 3.61.15 loads bounded signed model artifacts and binds them to M14 authorization; 3.61.16 adds persistent Windows Credential Manager storage and thread-safe durable event auditing; 3.61.17 binds model-health source freshness and identity through runtime capabilities and durable risk decisions; 3.61.18 binds dynamic drawdown to durable equity history and source freshness through runtime and durable risk gates; 3.61.19 adds source-bound order-book liquidity risk; 3.61.20 binds model uncertainty and calibration state to a signed prediction source through the final risk gate; 3.61.21 requires a separate empirical calibration report at the risk boundary; 3.61.22 propagates evidence invalidation through registered dependencies and downstream decisions; 3.61.23 restricts M25 allowlisted endpoints to the default TLS port and rejects URL credentials; 3.61.24 requires persistent side-effect state for retry/replay before final order dispatch; 3.61.25 keeps the source-checkout §178 acceptance launcher from creating bytecode that fails release hygiene; 3.61.26 restores Python 3.10-compatible source syntax and adds a minimum-version parser check to CI; 3.61.27 prevents direct or copied signed-model objects from bypassing signature verification in the M14 inference path; 3.61.28 aligns the offline §178 stage artifacts with the required Validation, Model, Accounting and P&L steps and binds them into replay/evidence/gate. See [`V429_M1_REMEDIATION_REPORT.md`](V429_M1_REMEDIATION_REPORT.md), [`V429_M2_REMEDIATION_REPORT.md`](V429_M2_REMEDIATION_REPORT.md), [`V429_M1_M5_TRANSPORT_REMEDIATION.md`](V429_M1_M5_TRANSPORT_REMEDIATION.md), [`V429_M7_REMEDIATION_REPORT.md`](V429_M7_REMEDIATION_REPORT.md), [`V429_M14_REMEDIATION_REPORT.md`](V429_M14_REMEDIATION_REPORT.md), [`V429_M15_REMEDIATION_REPORT.md`](V429_M15_REMEDIATION_REPORT.md), [`V429_M11_REMEDIATION_REPORT.md`](V429_M11_REMEDIATION_REPORT.md), [`V429_M21_REMEDIATION_REPORT.md`](V429_M21_REMEDIATION_REPORT.md), [`V429_M23_REMEDIATION_REPORT.md`](V429_M23_REMEDIATION_REPORT.md), [`V429_M9_REMEDIATION_REPORT.md`](V429_M9_REMEDIATION_REPORT.md), [`V429_M10_REMEDIATION_REPORT.md`](V429_M10_REMEDIATION_REPORT.md), [`V429_M24_REMEDIATION_REPORT.md`](V429_M24_REMEDIATION_REPORT.md), [`V429_M25_PUBLIC_DATA_REPORT.md`](V429_M25_PUBLIC_DATA_REPORT.md), [`V429_DATASET_01_CSV_AUDIT_REPORT.md`](V429_DATASET_01_CSV_AUDIT_REPORT.md), and [`V429_PIT_E2E_REMEDIATION_REPORT.md`](V429_PIT_E2E_REMEDIATION_REPORT.md).
+
+
+## V5.0 first-delivery work
+
+Version 3.61.29 added the prompt §179 traceability register, the immutable machine-readable Strategy Card template, and safety/research registries. The register audits all 55 required artifacts and marks incomplete specifications as PARTIAL or OPEN. Version 3.61.30 binds state-transition idempotency keys to the full transition specification and rejects conflicting reuse. It does not claim production readiness or external verification.
+
+The final local V4.29 runner passed with 1,363 tests passed, 26 skipped, and release hygiene PASS. The preflight remains offline: external evidence is false, production readiness is false, and activation is not set.
 
 `package_manifest_v429.txt` is the immutable manifest for the historical V4.29 archive; it is not a manifest of later changes on `main`.

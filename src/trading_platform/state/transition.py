@@ -15,14 +15,18 @@ class TransitionSpec:
 
 class TransitionEngine:
     def __init__(self) -> None:
-        self._committed: dict[str, OrthogonalState] = {}
+        self._committed: dict[str, tuple[TransitionSpec, OrthogonalState]] = {}
         self._audit: list[dict[str, Any]] = []
 
     def apply(self, spec: TransitionSpec, context: Any = None) -> OrthogonalState:
         if not spec.idempotency_key:
             raise ValueError("IDEMPOTENCY_KEY_REQUIRED")
-        if spec.idempotency_key in self._committed:
-            return self._committed[spec.idempotency_key]
+        committed = self._committed.get(spec.idempotency_key)
+        if committed is not None:
+            committed_spec, committed_state = committed
+            if committed_spec != spec:
+                raise ValueError("IDEMPOTENCY_KEY_CONFLICT")
+            return committed_state
         ok, errors = validate_state(spec.source)
         if not ok:
             raise ValueError(f"INVALID_SOURCE_STATE:{errors}")
@@ -32,7 +36,7 @@ class TransitionEngine:
         if spec.guard is not None:
             spec.guard(spec.source, context)
         event = {"transition_id": spec.transition_id, "action": spec.action, "committed_at": datetime.now(timezone.utc).isoformat()}
-        self._committed[spec.idempotency_key] = spec.target
+        self._committed[spec.idempotency_key] = (spec, spec.target)
         self._audit.append(event)
         return spec.target
 

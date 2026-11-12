@@ -1,5 +1,12 @@
 # V4.29 Change Impact
 
+- V5.0 §179 is now audited through a machine-readable 55-entry traceability register. The register records exact repository references and leaves missing or scattered artifacts as PARTIAL/OPEN; its contract tests validate IDs, path existence and gap disclosures.
+- Added machine-readable error taxonomy, fail-safe, failure-precedence, incident-scope, metric-applicability, objective-function, and benchmark registries. The metric/objective/benchmark entries are SPECIFICATION_ONLY and do not make empirical claims.
+- Fixed transition idempotency: a key is bound to the full TransitionSpec and committed result; reuse with a different spec now fails with IDEMPOTENCY_KEY_CONFLICT before a second state or audit change.
+- Added a Strategy Card dataclass with immutable tuple fields, required non-empty text, duplicate rejection, deterministic canonical JSON and SHA-256 fingerprint. Added the paired Model Card/Strategy Card field specification; neither card grants approval or production capability.
+- The V4.29 milestone manifest now hashes the traceability register, specifications, safety and research registries, StrategyCard implementation, transition idempotency code, and regression tests. First-delivery checks passed 35 tests; transition/release/runner-contract checks passed 34 tests. The full runner passed with 1,363 passed and 26 skipped, RELEASE_HYGIENE=PASS; the preflight is READY_FOR_MILESTONE and allowed with zero blockers and 188 input hashes.
+- Changed package version from 3.61.28 to 3.61.29.
+- Changed package version from 3.61.29 to 3.61.30 for the transition conflict fix; docs/06_IDEMPOTENCY.md and the V4.29 hashed contract inputs now cover it.
 - The Python 3.10 syntax regression also rejects same-quote string literals nested in f-string expressions; this covers PEP 701 syntax that a newer interpreter's feature-version parser can otherwise accept.
 - Scope: final order-dispatch authority for risk, position, market data and causal TTL across current and legacy Testnet paths, plus reviewer-side external file access for GitHub governance signing, CI milestone identity, compliance matrix, and workflow contract validation.
 - Modified code: `src/trading_platform/v311/dispatch_guard.py`, `v36/user_execution.py`, `v379/execution_parity.py`, `v380/order_adapter.py`, `v384/testnet_execution_activation.py`, `v385/controlled_testnet_submit.py`, and the V4.29 validation contract.

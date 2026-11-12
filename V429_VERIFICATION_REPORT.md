@@ -1,5 +1,9 @@
 # V4.29 Recovery — Verification Report
 
+## V5.0 §179 first-delivery traceability
+
+Package 3.61.30 adds a 55-row register mapped to the exact prompt deliverables. Automated contract tests require unique ordered IDs, valid repository paths, and a stated gap for each PARTIAL or OPEN entry. The Model Card and Strategy Card templates are documented; StrategyCard is immutable and fingerprints all canonical fields. The six previously OPEN safety and research items now have versioned machine-readable registries. Transition idempotency rejects a conflicting spec before changing state. Focused first-delivery validation passed 35 tests; transition, release-version, and runner-contract validation passed 34. The full V4.29 runner passed with 1,363 passed, 26 skipped, and RELEASE_HYGIENE=PASS. Its preflight is READY_FOR_MILESTONE, allowed=true, pipeline PASS, zero blockers and 188 input hashes; the local activation boundary remains external_evidence=false, production_ready=false, and activation_flag=NOT_SET.
+
 **Disposition:** `READY_FOR_MILESTONE`; `external_evidence=false`; `production_ready=false`.
 
 ## Parent and provenance
