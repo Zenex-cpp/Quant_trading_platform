@@ -7,6 +7,12 @@
 - Package 3.61.30 closes a transition-engine idempotency collision: an existing key cannot silently return success for a different TransitionSpec. The final local runner reports 1,363 passed, 26 skipped, RELEASE_HYGIENE=PASS; its preflight is READY_FOR_MILESTONE, allowed=true, pipeline PASS, zero blockers and 188 input hashes.
 - PR #21 controlled-milestone-validation runs 43226746432 and 43226732855 on commit 6b21d7c3cb048db0ffb7df265be0a106aa775cd1 both completed successfully: 1,376 passed, 3 skipped, RELEASE_HYGIENE=PASS. Uploaded audit artifact digests were 23eab2fbee88cb90a40e2e21175e55652a6f4bd0f5eef42eef3cf95640e015f5 and 6287a30c1246f9317a34a704fe793563704d1c0c5a8b22559fcad9e09daf86a4. The separate REPOSITORY_GOVERNANCE phase remains BLOCKED; PR checks do not prove a protected-main push or accepted independent trust evidence.
 
+## FD-10/FD-11 typed event contracts — 12 November 2026
+
+- Package 3.61.36 adds a canonical envelope schema and registry with versioned payload schemas for the 19 V2.7 governance, V2.8 deployment, and V2.9 provenance event values. The registry rejects duplicate keys and unsafe schema paths; its validator checks envelopes and payloads. Realtime now shares the canonical envelope.
+- This does not close FD-10/FD-11: the V2.1 generic EventStore and later durable authority-ledger event families still need a complete producer/consumer inventory, payload schemas, and validation integration.
+- The prompt requires a `compatibility_mode` field but does not set its policy. Registrations use `NONE` and make no forward/backward compatibility claim.
+
 ## Closed locally
 
 - M1–M5 gates are fail-closed across the V3.11 dispatcher and legacy V3.36/V3.79/V3.80/V3.84/V3.85 Testnet submit paths. The V3.85 runner checks the same durable RiskDecision, position, market-data and causal-TTL authorities; direct legacy adapters cannot submit; V3.36 accepts only the guarded dispatcher. See `V429_M1_M5_TRANSPORT_REMEDIATION.md`.

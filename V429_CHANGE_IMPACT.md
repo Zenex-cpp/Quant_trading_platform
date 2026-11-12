@@ -1,5 +1,6 @@
 # V4.29 Change Impact
 
+- Package 3.61.36 defines and validates the shared event envelope plus versioned payload schemas for 19 typed V2.7–V2.9 governance, deployment, and provenance events. Realtime consumes the shared envelope. FD-10/FD-11 stay PARTIAL while the generic V2.1 EventStore and later authority-ledger streams remain outside the registry.
 - V5.0 §179 is now audited through a machine-readable 55-entry traceability register. The register records exact repository references and leaves missing or scattered artifacts as PARTIAL/OPEN; its contract tests validate IDs, path existence and gap disclosures.
 - Added machine-readable error taxonomy, fail-safe, failure-precedence, incident-scope, metric-applicability, objective-function, and benchmark registries. The metric/objective/benchmark entries are SPECIFICATION_ONLY and do not make empirical claims.
 - Fixed transition idempotency: a key is bound to the full TransitionSpec and committed result; reuse with a different spec now fails with IDEMPOTENCY_KEY_CONFLICT before a second state or audit change.

@@ -1,5 +1,12 @@
 # Trading Platform V4.29 Recovery — Release Notes
 
+## Package 3.61.36 — Typed event schemas and registry
+
+- Added a canonical envelope JSON Schema and runtime validation for required identifiers, aware timestamps, chronology, and non-negative optional sequence numbers. Realtime `MarketEvent` now uses the same envelope class.
+- Published a machine-readable registry for 19 V2.7 governance, V2.8 deployment, and V2.9 provenance event types, with versioned JSON payload schemas checked against their source dataclasses.
+- Added strict duplicate/id checks, date validation, local schema-path confinement, and payload validation. `jsonschema` is now an explicit package dependency.
+- FD-10 and FD-11 remain PARTIAL because the generic V2.1 EventStore and later authority-ledger event streams are not registered or routed through this validator.
+
 ## V5.0 §179 traceability and strategy card
 
 # Package 3.61.35 — Safety monotonicity register
