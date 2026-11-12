@@ -8,6 +8,7 @@
 - Changed package version from 3.61.28 to 3.61.29.
 - Changed package version from 3.61.29 to 3.61.30 for the transition conflict fix; docs/06_IDEMPOTENCY.md and the V4.29 hashed contract inputs now cover it.
 - Package 3.61.34 adds the canonical lifecycle/risk pairwise rejection inventory and enforces a fail-closed allowlist in the base transition engine. FD-06 remains PARTIAL because approved positive lifecycle/risk paths and durable side-effect atomicity are not implemented.
+- Package 3.61.35 adds the §14–17 safety monotonicity matrix, covering implemented dimension-specific authorities and recording the missing execution-risk and correlated-exposure rules. FD-08 remains PARTIAL; matrix status does not claim production-wide invocation.
 - The Python 3.10 syntax regression also rejects same-quote string literals nested in f-string expressions; this covers PEP 701 syntax that a newer interpreter's feature-version parser can otherwise accept.
 - Scope: final order-dispatch authority for risk, position, market data and causal TTL across current and legacy Testnet paths, plus reviewer-side external file access for GitHub governance signing, CI milestone identity, compliance matrix, and workflow contract validation.
 - Modified code: `src/trading_platform/v311/dispatch_guard.py`, `v36/user_execution.py`, `v379/execution_parity.py`, `v380/order_adapter.py`, `v384/testnet_execution_activation.py`, `v385/controlled_testnet_submit.py`, and the V4.29 validation contract.

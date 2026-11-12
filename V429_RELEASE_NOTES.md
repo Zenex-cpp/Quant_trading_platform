@@ -2,6 +2,13 @@
 
 ## V5.0 §179 traceability and strategy card
 
+# Package 3.61.35 — Safety monotonicity register
+
+- Traced all six §14 rules, the §15 risk-state budget rule, and the related §17 absolute ceilings to implementation/tests or an explicit gap.
+- Added monotonic factor and hard-ceiling tests; the M29 recovery-event tests remain the evidence for validated/audited state recovery.
+- FD-08 remains PARTIAL: execution-risk monotonicity, correlated-exposure monotonicity, and platform-wide immutable ceiling binding remain incomplete.
+- The register describes bounded repository coverage; it does not establish production-wide invocation or external verification.
+
 # Package 3.61.34 — State transition contract
 
 - Published the pairwise default-reject matrix for all prompt §12 lifecycle and §13 risk-state pairs.
