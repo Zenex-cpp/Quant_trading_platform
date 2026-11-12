@@ -6,6 +6,7 @@
 - Published a machine-readable registry for 19 V2.7 governance, V2.8 deployment, and V2.9 provenance event types, with versioned JSON payload schemas checked against their source dataclasses.
 - Added strict duplicate/id checks, date validation, local schema-path confinement, and payload validation. `jsonschema` is now an explicit package dependency.
 - FD-10 and FD-11 remain PARTIAL because the generic V2.1 EventStore and later authority-ledger event streams are not registered or routed through this validator.
+- Verification: 99 focused event/realtime/backtest/traceability/release tests passed. The Python 3.14.7 V4.29 runner passed with 1,396 passed, 26 skipped, `RELEASE_HYGIENE=PASS`; preflight was `READY_FOR_MILESTONE`, allowed, with 227 input hashes and zero blockers. Hosted PR CI run 43271309168 passed with 1,419 passed and 3 skipped.
 
 ## V5.0 §179 traceability and strategy card
 
