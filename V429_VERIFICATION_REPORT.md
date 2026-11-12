@@ -79,11 +79,11 @@ EventStore now serializes access to each SQLite connection across threads, and i
 
 ## Compliance status
 
-The V4.29 matrix contains 42 requirements: `TESTED=37`, `IMPLEMENTED=2`, `PARTIAL=3`. The governance controls that depend on remote provider evidence remain `PARTIAL` or `TESTED` with explicit unresolved gaps; no requirement has been promoted to `VERIFIED` based only on synthetic fixtures.
+The V4.29 matrix contains 42 requirements: TESTED=40, PARTIAL=2. REPO-GOV-01/02 remain PARTIAL pending fresh trusted provider evidence and protected-main validation; no requirement is promoted to VERIFIED from synthetic fixtures or working-branch checks.
 
 ## Evidence boundary
 
-All new filesystem tests use local temporary directories and synthetic Ed25519 keys. A live GitHub refresh was attempted but returned no repository data: `gh auth status` reports an invalid token for `Zenex-cpp`, and `git ls-remote` could not resolve `github.com`. No hosted Actions result for this local package revision was observed. Independent reviewer identity and trust-anchor ceremony remain unverified/not configured. This release verifies application behavior; it does not certify production readiness.
+Local filesystem tests use temporary directories and synthetic Ed25519 keys. The hosted controlled-milestone-validation on PR #21 passed on working-branch commit e14de78d5853fbd64f6b254561527e375c1094fb in runs 43217087204 and 43217098654. Live refs confirmed that codex/m14-runtime-compatibility pointed to e14de78d5853fbd64f6b254561527e375c1094fb and main remained at 85f39b711ea99fb3ad3d9973afb6ba50e5ac27b9. An authenticated API read confirmed strict required checks with administrator enforcement and disabled force-push/deletion; no rulesets are configured, required approvals are zero, code-owner review is disabled and CODEOWNERS maps all paths to @Zenex-cpp. These settings are observed but not accepted as independent signed governance evidence. Independent reviewer identity and trust-anchor ceremony remain unverified/not configured.
 
 `external_evidence=false`, `activation_flag=NOT_SET`, and `production_ready=false` remain unchanged.
 
@@ -91,7 +91,7 @@ All new filesystem tests use local temporary directories and synthetic Ed25519 k
 
 Package 3.61.11 adds the M25-scoped public historical-data importer and its application-level egress zone. The focused importer, segmentation, workflow-contract, compliance-matrix and release-integrity suite passed **43 tests**. The mandatory Windows/Python 3.14.7 runner passed with **1,255 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`; durable preflight returned `READY_FOR_MILESTONE`, `allowed=true`, with M9, M14 and M25 impacted and no blockers.
 
-This patch does not change external evidence or production readiness. M25 remains `TESTED` pending infrastructure routing proof. No Binance data was downloaded; the public data source is limited by its current terms to non-commercial historical research and cannot supply the intended live/commercial strategy. Hosted GitHub CI and the current remote-main revision still require confirmation.
+This patch does not change external evidence or production readiness. M25 remains TESTED pending infrastructure routing proof. No Binance data was downloaded; the public data source is limited by its terms to non-commercial historical research and cannot supply the intended live/commercial strategy. PR #21 hosted CI passed on the working branch; main remains at its older confirmed SHA.
 
 ## DATASET-01 audit path — 2026-11-11
 
