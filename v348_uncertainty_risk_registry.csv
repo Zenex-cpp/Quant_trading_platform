@@ -1,2 +1,5 @@
-method,version,definition,min_uncertainty,max_uncertainty,action,monitoring
-CONSERVATIVE_LINEAR,1,"max(floor, 1-min(1, uncertainty/max_uncertainty))",0,1,HIGHER_UNCERTAINTY_REDUCES_OR_PRESERVES_RISK,MONOTONICITY_ABLATION_REQUIRED
+method,version,source,definition,minimum_uncertainty,maximum_uncertainty,threshold,action,monitoring,production_eligible
+CONSERVATIVE_LINEAR,1,SOURCE_BOUND_MODEL_UNCERTAINTY_ASSESSMENT,"risk_factor=max(floor,1-min(1,uncertainty/max_uncertainty))",0,1,"uncertainty>=max_uncertainty => risk_factor=floor",HIGHER_UNCERTAINTY_REDUCES_OR_PRESERVES_RISK,MONOTONICITY_ABLATION_AND_CALIBRATION_DRIFT_REQUIRED,true
+SIGNED_MODEL_DECLARED,1,SIGNED_MODEL_ARTIFACT_HASH_AND_PREDICTION_ID,"uncertainty value declared by the signed model artifact manifest",0,1,"state UNKNOWN or POOR => risk_factor<=0.25; ACCEPTABLE=><=0.50",CAP_RISK_AND_REQUIRE_FRESH_SOURCE_BOUND_PREDICTION,CALIBRATION_BRIER_ECE_RELIABILITY_AND_REFERENCE_WINDOW_DRIFT,false
+BERNOULLI_ENTROPY_NORMALIZED,1,SIGNED_PREDICTION_PROBABILITY,"-(p*ln(p)+(1-p)*ln(1-p))/ln(2), endpoint values zero",0,1,"uncertainty>=0.80 => apply conservative risk mapping",HIGHER_ENTROPY_REDUCES_OR_PRESERVES_RISK,OUT_OF_SAMPLE_CALIBRATION_AND_MONOTONICITY_ABLATION_REQUIRED,false
+ENSEMBLE_DISPERSION_VARIANCE,1,SIGNED_ENSEMBLE_MEMBER_PREDICTIONS_AND_ARTIFACT_HASHES,"population variance of member probabilities in [0,1]",0,0.25,"uncertainty>=0.0625 => apply conservative risk mapping",HIGHER_DISPERSION_REDUCES_OR_PRESERVES_RISK,INDEPENDENT_MEMBER_PROVENANCE_AND_OUT_OF_SAMPLE_ABLATION_REQUIRED,false

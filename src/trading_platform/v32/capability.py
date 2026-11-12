@@ -9,6 +9,7 @@ from typing import Any
 from trading_platform.v25.health import HealthAssessment
 from trading_platform.v349.liquidity_assessment import LiquidityAssessment
 from trading_platform.v350.drawdown_history import DrawdownAssessment
+from trading_platform.v348.uncertainty_assessment import UncertaintyAssessment
 from trading_platform.v30.truth import CanonicalAction, OperationalTruth
 from trading_platform.v31.authority import AuthorityDecision, AuthorityStatus, RuntimeAuthority
 
@@ -25,6 +26,7 @@ class TradeCapability:
     model_health_assessment: HealthAssessment | None = None
     liquidity_assessment: LiquidityAssessment | None = None
     drawdown_assessment: DrawdownAssessment | None = None
+    uncertainty_assessment: UncertaintyAssessment | None = None
 
     @property
     def truth_hash(self) -> str:
@@ -46,6 +48,7 @@ class CapabilityAuthority:
               uncertainty_floor: Decimal = Decimal("0"),
               uncertainty_method: str = "CONSERVATIVE_LINEAR",
               uncertainty_method_version: str = "1",
+              uncertainty_assessment: UncertaintyAssessment | None = None,
               liquidity_stress: Decimal | None = None, max_liquidity_stress: Decimal = Decimal("1"),
               liquidity_floor: Decimal = Decimal("0"), liquidity_method: str = "CONSERVATIVE_LINEAR",
               liquidity_method_version: str = "1", liquidity_assessment: LiquidityAssessment | None = None,
@@ -56,6 +59,11 @@ class CapabilityAuthority:
               model_health_floor: Decimal = Decimal("0"), model_health_method: str = "CONSERVATIVE_LINEAR",
               model_health_method_version: str = "1", model_health_assessment: HealthAssessment | None = None,
               model_health_assessment_id: str | None = None) -> TradeCapability:
+        if uncertainty_assessment is not None:
+            if not uncertainty_assessment.is_valid():
+                raise CapabilityError("INVALID_UNCERTAINTY_ASSESSMENT")
+            if self._datetime_to_epoch_ns(expires_at) > uncertainty_assessment.valid_until_ns:
+                raise CapabilityError("UNCERTAINTY_CAPABILITY_EXCEEDS_SOURCE_TTL")
         if liquidity_assessment is not None and not liquidity_assessment.matches_order(
             symbol=str(intent_payload.get("symbol", "")), side=str(intent_payload.get("side", "")),
             quantity=intent_payload.get("quantity", ""),
@@ -67,6 +75,7 @@ class CapabilityAuthority:
             uncertainty=uncertainty, max_uncertainty=max_uncertainty,
             uncertainty_floor=uncertainty_floor, uncertainty_method=uncertainty_method,
             uncertainty_method_version=uncertainty_method_version,
+            uncertainty_assessment=uncertainty_assessment,
             liquidity_stress=liquidity_stress, max_liquidity_stress=max_liquidity_stress,
             liquidity_floor=liquidity_floor, liquidity_method=liquidity_method,
             liquidity_method_version=liquidity_method_version,
@@ -87,6 +96,12 @@ class CapabilityAuthority:
                                           "uncertainty_floor": str(uncertainty_floor),
                                           "uncertainty_method": uncertainty_method,
                                           "uncertainty_method_version": uncertainty_method_version,
+                                          "uncertainty_assessment_id": (
+                                              None if uncertainty_assessment is None else uncertainty_assessment.assessment_id
+                                          ),
+                                          "uncertainty_source_fingerprint": (
+                                              None if uncertainty_assessment is None else uncertainty_assessment.source_fingerprint
+                                          ),
                                           "liquidity_stress": None if liquidity_stress is None else str(liquidity_stress),
                                           "max_liquidity_stress": str(max_liquidity_stress),
                                           "liquidity_floor": str(liquidity_floor),
@@ -125,6 +140,7 @@ class CapabilityAuthority:
             consumed=False, model_health_assessment=model_health_assessment,
             liquidity_assessment=liquidity_assessment,
             drawdown_assessment=drawdown_assessment,
+            uncertainty_assessment=uncertainty_assessment,
         )
 
     def validate(self, capability: TradeCapability, *, now: datetime, truth: OperationalTruth,
@@ -132,7 +148,8 @@ class CapabilityAuthority:
                  model_health_assessment: HealthAssessment | None = None,
                  model_health_assessment_id: str | None = None,
                  liquidity_assessment: LiquidityAssessment | None = None,
-                 drawdown_assessment: DrawdownAssessment | None = None) -> None:
+                 drawdown_assessment: DrawdownAssessment | None = None,
+                 uncertainty_assessment: UncertaintyAssessment | None = None) -> None:
         if capability.capability_id in self._consumed or capability.consumed:
             raise CapabilityError("CAPABILITY_ALREADY_CONSUMED")
         if now >= capability.expires_at:
@@ -141,6 +158,20 @@ class CapabilityAuthority:
             raise CapabilityError("TRUTH_HASH_CHANGED")
         if not truth.decision_fresh or not truth.trading_allowed:
             raise CapabilityError("TRUTH_NO_LONGER_AUTHORIZES_TRADE")
+        if capability.authority.uncertainty is not None:
+            if uncertainty_assessment is None:
+                raise CapabilityError("UNCERTAINTY_REVALIDATION_REQUIRED")
+            if (
+                uncertainty_assessment != capability.uncertainty_assessment
+                or uncertainty_assessment.assessment_id != capability.authority.uncertainty_assessment_id
+                or uncertainty_assessment.source_fingerprint != capability.authority.uncertainty_source_fingerprint
+                or uncertainty_assessment.uncertainty != capability.authority.uncertainty
+            ):
+                raise CapabilityError("UNCERTAINTY_SOURCE_CHANGED")
+            if not uncertainty_assessment.source_fresh_at(self._datetime_to_epoch_ns(now)):
+                raise CapabilityError("UNCERTAINTY_SOURCE_EXPIRED")
+        elif uncertainty_assessment is not None:
+            raise CapabilityError("UNCERTAINTY_UNEXPECTED_PROVENANCE")
         if capability.authority.liquidity_stress is not None:
             if liquidity_assessment is None:
                 raise CapabilityError("LIQUIDITY_REVALIDATION_REQUIRED")
@@ -189,18 +220,21 @@ class CapabilityAuthority:
                 model_health_assessment: HealthAssessment | None = None,
                 model_health_assessment_id: str | None = None,
                 liquidity_assessment: LiquidityAssessment | None = None,
-                drawdown_assessment: DrawdownAssessment | None = None) -> TradeCapability:
+                drawdown_assessment: DrawdownAssessment | None = None,
+                uncertainty_assessment: UncertaintyAssessment | None = None) -> TradeCapability:
         self.validate(capability, now=now, truth=truth, intent_payload=intent_payload,
                       model_health=model_health, model_health_assessment=model_health_assessment,
                       model_health_assessment_id=model_health_assessment_id,
                       liquidity_assessment=liquidity_assessment,
-                      drawdown_assessment=drawdown_assessment)
+                      drawdown_assessment=drawdown_assessment,
+                      uncertainty_assessment=uncertainty_assessment)
         self._consumed.add(capability.capability_id)
         return TradeCapability(capability.capability_id, capability.authority, capability.intent_fingerprint,
                                capability.expires_at, consumed=True,
                                model_health_assessment=capability.model_health_assessment,
                                liquidity_assessment=capability.liquidity_assessment,
-                               drawdown_assessment=capability.drawdown_assessment)
+                               drawdown_assessment=capability.drawdown_assessment,
+                               uncertainty_assessment=capability.uncertainty_assessment)
 
     @staticmethod
     def _datetime_to_epoch_ns(value: datetime) -> int:

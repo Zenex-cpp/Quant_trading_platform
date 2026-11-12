@@ -7,6 +7,7 @@ from typing import Any
 from trading_platform.v25.health import HealthAssessment
 from trading_platform.v349.liquidity_assessment import LiquidityAssessment
 from trading_platform.v350.drawdown_history import DrawdownAssessment
+from trading_platform.v348.uncertainty_assessment import UncertaintyAssessment
 from trading_platform.v30.truth import CanonicalAction, OperationalTruth
 from trading_platform.v31.authority import RuntimeAuthority, AuthorityDecision
 from trading_platform.execution.guards import build_order_request
@@ -36,6 +37,7 @@ class ExecutionRouter:
               uncertainty_floor: Decimal = Decimal("0"),
               uncertainty_method: str = "CONSERVATIVE_LINEAR",
               uncertainty_method_version: str = "1",
+              uncertainty_assessment: UncertaintyAssessment | None = None,
               liquidity_stress: Decimal | None = None, max_liquidity_stress: Decimal = Decimal("1"),
               liquidity_floor: Decimal = Decimal("0"), liquidity_method: str = "CONSERVATIVE_LINEAR",
               liquidity_method_version: str = "1", liquidity_assessment: LiquidityAssessment | None = None,
@@ -55,12 +57,15 @@ class ExecutionRouter:
                 raise PermissionError("LIQUIDITY_SOURCE_EXPIRED")
         if drawdown_assessment is not None and not drawdown_assessment.source_fresh_at(self._datetime_to_epoch_ns(now)):
             raise PermissionError("DRAWDOWN_SOURCE_EXPIRED")
+        if uncertainty_assessment is not None and not uncertainty_assessment.source_fresh_at(self._datetime_to_epoch_ns(now)):
+            raise PermissionError("UNCERTAINTY_SOURCE_EXPIRED")
         decision = self.authority.evaluate(
             truth=truth, action=CanonicalAction.TRADE, requested_risk=requested_risk,
             decision_id=decision_id, input_payload=input_payload,
             uncertainty=uncertainty, max_uncertainty=max_uncertainty,
             uncertainty_floor=uncertainty_floor, uncertainty_method=uncertainty_method,
             uncertainty_method_version=uncertainty_method_version,
+            uncertainty_assessment=uncertainty_assessment,
             liquidity_stress=liquidity_stress, max_liquidity_stress=max_liquidity_stress,
             liquidity_floor=liquidity_floor, liquidity_method=liquidity_method,
             liquidity_method_version=liquidity_method_version,

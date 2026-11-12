@@ -11,6 +11,7 @@ from typing import Any
 from trading_platform.v25.health import HealthAssessment
 from trading_platform.v30.truth import CanonicalAction, OperationalTruth, TruthStatus, ConfigurationStatus
 from trading_platform.v348.uncertainty_risk_authority import bind_uncertainty_to_risk, UncertaintyRiskError
+from trading_platform.v348.uncertainty_assessment import UncertaintyAssessment
 from trading_platform.v349.liquidity_risk_authority import bind_liquidity_to_risk, LiquidityRiskError
 from trading_platform.v349.liquidity_assessment import LiquidityAssessment
 from trading_platform.v350.drawdown_risk_authority import bind_drawdown_to_risk, DrawdownRiskError
@@ -44,6 +45,10 @@ class AuthorityDecision:
     uncertainty_risk_factor: Decimal | None = None
     uncertainty_method: str | None = None
     uncertainty_method_version: str | None = None
+    uncertainty_assessment_id: str | None = None
+    uncertainty_source_fingerprint: str | None = None
+    uncertainty_calibration_state: str | None = None
+    uncertainty_assessment: UncertaintyAssessment | None = None
     liquidity_stress: Decimal | None = None
     liquidity_risk_factor: Decimal | None = None
     liquidity_max_stress: Decimal | None = None
@@ -96,6 +101,7 @@ class AuthorityDecision:
         uncertainty_risk_factor: Decimal | None = None,
         uncertainty_method: str | None = None,
         uncertainty_method_version: str | None = None,
+        uncertainty_assessment: UncertaintyAssessment | None = None,
         liquidity_stress: Decimal | None = None,
         liquidity_risk_factor: Decimal | None = None,
         liquidity_max_stress: Decimal | None = None,
@@ -140,6 +146,9 @@ class AuthorityDecision:
                 "uncertainty_risk_factor": None if uncertainty_risk_factor is None else str(uncertainty_risk_factor),
                 "uncertainty_method": uncertainty_method,
                 "uncertainty_method_version": uncertainty_method_version,
+                "uncertainty_assessment_id": None if uncertainty_assessment is None else uncertainty_assessment.assessment_id,
+                "uncertainty_source_fingerprint": None if uncertainty_assessment is None else uncertainty_assessment.source_fingerprint,
+                "uncertainty_calibration_state": None if uncertainty_assessment is None else uncertainty_assessment.calibration_state,
             })
         if liquidity_stress is not None:
             fp_payload.update({
@@ -191,6 +200,10 @@ class AuthorityDecision:
             uncertainty_risk_factor=uncertainty_risk_factor,
             uncertainty_method=uncertainty_method,
             uncertainty_method_version=uncertainty_method_version,
+            uncertainty_assessment_id=None if uncertainty_assessment is None else uncertainty_assessment.assessment_id,
+            uncertainty_source_fingerprint=None if uncertainty_assessment is None else uncertainty_assessment.source_fingerprint,
+            uncertainty_calibration_state=None if uncertainty_assessment is None else uncertainty_assessment.calibration_state,
+            uncertainty_assessment=uncertainty_assessment,
             liquidity_stress=liquidity_stress,
             liquidity_risk_factor=liquidity_risk_factor,
             liquidity_max_stress=liquidity_max_stress,
@@ -247,6 +260,7 @@ class RuntimeAuthority:
         uncertainty_floor: Decimal = Decimal("0"),
         uncertainty_method: str = "CONSERVATIVE_LINEAR",
         uncertainty_method_version: str = "1",
+        uncertainty_assessment: UncertaintyAssessment | None = None,
         liquidity_stress: Decimal | None = None,
         max_liquidity_stress: Decimal = Decimal("1"),
         liquidity_floor: Decimal = Decimal("0"),
@@ -274,6 +288,18 @@ class RuntimeAuthority:
         model_health_binding = None
         state_factor = Decimal("1")
         state_cap = truth.effective_risk
+        uncertainty_source_error: str | None = None
+        if uncertainty_assessment is not None:
+            if uncertainty is None:
+                uncertainty = uncertainty_assessment.uncertainty
+            else:
+                try:
+                    if Decimal(str(uncertainty)) != uncertainty_assessment.uncertainty:
+                        uncertainty_source_error = "UNCERTAINTY_ASSESSMENT_VALUE_MISMATCH"
+                except Exception:
+                    uncertainty_source_error = "UNCERTAINTY_ASSESSMENT_VALUE_MISMATCH"
+        elif uncertainty is not None and action is CanonicalAction.TRADE:
+            uncertainty_source_error = "UNCERTAINTY_SOURCE_BINDING_REQUIRED"
 
         def build(reason: str, status: AuthorityStatus) -> AuthorityDecision:
             return AuthorityDecision.build(
@@ -288,6 +314,7 @@ class RuntimeAuthority:
                 uncertainty_risk_factor=None if uncertainty_binding is None else uncertainty_binding.risk_factor,
                 uncertainty_method=None if uncertainty_binding is None else uncertainty_binding.method,
                 uncertainty_method_version=None if uncertainty_binding is None else uncertainty_binding.method_version,
+                uncertainty_assessment=uncertainty_assessment,
                 liquidity_stress=liquidity_stress,
                 liquidity_risk_factor=None if liquidity_binding is None else liquidity_binding.risk_factor,
                 liquidity_max_stress=max_liquidity_stress if liquidity_binding is not None else None,
@@ -335,6 +362,20 @@ class RuntimeAuthority:
         except RiskStateMonotonicityError as exc:
             return build(f"RISK_STATE_BLOCKED:{exc}", AuthorityStatus.DENIED)
 
+        if uncertainty_source_error is not None:
+            return build(uncertainty_source_error, AuthorityStatus.DENIED)
+
+        if uncertainty_assessment is not None:
+            model_component = truth.component_map.get("model_output")
+            if model_component is None or model_component.status is not TruthStatus.VERIFIED:
+                return build("UNCERTAINTY_MODEL_SOURCE_BINDING_REQUIRED", AuthorityStatus.DENIED)
+            if uncertainty_assessment.source_evidence_id not in model_component.evidence_ids:
+                return build("UNCERTAINTY_MODEL_ARTIFACT_BINDING_REQUIRED", AuthorityStatus.DENIED)
+            if uncertainty_assessment.source_fingerprint not in model_component.evidence_ids:
+                return build("UNCERTAINTY_ASSESSMENT_SOURCE_BINDING_REQUIRED", AuthorityStatus.DENIED)
+            if not uncertainty_assessment.source_fresh_at(truth.observed_at_ns):
+                return build("UNCERTAINTY_SOURCE_EXPIRED", AuthorityStatus.DENIED)
+
         if uncertainty is not None:
             try:
                 uncertainty_binding = bind_uncertainty_to_risk(
@@ -344,6 +385,8 @@ class RuntimeAuthority:
                     floor=uncertainty_floor,
                     method=uncertainty_method,
                     method_version=uncertainty_method_version,
+                    assessment=uncertainty_assessment,
+                    now_ns=truth.observed_at_ns,
                 )
             except UncertaintyRiskError as exc:
                 return build(f"UNCERTAINTY_RISK_BLOCKED:{exc}", AuthorityStatus.DENIED)

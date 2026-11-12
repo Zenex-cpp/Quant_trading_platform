@@ -45,6 +45,7 @@ jobs:
           --impacted-requirement M9
           --impacted-requirement M14
           --impacted-requirement M15
+          --impacted-requirement M21
           --impacted-requirement M22
           --impacted-requirement M23
           --impacted-requirement M24

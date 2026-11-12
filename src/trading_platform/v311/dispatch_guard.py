@@ -15,6 +15,7 @@ from trading_platform.v316.accounting_gate import AccountingGateDenied, DurableA
 from trading_platform.v317.durable_risk import RiskReservationConflict, RiskReservationGate
 from trading_platform.v318.durable_decision import RiskDecisionConflict, DurableRiskDecisionLedger
 from trading_platform.v349.liquidity_assessment import LiquidityAssessment
+from trading_platform.v348.uncertainty_assessment import UncertaintyAssessment
 from trading_platform.v319.durable_intent import DurableOrderIntentLedger, OrderIntentConflict
 from trading_platform.v320.durable_request import DurableOrderRequestLedger, OrderRequestConflict
 from trading_platform.v321.durable_dispatch import DurableDispatchAttemptLedger, DispatchAttemptConflict, DispatchAttemptState
@@ -46,6 +47,7 @@ def assert_final_dispatch_authorities(
     market_data_authority: MarketDataAuthorityLedger | None,
     causal_ttl_authority: CausalTTLAuthorityLedger | None,
     liquidity_assessment: LiquidityAssessment | None = None,
+    uncertainty_assessment: UncertaintyAssessment | None = None,
 ) -> None:
     """Apply the shared M1–M5 authority checks immediately before transport.
 
@@ -86,6 +88,8 @@ def assert_final_dispatch_authorities(
             reservation_id=intent.risk_reservation_id,
             requested_exposure=Decimal(str(requested_exposure)),
             truth_hash=truth_hash,
+            uncertainty=(None if uncertainty_assessment is None else uncertainty_assessment.uncertainty),
+            uncertainty_assessment=uncertainty_assessment,
             liquidity_stress=(None if liquidity_assessment is None else liquidity_assessment.liquidity_stress),
             liquidity_assessment=liquidity_assessment,
         )
@@ -236,6 +240,7 @@ class GuardedExecutionDispatcher:
             market_data_authority=self.market_data_authority,
             causal_ttl_authority=self.causal_ttl_authority,
             liquidity_assessment=req.authority.liquidity_assessment,
+            uncertainty_assessment=req.authority.uncertainty_assessment,
         )
         attempt_intent_fp = (self.order_intent_ledger.fingerprint(intent)
                              if self.order_intent_ledger is not None

@@ -14,6 +14,9 @@ from trading_platform.realtime.orderbook import OrderBookSnapshot
 from trading_platform.v332.market_authority import MarketDataAuthorityLedger
 from trading_platform.v349 import LiquidityAssessment
 from trading_platform.v350 import DrawdownHistoryError, DrawdownHistoryLedger, DrawdownRiskError, assert_drawdown_monotone, bind_drawdown_to_risk
+from trading_platform.model.contracts import Prediction
+from trading_platform.v348 import UncertaintyAssessment
+from tests._m21_calibration_helpers import synthetic_calibration_report
 
 
 AXES = AxisSnapshot("ACTIVE", "LIVE", "HEALTHY", "APPROVED", "ACTIVE", "CHAMPION")
@@ -86,7 +89,20 @@ def liquidity_assessment_for():
     )
 
 
-def truth(*, assessment=None, liquidity=None, bind_history: bool = True):
+def uncertainty_assessment_for(value="0.5"):
+    now=datetime.fromtimestamp(0.1, tz=timezone.utc)
+    probability=float(value)
+    prediction=Prediction(
+        prediction_id=f"P-M23-{value}", model_id="M-SYNTHETIC", model_version="1",
+        timestamp=now, feature_version="F1", target_version="T1", prediction=probability,
+        probability=probability, expected_return=None, expected_risk=probability,
+        uncertainty=probability, calibration_state="CALIBRATED", valid_from=now,
+        expires_at=now+timedelta(seconds=60), artifact_hash="c"*64,
+    )
+    return UncertaintyAssessment.from_prediction(prediction, calibration_report=synthetic_calibration_report())
+
+
+def truth(*, assessment=None, liquidity=None, model_assessment=None, bind_history: bool = True):
     evidence_ids = (
         (assessment.current_snapshot_hash, assessment.history_fingerprint)
         if assessment is not None and bind_history
@@ -94,14 +110,18 @@ def truth(*, assessment=None, liquidity=None, bind_history: bool = True):
         if assessment is not None
         else ("E-accounting",)
     )
+    names=("health", "provenance", "governance", "reconciliation", "accounting", "ledger", "market_data")
+    if model_assessment is not None:
+        names=(*names,"model_output")
     comps = tuple(
         TruthComponent(
             n, TruthStatus.VERIFIED, "OK",
-            evidence_ids if n == "accounting" else
+            (model_assessment.source_evidence_id, model_assessment.source_fingerprint)
+            if n == "model_output" and model_assessment is not None else evidence_ids if n == "accounting" else
             (liquidity.source_evidence_id, liquidity.source_fingerprint)
             if n == "market_data" and liquidity is not None else (f"E-{n}",),
         )
-        for n in ("health", "provenance", "governance", "reconciliation", "accounting", "ledger", "market_data")
+        for n in names
     )
     caps = {k: Decimal("100") for k in ("health_cap", "deployment_cap", "accounting_cap", "reconciliation_cap", "provenance_cap", "operator_cap")}
     observed_at_ns = max(
@@ -321,10 +341,11 @@ def test_durable_decision_replays_and_revalidates_dynamic_drawdown_source(tmp_pa
 def test_combined_uncertainty_liquidity_drawdown_uses_tightest_cap():
     assessment = assessment_for(("100", "70"))
     liquidity = liquidity_assessment_for()
+    uncertainty = uncertainty_assessment_for()
     low = RuntimeAuthority().evaluate(
-        truth=truth(assessment=assessment, liquidity=liquidity), action=CanonicalAction.TRADE,
+        truth=truth(assessment=assessment, liquidity=liquidity, model_assessment=uncertainty), action=CanonicalAction.TRADE,
         requested_risk=Decimal("20"), decision_id="DD-COMB-1",
-        uncertainty=Decimal("0.5"), liquidity_assessment=liquidity,
+        uncertainty_assessment=uncertainty, liquidity_assessment=liquidity,
         drawdown_assessment=assessment,
     )
     assert low.status is AuthorityStatus.AUTHORIZED
@@ -332,9 +353,9 @@ def test_combined_uncertainty_liquidity_drawdown_uses_tightest_cap():
     assert low.liquidity_risk_factor == Decimal("0.2")
     assert low.drawdown_risk_factor == Decimal("0.7")
     denied = RuntimeAuthority().evaluate(
-        truth=truth(assessment=assessment, liquidity=liquidity), action=CanonicalAction.TRADE,
+        truth=truth(assessment=assessment, liquidity=liquidity, model_assessment=uncertainty), action=CanonicalAction.TRADE,
         requested_risk=Decimal("20.01"), decision_id="DD-COMB-2",
-        uncertainty=Decimal("0.5"), liquidity_assessment=liquidity,
+        uncertainty_assessment=uncertainty, liquidity_assessment=liquidity,
         drawdown_assessment=assessment,
     )
     assert denied.status is AuthorityStatus.DENIED

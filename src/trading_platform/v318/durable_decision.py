@@ -11,6 +11,7 @@ from trading_platform.v21.event_store import EventStore
 from trading_platform.v25.health import EvidenceFreshness, HealthAssessment, HealthState
 from trading_platform.v349.liquidity_assessment import LiquidityAssessment
 from trading_platform.v350.drawdown_history import DrawdownAssessment
+from trading_platform.v348.uncertainty_assessment import UncertaintyAssessment
 
 
 class RiskDecisionConflict(RuntimeError):
@@ -66,6 +67,7 @@ class RiskDecisionRecord:
     uncertainty_risk_factor: Decimal | None = None
     uncertainty_method: str | None = None
     uncertainty_method_version: str | None = None
+    uncertainty_assessment: UncertaintyAssessment | None = None
     liquidity_stress: Decimal | None = None
     liquidity_max: Decimal | None = None
     liquidity_floor: Decimal = Decimal("0")
@@ -128,6 +130,10 @@ class RiskDecisionRecord:
             "uncertainty_risk_factor": None if self.uncertainty_risk_factor is None else str(self.uncertainty_risk_factor),
             "uncertainty_method": self.uncertainty_method,
             "uncertainty_method_version": self.uncertainty_method_version,
+            "uncertainty_assessment": None if self.uncertainty_assessment is None else {
+                **self.uncertainty_assessment.payload(),
+                "source_fingerprint": self.uncertainty_assessment.source_fingerprint,
+            },
             "liquidity_stress": None if self.liquidity_stress is None else str(self.liquidity_stress),
             "liquidity_max": None if self.liquidity_max is None else str(self.liquidity_max),
             "liquidity_floor": str(self.liquidity_floor),
@@ -187,6 +193,7 @@ class RiskDecisionGateSnapshot:
     truth_hash: str
     uncertainty: Decimal | None = None
     uncertainty_risk_factor: Decimal | None = None
+    uncertainty_source_fingerprint: str | None = None
     liquidity_stress: Decimal | None = None
     liquidity_risk_factor: Decimal | None = None
     liquidity_source_fingerprint: str | None = None
@@ -262,6 +269,7 @@ class DurableRiskDecisionLedger:
         portfolio_version: str | None = None,
         position_version: str | None = None,
         uncertainty: Decimal | None = None,
+        uncertainty_assessment: UncertaintyAssessment | None = None,
         liquidity_stress: Decimal | None = None,
         liquidity_assessment: LiquidityAssessment | None = None,
         drawdown: Decimal | None = None,
@@ -292,7 +300,17 @@ class DurableRiskDecisionLedger:
             current_uncertainty = DurableRiskDecisionLedger._amount(uncertainty, "INVALID_UNCERTAINTY")
             if current_uncertainty != decision.uncertainty:
                 raise RiskDecisionConflict("RISK_DECISION_UNCERTAINTY_STALE")
-        elif uncertainty is not None:
+            if uncertainty_assessment is None:
+                raise RiskDecisionConflict("RISK_DECISION_UNCERTAINTY_SOURCE_REQUIRED")
+            if (
+                decision.uncertainty_assessment is None
+                or uncertainty_assessment != decision.uncertainty_assessment
+                or uncertainty_assessment.source_fingerprint != decision.uncertainty_assessment.source_fingerprint
+            ):
+                raise RiskDecisionConflict("RISK_DECISION_UNCERTAINTY_SOURCE_STALE")
+            if not uncertainty_assessment.source_fresh_at(now_ms * 1_000_000):
+                raise RiskDecisionConflict("RISK_DECISION_UNCERTAINTY_SOURCE_EXPIRED")
+        elif uncertainty is not None or uncertainty_assessment is not None:
             raise RiskDecisionConflict("RISK_DECISION_UNCERTAINTY_PROVENANCE_MISSING")
         if decision.liquidity_stress is not None:
             if liquidity_stress is None:
@@ -369,6 +387,9 @@ class DurableRiskDecisionLedger:
             truth_hash=decision.truth_hash,
             uncertainty=decision.uncertainty,
             uncertainty_risk_factor=decision.uncertainty_risk_factor,
+            uncertainty_source_fingerprint=(
+                None if decision.uncertainty_assessment is None else decision.uncertainty_assessment.source_fingerprint
+            ),
             liquidity_stress=decision.liquidity_stress,
             liquidity_risk_factor=decision.liquidity_risk_factor,
             liquidity_source_fingerprint=(
@@ -411,12 +432,23 @@ class DurableRiskDecisionLedger:
                 raise ValueError("UNCERTAINTY_MAX_REQUIRED")
             if not decision.uncertainty_method or not decision.uncertainty_method_version:
                 raise ValueError("UNCERTAINTY_METHOD_IDENTITY_REQUIRED")
+            assessment = decision.uncertainty_assessment
+            if assessment is None or not assessment.is_valid():
+                raise ValueError("UNCERTAINTY_SOURCE_PROVENANCE_REQUIRED")
+            if assessment.uncertainty != decision.uncertainty:
+                raise ValueError("UNCERTAINTY_ASSESSMENT_VALUE_MISMATCH")
+            created_at_ns = decision.created_at_ms * 1_000_000
+            if not assessment.source_fresh_at(created_at_ns):
+                raise ValueError("UNCERTAINTY_SOURCE_NOT_FRESH_AT_DECISION")
+            if decision.expires_at_ms * 1_000_000 > assessment.valid_until_ns:
+                raise ValueError("UNCERTAINTY_DECISION_EXCEEDS_SOURCE_TTL")
             try:
                 from trading_platform.v348.uncertainty_risk_authority import bind_uncertainty_to_risk
                 binding = bind_uncertainty_to_risk(
                     uncertainty=decision.uncertainty, baseline_risk=requested,
                     max_uncertainty=decision.uncertainty_max, floor=decision.uncertainty_floor,
                     method=decision.uncertainty_method, method_version=decision.uncertainty_method_version,
+                    assessment=assessment, now_ns=created_at_ns,
                 )
             except Exception as exc:
                 raise ValueError("INVALID_UNCERTAINTY_RISK_BINDING") from exc
@@ -424,7 +456,7 @@ class DurableRiskDecisionLedger:
                 raise ValueError("UNCERTAINTY_RISK_FACTOR_MISMATCH")
             if allowed > binding.allowed_risk:
                 raise ValueError("RISK_ALLOWED_EXCEEDS_UNCERTAINTY_CAP")
-        elif any(v is not None for v in (decision.uncertainty_max, decision.uncertainty_risk_factor, decision.uncertainty_method, decision.uncertainty_method_version)):
+        elif any(v is not None for v in (decision.uncertainty_max, decision.uncertainty_risk_factor, decision.uncertainty_method, decision.uncertainty_method_version, decision.uncertainty_assessment)):
             raise ValueError("UNCERTAINTY_PROVENANCE_INCOMPLETE")
         elif decision.uncertainty_floor != Decimal("0"):
             raise ValueError("UNCERTAINTY_FLOOR_WITHOUT_UNCERTAINTY")
@@ -609,6 +641,7 @@ class DurableRiskDecisionLedger:
                 uncertainty_risk_factor=None if payload.get("uncertainty_risk_factor") is None else Decimal(str(payload["uncertainty_risk_factor"])),
                 uncertainty_method=None if payload.get("uncertainty_method") is None else str(payload["uncertainty_method"]),
                 uncertainty_method_version=None if payload.get("uncertainty_method_version") is None else str(payload["uncertainty_method_version"]),
+                uncertainty_assessment=None if payload.get("uncertainty_assessment") is None else UncertaintyAssessment.from_payload(dict(payload["uncertainty_assessment"])),
                 liquidity_stress=None if payload.get("liquidity_stress") is None else Decimal(str(payload["liquidity_stress"])),
                 liquidity_max=None if payload.get("liquidity_max") is None else Decimal(str(payload["liquidity_max"])),
                 liquidity_floor=Decimal(str(payload.get("liquidity_floor", "0"))),

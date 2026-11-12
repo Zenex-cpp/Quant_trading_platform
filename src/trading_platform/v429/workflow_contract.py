@@ -40,6 +40,7 @@ def validate_workflow_contract_v429(text: str) -> tuple[str, ...]:
         "WORKFLOW_M9_IMPACT_MISSING": "--impacted-requirement M9",
         "WORKFLOW_M14_IMPACT_MISSING": "--impacted-requirement M14",
         "WORKFLOW_M15_IMPACT_MISSING": "--impacted-requirement M15",
+        "WORKFLOW_M21_IMPACT_MISSING": "--impacted-requirement M21",
         "WORKFLOW_M22_IMPACT_MISSING": "--impacted-requirement M22",
         "WORKFLOW_M23_IMPACT_MISSING": "--impacted-requirement M23",
         "WORKFLOW_M24_IMPACT_MISSING": "--impacted-requirement M24",

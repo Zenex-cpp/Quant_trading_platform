@@ -23,6 +23,9 @@ from trading_platform.v349 import (
     assert_liquidity_monotone,
     bind_liquidity_to_risk,
 )
+from trading_platform.model.contracts import Prediction
+from trading_platform.v348 import UncertaintyAssessment
+from tests._m21_calibration_helpers import synthetic_calibration_report
 from trading_platform.v32.capability import CapabilityAuthority, CapabilityError
 
 
@@ -66,12 +69,27 @@ def assessment(
     )
 
 
-def truth(liquidity: LiquidityAssessment | None = None, *, bind_source: bool = True):
+def uncertainty_source(value="0.5"):
+    now=datetime.fromtimestamp(0.1, tz=timezone.utc)
+    prediction=Prediction(
+        prediction_id=f"P-M22-{value}", model_id="M-SYNTHETIC", model_version="1",
+        timestamp=now, feature_version="F1", target_version="T1", prediction=float(value),
+        probability=float(value), expected_return=None, expected_risk=float(value), uncertainty=float(value),
+        calibration_state="CALIBRATED", valid_from=now, expires_at=now+timedelta(seconds=60), artifact_hash="b"*64,
+    )
+    return UncertaintyAssessment.from_prediction(prediction, calibration_report=synthetic_calibration_report())
+
+
+def truth(liquidity: LiquidityAssessment | None = None, *, bind_source: bool = True, uncertainty=None):
     names = ("health", "provenance", "governance", "reconciliation", "accounting", "ledger", "market_data")
+    if uncertainty is not None:
+        names=(*names,"model_output")
     components = tuple(
         TruthComponent(
             name, TruthStatus.VERIFIED, "OK",
-            (liquidity.source_evidence_id, liquidity.source_fingerprint)
+            (uncertainty.source_evidence_id, uncertainty.source_fingerprint)
+            if name == "model_output" and uncertainty is not None
+            else (liquidity.source_evidence_id, liquidity.source_fingerprint)
             if name == "market_data" and liquidity is not None and bind_source
             else (liquidity.source_evidence_id,)
             if name == "market_data" and liquidity is not None
@@ -206,16 +224,17 @@ def test_runtime_rejects_scalar_or_unbound_market_liquidity():
 
 def test_runtime_uses_tightest_uncertainty_and_orderbook_liquidity_cap():
     assessed = assessment(quantity="10", max_spread_bps="2.5")
+    uncertainty = uncertainty_source()
     decision = RuntimeAuthority().evaluate(
-        truth=truth(assessed), action=CanonicalAction.TRADE, requested_risk=Decimal("20"),
-        decision_id="A3", uncertainty=Decimal("0.5"), liquidity_assessment=assessed,
+        truth=truth(assessed, uncertainty=uncertainty), action=CanonicalAction.TRADE, requested_risk=Decimal("20"),
+        decision_id="A3", uncertainty_assessment=uncertainty, liquidity_assessment=assessed,
     )
     assert decision.status is AuthorityStatus.AUTHORIZED
     assert decision.uncertainty_risk_factor == Decimal("0.5")
     assert decision.liquidity_risk_factor == Decimal("0.2")
     denied = RuntimeAuthority().evaluate(
-        truth=truth(assessed), action=CanonicalAction.TRADE, requested_risk=Decimal("20.01"),
-        decision_id="A4", uncertainty=Decimal("0.5"), liquidity_assessment=assessed,
+        truth=truth(assessed, uncertainty=uncertainty), action=CanonicalAction.TRADE, requested_risk=Decimal("20.01"),
+        decision_id="A4", uncertainty_assessment=uncertainty, liquidity_assessment=assessed,
     )
     assert denied.reason == "RISK_EXCEEDS_LIQUIDITY_ADJUSTED_RISK"
 

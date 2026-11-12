@@ -160,6 +160,9 @@ class SignedLinearModelV1:
             calibration_state=self.calibration_state,
             valid_from=valid_from,
             expires_at=expires_at,
+            artifact_hash=self.artifact_hash,
+            uncertainty_method="SIGNED_MODEL_DECLARED",
+            uncertainty_source="SIGNED_MODEL_ARTIFACT_HASH_AND_PREDICTION_ID",
         )
         prediction.validate()
         return prediction
@@ -278,11 +281,11 @@ def load_signed_linear_model_v1(
     )
     intercept = _finite_number(payload["intercept"], "INTERCEPT")
     uncertainty = _finite_number(payload["uncertainty"], "UNCERTAINTY")
-    if uncertainty < 0:
-        raise ModelArtifactLoadError("MODEL_ARTIFACT_UNCERTAINTY_NEGATIVE")
+    if not 0.0 <= uncertainty <= 1.0:
+        raise ModelArtifactLoadError("MODEL_ARTIFACT_UNCERTAINTY_INVALID")
     calibration_state = payload["calibration_state"]
-    if not isinstance(calibration_state, str) or not calibration_state:
-        raise ModelArtifactLoadError("MODEL_ARTIFACT_CALIBRATION_STATE_REQUIRED")
+    if calibration_state not in {"CALIBRATED", "ACCEPTABLE", "POOR", "UNKNOWN"}:
+        raise ModelArtifactLoadError("MODEL_ARTIFACT_CALIBRATION_STATE_INVALID")
     ttl = payload["prediction_ttl_seconds"]
     if (
         not isinstance(ttl, int)

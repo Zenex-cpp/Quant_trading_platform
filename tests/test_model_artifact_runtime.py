@@ -15,6 +15,7 @@ from trading_platform.model.artifact_runtime import (
     load_signed_linear_model_v1,
 )
 from trading_platform.model.contracts import ModelArtifactContract, SchemaContract
+from trading_platform.v348 import UncertaintyAssessment
 from trading_platform.v373.backtest_engine import BacktestStageFunctions, MarketEvent
 from trading_platform.v341.compatibility_authority import CompatibilityAuthorityInvalid
 from trading_platform.v375.decision_parity import (
@@ -221,11 +222,24 @@ def test_untrusted_key_malformed_json_and_oversized_artifact_fail_closed():
         ({"coefficients": {"close": float("nan"), "volume": 0.1}}, "MODEL_ARTIFACT_NONFINITE_JSON_NUMBER"),
         ({"prediction_ttl_seconds": 0}, "MODEL_ARTIFACT_PREDICTION_TTL_INVALID"),
         ({"prediction_ttl_seconds": 700000}, "MODEL_ARTIFACT_PREDICTION_TTL_INVALID"),
+        ({"uncertainty": 1.1}, "MODEL_ARTIFACT_UNCERTAINTY_INVALID"),
+        ({"calibration_state": "UNREVIEWED"}, "MODEL_ARTIFACT_CALIBRATION_STATE_INVALID"),
     ],
 )
 def test_model_manifest_constraints_fail_closed(payload_updates, message):
     with pytest.raises(ModelArtifactLoadError, match=message):
         _load(_payload(**payload_updates))
+
+
+def test_signed_prediction_carries_recomputable_uncertainty_source():
+    prediction = _load().predict({"close": 100, "volume": 10}, timestamp=NOW)
+    assessment = UncertaintyAssessment.from_prediction(prediction)
+    assert prediction.artifact_hash == assessment.source_evidence_id
+    assert prediction.prediction_id == assessment.prediction_id
+    assert assessment.is_valid()
+    assert prediction.calibration_state == "CALIBRATED"  # Manifest metadata is not empirical evidence.
+    assert assessment.calibration_state == "UNKNOWN"
+    assert assessment.calibration_report_fingerprint is None
 
 
 @pytest.mark.parametrize(

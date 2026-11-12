@@ -220,6 +220,21 @@ def test_v429_m22_matrix_points_to_source_bound_orderbook_liquidity():
     assert '"M22"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")
 
 
+def test_v429_m21_matrix_points_to_source_bound_uncertainty_and_calibration():
+    with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
+        m21 = next(row for row in csv.DictReader(stream) if row["machine_check_id"] == "M21")
+    assert m21["implementation_status"] == "TESTED"
+    assert "trading_platform/v348/uncertainty_assessment.py" in m21["code_reference"]
+    assert "trading_platform/v348/uncertainty_risk_authority.py" in m21["code_reference"]
+    assert "trading_platform/v31/authority.py" in m21["code_reference"]
+    assert "trading_platform/v318/durable_decision.py" in m21["code_reference"]
+    assert "tests/test_v348_m21_uncertainty_risk.py" in m21["test_reference"]
+    assert "tests/test_v04_model.py" in m21["test_reference"]
+    assert m21["evidence_reference"] == "V429_M21_REMEDIATION_REPORT.md"
+    assert "ablation" in m21["unresolved_gap"].lower()
+    assert '"M21"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")
+
+
 def test_v429_m25_matrix_points_to_isolated_public_archive_downloader():
     with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
         m25 = next(row for row in csv.DictReader(stream) if row["machine_check_id"] == "M25")
