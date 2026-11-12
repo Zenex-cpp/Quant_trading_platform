@@ -229,7 +229,12 @@ class UncertaintyAssessment:
                 or _decimal(self.uncertainty) != self.uncertainty
             ):
                 return False
-            expected_id = f"UA-{sha256(json.dumps(self._identity_payload(), sort_keys=True, separators=(",", ":")).encode()).hexdigest()[:24]}"
+            identity_json = json.dumps(
+                self._identity_payload(),
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode()
+            expected_id = "UA-" + sha256(identity_json).hexdigest()[:24]
             return self.assessment_id == expected_id
         except (TypeError, ValueError, UncertaintyAssessmentError):
             return False

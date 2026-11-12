@@ -1,5 +1,6 @@
 # V4.29 Change Impact
 
+- The Python 3.10 syntax regression also rejects same-quote string literals nested in f-string expressions; this covers PEP 701 syntax that a newer interpreter's feature-version parser can otherwise accept.
 - Scope: final order-dispatch authority for risk, position, market data and causal TTL across current and legacy Testnet paths, plus reviewer-side external file access for GitHub governance signing, CI milestone identity, compliance matrix, and workflow contract validation.
 - Modified code: `src/trading_platform/v311/dispatch_guard.py`, `v36/user_execution.py`, `v379/execution_parity.py`, `v380/order_adapter.py`, `v384/testnet_execution_activation.py`, `v385/controlled_testnet_submit.py`, and the V4.29 validation contract.
 - New authority/helpers: `trading_platform.v429.external_file_safety` and `trading_platform.v429.workflow_contract`.
