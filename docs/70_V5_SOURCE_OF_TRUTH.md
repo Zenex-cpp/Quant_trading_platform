@@ -8,7 +8,7 @@ This matrix names the authoritative record for each project and trading domain, 
 2. Compare records only when their scope, identity, version, timestamp, and content hash are compatible. Derived records retain references to their inputs and must not silently replace them.
 3. When a required authoritative record is missing, stale, conflicting, or unverifiable, preserve `UNKNOWN`/blocked status and stop any dependent risk-increasing action, promotion, or deployment. Reconcile against the domain's authority and record a new version; never resolve a disagreement by picking whichever value is newest or most convenient.
 4. A local ledger is authoritative only for the records it durably stores and validates. A default in-memory store, report, cache, working tree, or generated audit file is not proof of durable operational state.
-5. `EXTERNAL_REQUIRED`, `PARTIAL`, and `UNCONFIGURED` rows identify explicit limits. This matrix does not assert that an external source is connected, independently authenticated, protected, licensed, or production-ready.
+5. `EXTERNAL_REQUIRED`, `PARTIAL`, and `DURABLE_IF_CONFIGURED` rows identify explicit limits. This matrix does not assert that an external source is connected, independently authenticated, protected, licensed, or production-ready.
 
 ## Matrix scope
 
