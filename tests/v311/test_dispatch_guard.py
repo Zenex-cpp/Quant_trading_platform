@@ -8,6 +8,8 @@ from trading_platform.v34.execution_bridge import ExecutionBridge, BridgeStatus
 from trading_platform.v35.binance_execution import ExchangeOutcome, RuntimeCredentialValues, SubmitObservation
 from trading_platform.v310.runtime_orchestrator import OrchestrationState, RuntimeCycleSnapshot
 from trading_platform.v311.dispatch_guard import DispatchGuardDenied, GuardedExecutionDispatcher
+from trading_platform.v21.event_store import EventStore
+from trading_platform.v338.side_effects import DurableSideEffectLedger
 from trading_platform.execution.models import OrderIntent, OrderAction, OrderType, PositionState, Side
 from trading_platform.core.ttl import ValidWindow
 from tests.dispatch_support import execution_authorities_for, risk_decision_ledger_for
@@ -67,12 +69,13 @@ def test_denied_runtime_blocks_before_transport():
     assert g.calls == []
 
 
-def test_allowed_runtime_dispatches_exact_committed_request():
+def test_allowed_runtime_dispatches_exact_committed_request(tmp_path):
     b, i = valid_bridge()
     g = FakeGateway(SubmitObservation(ExchangeOutcome.ACKNOWLEDGED, b._requests[i.intent_id].request.client_order_id, "EX123"))
     d = GuardedExecutionDispatcher(bridge=b, gateway=g, permission_snapshot=lambda: snap(True),
         **execution_authorities_for(i, now_ms=int(NOW.timestamp() * 1000)),
         risk_decision_ledger=risk_decision_ledger_for(b, i, now_ms=int(NOW.timestamp() * 1000)),
+        side_effect_ledger=DurableSideEffectLedger(EventStore(str(tmp_path / "side-effect.db"))),
         clock_ms=lambda: int(NOW.timestamp() * 1000))
     receipt = d.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
     assert len(g.calls) == 1
@@ -129,12 +132,12 @@ def test_accounting_unknown_blocks_before_transport():
     assert g.calls == []
 
 
-def test_reconciled_accounting_allows_transport():
+def test_reconciled_accounting_allows_transport(tmp_path):
     from trading_platform.v21.event_store import EventStore
     from trading_platform.v315 import DurableAccountingLedger, DurableFill
     from trading_platform.v316 import DurableAccountingAuthority
 
-    ledger = DurableAccountingLedger(EventStore())
+    ledger = DurableAccountingLedger(EventStore(str(tmp_path / "accounting.db")))
     ledger.append_fill(DurableFill("af2", "ao2", "BTCUSDT", "BUY", Decimal("1"), Decimal("100")))
     authority = DurableAccountingAuthority(ledger)
     authority.restore()

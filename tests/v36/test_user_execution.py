@@ -13,6 +13,8 @@ from trading_platform.execution.models import PositionState
 from trading_platform.v30.truth import AxisSnapshot, TruthComponent, TruthStatus, build_truth
 from trading_platform.v32.capability import CapabilityAuthority
 from trading_platform.v33.commit import CommitCoordinator
+from trading_platform.v21.event_store import EventStore
+from trading_platform.v321 import DurableDispatchAttemptLedger
 from tests.dispatch_support import execution_authorities_for, risk_decision_ledger_for
 
 NOW = datetime(2026, 9, 13, tzinfo=timezone.utc)
@@ -115,7 +117,7 @@ class FakeGateway:
         return BinanceTestnetExecutionGateway.lifecycle_target(obs)
 
 
-def setup_guarded_dispatcher(gateway):
+def setup_guarded_dispatcher(gateway, tmp_path):
     order_intent = intent()
     commit = CommitCoordinator()
     truth = build_truth(
@@ -159,15 +161,16 @@ def setup_guarded_dispatcher(gateway):
         permission_snapshot=lambda: runtime,
         **execution_authorities_for(order_intent, now_ms=now_ms),
         risk_decision_ledger=risk_decision_ledger_for(bridge, order_intent, now_ms=now_ms),
+        dispatch_attempt_ledger=DurableDispatchAttemptLedger(EventStore(str(tmp_path / "attempt.db"))),
         clock_ms=lambda: now_ms,
     )
     correlation = BinanceExecutionCorrelation(bridge, now_epoch=lambda: NOW.timestamp())
     return bridge, correlation, dispatcher
 
 
-def test_ambiguous_submit_uses_one_post_then_one_query_without_retry():
+def test_ambiguous_submit_uses_one_post_then_one_query_without_retry(tmp_path):
     g = FakeGateway({"status": "NEW", "orderId": 77, "executedQty": "0"})
-    bridge, c, dispatcher = setup_guarded_dispatcher(g)
+    bridge, c, dispatcher = setup_guarded_dispatcher(g, tmp_path)
     committed_client_order_id = bridge.committed_request("intent-1").request.client_order_id
     from trading_platform.v35.binance_execution import RuntimeCredentialValues
     r = c.submit_and_reconcile(intent=intent(), client_order_id=committed_client_order_id, gateway=g,

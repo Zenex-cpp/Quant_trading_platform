@@ -28,7 +28,7 @@ EXPECTED_MILESTONE_ID = "V4.29-RECOVERY"
 EXPECTED_BASELINE_VERSION = "V4.28-RECOVERY"
 EXPECTED_MATRIX_PATH = "compliance_v429.csv"
 EXPECTED_BASELINE_HASH_PATH = "V428_BASELINE_ARCHIVE_SHA256.txt"
-EXPECTED_IMPACTED_IDS = ("CI-PREFLIGHT-01", "M1", "M2", "M3", "M4", "M5", "M7", "M9", "M10", "M14", "M15", "M18", "M21", "M22", "M23", "M24", "M25", "REPO-GOV-01", "REPO-GOV-02", "REPO-GOV-03", "REPO-GOV-CAPTURE-01", "REPO-GOV-SIGN-01", "REPO-GOV-PATH-01", "REPO-GOV-PATH-02", "REPO-GOV-PATH-03", "REPO-GOV-PATH-04")
+EXPECTED_IMPACTED_IDS = ("CI-PREFLIGHT-01", "M1", "M2", "M3", "M4", "M5", "M7", "M9", "M10", "M11", "M14", "M15", "M18", "M21", "M22", "M23", "M24", "M25", "REPO-GOV-01", "REPO-GOV-02", "REPO-GOV-03", "REPO-GOV-CAPTURE-01", "REPO-GOV-SIGN-01", "REPO-GOV-PATH-01", "REPO-GOV-PATH-02", "REPO-GOV-PATH-03", "REPO-GOV-PATH-04")
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 if str(ROOT / "src") not in sys.path:
@@ -62,6 +62,7 @@ CONTRACT_FILES = (
     "V429_M7_REMEDIATION_REPORT.md",
     "V429_M9_REMEDIATION_REPORT.md",
     "V429_M10_REMEDIATION_REPORT.md",
+    "V429_M11_REMEDIATION_REPORT.md",
     "V429_M14_REMEDIATION_REPORT.md",
     "V429_M15_REMEDIATION_REPORT.md",
     "V429_M18_REMEDIATION_REPORT.md",
@@ -141,6 +142,8 @@ CONTRACT_FILES = (
     "src/trading_platform/v408/gate_promotion.py",
     "src/trading_platform/v311/dispatch_guard.py",
     "src/trading_platform/v312/execution_runtime.py",
+    "src/trading_platform/v321/durable_dispatch.py",
+    "src/trading_platform/v338/side_effects.py",
     "src/trading_platform/v36/user_execution.py",
     "src/trading_platform/v380/order_adapter.py",
     "src/trading_platform/v384/testnet_execution_activation.py",
@@ -210,6 +213,7 @@ CONTRACT_FILES = (
     "tests/v318/test_dispatch_freshness.py",
     "tests/v320/test_dispatch_order_request.py",
     "tests/v321/test_durable_dispatch.py",
+    "tests/v338/test_m11_side_effects.py",
     "schemas/v424_milestone_preflight.schema.json",
     "schemas/v424_repository_governance_evidence.schema.json",
     "schemas/v428_repository_governance_evidence.schema.json",

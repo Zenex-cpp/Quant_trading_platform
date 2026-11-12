@@ -47,6 +47,7 @@ class EventStore:
     """Thread-safe append-only event store with hash chaining and idempotent IDs."""
     def __init__(self, path: str = ":memory:") -> None:
         self._lock = RLock()
+        self._path = str(path)
         self._db = sqlite3.connect(path, check_same_thread=False)
         self._db.execute("PRAGMA journal_mode=WAL")
         self._db.execute("PRAGMA synchronous=FULL")
@@ -76,6 +77,11 @@ class EventStore:
         END;
         """)
         self._db.commit()
+
+    @property
+    def is_persistent(self) -> bool:
+        """Whether events survive closing and reopening this store."""
+        return self._path not in {"", ":memory:"}
 
     @_store_locked
     def close(self) -> None:

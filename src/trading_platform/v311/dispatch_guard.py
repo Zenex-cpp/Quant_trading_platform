@@ -191,8 +191,19 @@ class GuardedExecutionDispatcher:
         self.market_data_authority = market_data_authority
         self.causal_ttl_authority = causal_ttl_authority
         if side_effect_ledger is None:
+            candidate_stores = [
+                ledger.store
+                for ledger in (dispatch_attempt_ledger, order_request_ledger)
+                if ledger is not None
+            ]
+            accounting_ledger = getattr(accounting_authority, "ledger", None)
+            if accounting_ledger is not None:
+                candidate_stores.append(accounting_ledger.store)
+            side_effect_store = next((store for store in candidate_stores if store.is_persistent), None)
+            if side_effect_store is None:
+                side_effect_store = candidate_stores[0] if candidate_stores else EventStore()
             side_effect_ledger = DurableSideEffectLedger(
-                dispatch_attempt_ledger.store if dispatch_attempt_ledger is not None else EventStore()
+                side_effect_store
             )
         self.side_effect_ledger = side_effect_ledger
         self.side_effect_executor = DurableSideEffectExecutor(self.side_effect_ledger)
@@ -293,6 +304,8 @@ class GuardedExecutionDispatcher:
             except DispatchAttemptConflict as exc:
                 raise DispatchGuardDenied(f"DISPATCH_ATTEMPT_DENIED:{exc}") from exc
         self.bridge.assert_dispatchable(intent.intent_id)
+        if not self.side_effect_ledger.store.is_persistent:
+            raise DispatchGuardDenied("SIDE_EFFECT_LEDGER_NOT_PERSISTENT")
         accounting_hash = None
         if self.accounting_authority is not None:
             accounting_hash = self.accounting_authority.snapshot().projection_hash

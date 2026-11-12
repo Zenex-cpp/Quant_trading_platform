@@ -22,6 +22,7 @@ from trading_platform.v331.position_authority import PositionAuthorityLedger, Po
 from trading_platform.v332.market_authority import MarketDataAuthorityLedger
 from trading_platform.v333.causal_ttl import CausalTTLAuthorityLedger
 from trading_platform.v318.durable_decision import DurableRiskDecisionLedger
+from trading_platform.v321 import DurableDispatchAttemptLedger
 from trading_platform.portfolio.config import ConfigValue
 from trading_platform.v343.config_authority import (
     ConfigurationAuthorityError,
@@ -63,6 +64,7 @@ class ExecutionRuntimeIntegration:
         market_data_authority: MarketDataAuthorityLedger | None = None,
         causal_ttl_authority: CausalTTLAuthorityLedger | None = None,
         risk_decision_ledger: DurableRiskDecisionLedger | None = None,
+        dispatch_attempt_ledger: DurableDispatchAttemptLedger | None = None,
         configuration_authority: ConfigurationAuthorityLedger | None = None,
     ) -> None:
         self.orchestrator = orchestrator
@@ -81,6 +83,7 @@ class ExecutionRuntimeIntegration:
             market_data_authority=self.market_data_authority,
             causal_ttl_authority=self.causal_ttl_authority,
             risk_decision_ledger=self.risk_decision_ledger,
+            dispatch_attempt_ledger=dispatch_attempt_ledger,
             clock_ms=lambda: int(self._clock_epoch() * 1000),
         )
         self._now_epoch: float = 0.0

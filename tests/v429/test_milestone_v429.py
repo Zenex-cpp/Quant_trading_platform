@@ -257,3 +257,16 @@ def test_v429_m25_matrix_points_to_isolated_public_archive_downloader():
     assert m25["evidence_reference"] == "V429_M25_PUBLIC_DATA_REPORT.md"
     assert "Infrastructure" in m25["unresolved_gap"]
     assert '"M25"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")
+
+
+def test_v429_m11_matrix_points_to_durable_retry_replay_boundary():
+    with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
+        m11 = next(row for row in csv.DictReader(stream) if row["machine_check_id"] == "M11")
+    assert m11["implementation_status"] == "TESTED"
+    assert "trading_platform/v311/dispatch_guard.py" in m11["code_reference"]
+    assert "trading_platform/v312/execution_runtime.py" in m11["code_reference"]
+    assert "tests/v321/test_durable_dispatch.py" in m11["test_reference"]
+    assert "tests/v312/test_execution_runtime.py" in m11["test_reference"]
+    assert m11["evidence_reference"] == "V429_M11_REMEDIATION_REPORT.md"
+    assert "venue" in m11["unresolved_gap"].lower()
+    assert '"M11"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")
