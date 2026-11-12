@@ -16,7 +16,7 @@ def test_acceptance_success_does_not_equal_production_readiness():
 
 def test_project_version_matches_runtime_version():
     project = tomllib.loads(Path("pyproject.toml").read_text())
-    assert project["project"]["version"] == __version__ == "3.61.27"
+    assert project["project"]["version"] == __version__ == "3.61.28"
 
 
 def test_project_installed_cli_entrypoint_is_registered():

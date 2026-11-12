@@ -150,8 +150,18 @@ class EndToEndAcceptanceRunner:
         dataset_stage = self._stage("Historical Data", data_id, (), ("DATA_SOURCE:SIMULATED",), {
             "dataset_id": data_id,
             "content_hash": data_hash,
-            "quality": audit.quality_status.value,
+            "row_count": len(records),
         })
+        validation_output = audit.to_dict()
+        validation_output.update({
+            "dataset_id": data_id,
+            "source_content_hash": data_hash,
+            "accepted": True,
+        })
+        validation_stage = self._stage(
+            "Validation", "VALIDATION-E2E-001", (dataset_stage.artifact_id,),
+            ("QUALITY_STATUS:VALID", "DUPLICATES:0", "TIME_ORDER:STRICT"), validation_output,
+        )
 
         parsed_ts = [datetime.fromisoformat(r["event_time"]) for r in records]
         target_spec = TargetSpec(
@@ -166,6 +176,37 @@ class EndToEndAcceptanceRunner:
             holdout_frac=.10, event_time=parsed_ts, label_end=label_end,
         )
         assert set(split.train).isdisjoint(split.final_holdout)
+        if not split.oos:
+            raise AssertionError("E2E_OOS_SPLIT_EMPTY_AFTER_PURGE")
+
+        # Features are materialized only through OOS. The final holdout remains
+        # outside both the feature artifact and the target-label construction.
+        feature_indices = tuple(sorted(set(split.train) | set(split.validation) | set(split.oos)))
+        feature_values = {
+            index: (
+                float(records[index]["close"]) / float(records[index - 1]["close"]) - 1.0
+                if index else 0.0
+            )
+            for index in feature_indices
+        }
+        for index in feature_indices:
+            assert_point_in_time(
+                feature_available_at=parsed_ts[index],
+                event_time=parsed_ts[index],
+                prediction_time=parsed_ts[index],
+            )
+        feature_provenance = FeatureProvenance(
+            feature_id="FEATURE-E2E-001", feature_version="F1", hypothesis="lag_return",
+            definition="close[t]/close[t-1]-1", source_ids=(data_id,),
+            availability=Availability(parsed_ts[0], "SIMULATED_DATASET", 0, "IMMUTABLE"),
+            window="1m", implementation_version="V358", validation_status=QualityStatus.VALID,
+            lineage=(data_id,),
+        )
+        feature_stage = self._stage(
+            "Feature", "FEATURE-E2E-001", (validation_stage.artifact_id,),
+            ("PIT_VALID", feature_provenance.feature_version, "FINAL_HOLDOUT_EXCLUDED"),
+            {str(i): feature_values[i] for i in feature_indices},
+        )
 
         # Only construct labels in the raw training partition. Validation, OOS,
         # and final-holdout target values stay outside the fit and prediction path.
@@ -181,7 +222,7 @@ class EndToEndAcceptanceRunner:
         if not training_rows:
             raise AssertionError("E2E_TRAINING_TARGETS_EMPTY_AFTER_PURGE")
         target_stage = self._stage(
-            "Target", "TARGET-E2E-001", (data_id,),
+            "Target", "TARGET-E2E-001", (feature_stage.artifact_id, validation_stage.artifact_id),
             (target_spec.target_id, target_spec.version, "TRAIN_ONLY"),
             [(i, target_map[i].value, str(target_map[i].available_at)) for i in training_rows],
         )
@@ -189,38 +230,40 @@ class EndToEndAcceptanceRunner:
         if final_holdout_target_count:
             raise AssertionError("E2E_FINAL_HOLDOUT_TARGETS_ACCESSED")
 
-        if not split.oos:
-            raise AssertionError("E2E_OOS_SPLIT_EMPTY_AFTER_PURGE")
-        training_features = {
-            i: (training_prices[i] / training_prices[i - 1] - 1.0) if i else 0.0
-            for i in training_rows
-        }
-        for index in training_rows:
-            assert_point_in_time(
-                feature_available_at=parsed_ts[index],
-                event_time=parsed_ts[index],
-                prediction_time=parsed_ts[index],
-            )
-        feature_provenance = FeatureProvenance(
-            feature_id="FEATURE-E2E-001", feature_version="F1", hypothesis="lag_return",
-            definition="close[t]/close[t-1]-1", source_ids=(data_id,),
-            availability=Availability(parsed_ts[0], "SIMULATED_DATASET", 0, "IMMUTABLE"),
-            window="1m", implementation_version="V358", validation_status=QualityStatus.VALID,
-            lineage=(data_id,),
-        )
-        feature_stage = self._stage(
-            "Feature", "FEATURE-E2E-001", (data_id,),
-            ("PIT_VALID", feature_provenance.feature_version, "TRAIN_FEATURES_ONLY"),
-            {str(i): training_features[i] for i in training_rows},
+        X_train = [[feature_values[i]] for i in training_rows]
+        y_train = [1 if float(target_map[i].value) > 0 else 0 for i in training_rows]
+        if len(set(y_train)) < 2:
+            raise AssertionError("E2E_TRAINING_TARGET_CLASSES_INSUFFICIENT")
+        baseline_probability = sum(y_train) / len(y_train)
+        baseline_stage = self._stage(
+            "Baseline", "BASELINE-E2E-001",
+            (target_stage.artifact_id, feature_stage.artifact_id),
+            ("TRAIN_ONLY", "CONSTANT_CLASS_PRIOR"),
+            {
+                "positive_class_probability": baseline_probability,
+                "threshold": 0.5,
+                "training_rows": len(y_train),
+                "action": "BUY" if baseline_probability > 0.5 else "HOLD",
+            },
         )
 
-        X_train = [[training_features[i]] for i in training_rows]
-        y_train = [1 if float(target_map[i].value) > 0 else 0 for i in training_rows]
         model = LogisticBaseline(max_iter=500)
         fit = model.fit(X_train, y_train, ["lag_return"])
-        baseline_stage = self._stage("Baseline", "BASELINE-E2E-001",
-                                     (target_stage.artifact_id, feature_stage.artifact_id),
-                                     ("TRAIN_ONLY", str(len(training_rows))), {"model_type": fit.model_type, "rows": fit.training_rows})
+        model_output = {
+            "model_type": fit.model_type,
+            "feature_names": list(fit.feature_names),
+            "training_rows": fit.training_rows,
+            "classes": [int(value) for value in fit.model.classes_],
+            "coefficients": [[float(value) for value in row] for row in fit.model.coef_],
+            "intercept": [float(value) for value in fit.model.intercept_],
+            "random_state": 0,
+        }
+        model_stage = self._stage(
+            "Model", "MODEL-E2E-001",
+            (baseline_stage.artifact_id, target_stage.artifact_id, feature_stage.artifact_id),
+            ("FIT:LOGISTIC", "TRAIN_TARGETS_ONLY", f"TRAIN_ROWS:{fit.training_rows}"),
+            model_output,
+        )
 
         prediction_idx = None
         p_up = None
@@ -228,14 +271,7 @@ class EndToEndAcceptanceRunner:
         for index in split.oos:
             # Simulate online evaluation: consume OOS rows in timestamp order and
             # stop at the first predeclared signal threshold crossing.
-            current_price = float(records[index]["close"])
-            previous_price = float(records[index - 1]["close"])
-            candidate_feature = current_price / previous_price - 1.0
-            assert_point_in_time(
-                feature_available_at=parsed_ts[index],
-                event_time=parsed_ts[index],
-                prediction_time=parsed_ts[index],
-            )
+            candidate_feature = feature_values[index]
             candidate_probability = float(model.predict_proba([[candidate_feature]])[0][1])
             if candidate_probability > 0.5:
                 prediction_idx = index
@@ -246,10 +282,12 @@ class EndToEndAcceptanceRunner:
             raise AssertionError("E2E_NO_OOS_SIGNAL_AT_PREDECLARED_THRESHOLD")
         pred_id = "PREDICTION-E2E-001"
         prediction_stage = self._stage(
-            "Prediction", pred_id, (baseline_stage.artifact_id, feature_stage.artifact_id),
-            ("MODEL:LOGISTIC", "FEATURE:F1", "TRAIN_TARGET:T1"),
+            "Prediction", pred_id,
+            (model_stage.artifact_id, baseline_stage.artifact_id, feature_stage.artifact_id),
+            ("MODEL:LOGISTIC", "FEATURE:F1", "TARGET:T1", "EVALUATION:OOS_ONLY"),
             {"index": prediction_idx, "feature_value": prediction_feature,
-             "probability": round(p_up, 12), "available_at": parsed_ts[prediction_idx].isoformat()},
+             "probability": round(p_up, 12), "baseline_probability": baseline_probability,
+             "threshold": 0.5, "available_at": parsed_ts[prediction_idx].isoformat()},
         )
 
         signal_id = "SIGNAL-E2E-001"
@@ -320,7 +358,7 @@ class EndToEndAcceptanceRunner:
 
         order_intent = OrderIntent(
             intent_id=intent_id, decision_id=decision_id, portfolio_decision_id=portfolio_id,
-            risk_decision_id=decision_id, strategy_id="STRAT-E2E-1", model_id="MODEL-E2E-1",
+            risk_decision_id=decision_id, strategy_id="STRAT-E2E-1", model_id="MODEL-E2E-001",
             execution_version="EXEC-E2E-1", symbol="BTCUSDT", side=Side.BUY,
             action=OrderAction.OPEN, quantity=Decimal("0.0002"), order_type=OrderType.LIMIT,
             window=intent_window, price=Decimal("50000"), time_in_force="GTC", risk_reservation_id=reservation_id,
@@ -452,10 +490,21 @@ class EndToEndAcceptanceRunner:
         )
 
         position = accounting_projection.positions[0]
-        position_stage = self._stage("Position", "POSITION-E2E-001", (execution_filled_stage.artifact_id,),
-                                     ("STATE:OPEN",),
-                                     {"symbol": position.symbol, "quantity": str(position.quantity),
-                                      "avg": str(position.avg_entry_price)})
+        fill_position = {
+            "symbol": durable_fill.symbol,
+            "quantity": str(durable_fill.quantity),
+            "avg": str(durable_fill.price),
+        }
+        if (
+            position.symbol != fill_position["symbol"]
+            or str(position.quantity) != fill_position["quantity"]
+            or str(position.avg_entry_price) != fill_position["avg"]
+        ):
+            raise AssertionError("POSITION_ACCOUNTING_FILL_MISMATCH")
+        position_stage = self._stage(
+            "Position", "POSITION-E2E-001", (execution_filled_stage.artifact_id,),
+            ("STATE:OPEN", "SOURCE:DURABLE_FILL", "ACCOUNTING_MATCH:PASS"), fill_position,
+        )
 
         opening_equity = Decimal("1000")
         marked_position = position.quantity * fill.price
@@ -472,16 +521,27 @@ class EndToEndAcceptanceRunner:
         )
         if not accounting_reconciliation.reconciled:
             raise AssertionError("ACCOUNTING_RECONCILIATION_NOT_EXACT")
-        accounting_stage = self._stage("Accounting / P&L", "ACCOUNTING-E2E-001", (position_stage.artifact_id,),
-                                       ("RECONCILIATION:SIMULATED_MATCH",),
-                                       {"projection": accounting_projection.payload(),
-                                        "equity": str(equity_expected),
-                                        "fees": str(accounting_projection.fees),
-                                        "realized_pnl": str(accounting_projection.realized_pnl)})
+        accounting_stage = self._stage(
+            "Accounting", "ACCOUNTING-E2E-001", (position_stage.artifact_id,),
+            ("DURABLE_LEDGER:RECONSTRUCTED", "RECONCILIATION:SIMULATED_MATCH"),
+            {"projection": accounting_projection.payload()},
+        )
+        pnl_stage = self._stage(
+            "P&L", "PNL-E2E-001", (accounting_stage.artifact_id, position_stage.artifact_id),
+            ("EQUITY:MARKED", "FEES:INCLUDED"),
+            {
+                "opening_equity": str(opening_equity),
+                "equity": str(equity_expected),
+                "equity_change": str(equity_expected - opening_equity),
+                "fees": str(accounting_projection.fees),
+                "realized_pnl": str(accounting_projection.realized_pnl),
+                "unrealized_pnl": str(position.quantity * (fill.price - position.avg_entry_price)),
+            },
+        )
 
         recovery_stage = self._stage(
             "Recovery", "RECOVERY-E2E-001",
-            (accounting_stage.artifact_id, intent_stage.artifact_id, risk_stage.artifact_id),
+            (pnl_stage.artifact_id, intent_stage.artifact_id, risk_stage.artifact_id),
             ("SQLITE_REOPEN", "EVENT_CHAIN_VALID", "ACCOUNTING_STATE_HASH_MATCH"),
             {
                 "accounting_state_hash": accounting_projection.state_hash,
@@ -493,29 +553,38 @@ class EndToEndAcceptanceRunner:
         rollback = run_rollback_exercise(now=RUN_AT, scenario_id="E2E-ROLLBACK-V358-001")
         if rollback.result != "PASS" or not rollback.closed_without_residual_risk:
             raise AssertionError("DEPLOYMENT_ROLLBACK_EXERCISE_FAILED")
-        rollback_stage = self._stage("Rollback", "ROLLBACK-E2E-001", (),
+        rollback_stage = self._stage("Rollback", "ROLLBACK-E2E-001",
+                                     (execution_filled_stage.artifact_id, risk_stage.artifact_id),
                                      ("DEPLOYMENT_ROLLBACK", "NO_RESIDUAL_RISK"), rollback.as_dict())
 
         audit = AuditRecord(
             audit_id="AUDIT-E2E-001", event_type="E2E_ACCEPTANCE_COMPLETED", timestamp=RUN_AT,
             actor="acceptance-runner", payload={"chain": [s.artifact_id for s in (
-                dataset_stage, feature_stage, target_stage, baseline_stage, prediction_stage, signal_stage,
+                dataset_stage, validation_stage, feature_stage, target_stage, baseline_stage, model_stage,
+                prediction_stage, signal_stage,
                 opportunity_stage, portfolio_stage, risk_stage, intent_stage, simulation_stage, execution_stage,
-                execution_filled_stage, failure_stage, position_stage, accounting_stage, recovery_stage,
-                rollback_stage,
+                execution_filled_stage, failure_stage, position_stage, accounting_stage, pnl_stage,
+                recovery_stage, rollback_stage,
             )]}
         )
         audit_hash = audit.content_hash()
         audit_stage = self._stage(
             "Audit", audit.audit_id,
-            (accounting_stage.artifact_id, recovery_stage.artifact_id, failure_stage.artifact_id,
-             rollback_stage.artifact_id),
+            (pnl_stage.artifact_id, recovery_stage.artifact_id, failure_stage.artifact_id,
+             rollback_stage.artifact_id, model_stage.artifact_id, validation_stage.artifact_id),
             (audit.event_type,), {"content_hash": audit_hash},
         )
 
         replay_state = {
+            "research_chain": {
+                s.artifact_id: s.output_hash for s in (
+                    dataset_stage, validation_stage, feature_stage, target_stage,
+                    baseline_stage, model_stage, prediction_stage,
+                )
+            },
             "position": {"symbol": position.symbol, "quantity": str(position.quantity), "avg": str(position.avg_entry_price)},
             "accounting": accounting_projection.payload(),
+            "pnl": pnl_stage.output_hash,
             "risk": risk_record.payload(),
             "intent": DurableOrderIntentLedger.payload(order_intent),
             "failure_injection": failure_stage.output_hash,
@@ -523,21 +592,22 @@ class EndToEndAcceptanceRunner:
         }
         checkpoint = ReplayCheckpoint(
             event_offset=len(accounting_projection.processed_event_ids),
-            snapshot_version="E2E-V358-2", state_hash=canonical_hash(replay_state),
+            snapshot_version="E2E-V358-3", state_hash=canonical_hash(replay_state),
         )
         replay_stage = self._stage("Replay", "REPLAY-E2E-001",
-                                   (audit_stage.artifact_id, accounting_stage.artifact_id, recovery_stage.artifact_id,
-                                    rollback_stage.artifact_id),
+                                   (audit_stage.artifact_id, pnl_stage.artifact_id, recovery_stage.artifact_id,
+                                    rollback_stage.artifact_id, model_stage.artifact_id, validation_stage.artifact_id),
                                    (checkpoint.snapshot_version,), asdict(checkpoint))
 
+        pre_evidence_stages = (
+            dataset_stage, validation_stage, feature_stage, target_stage, baseline_stage, model_stage,
+            prediction_stage, signal_stage, opportunity_stage, portfolio_stage, risk_stage, intent_stage,
+            simulation_stage, execution_stage, execution_filled_stage, failure_stage, position_stage,
+            accounting_stage, pnl_stage, recovery_stage, rollback_stage, audit_stage, replay_stage,
+        )
         evidence_payload = {
             "run_id": self.RUN_ID,
-            "stage_hashes": {s.artifact_id: s.output_hash for s in (
-                dataset_stage, feature_stage, target_stage, baseline_stage, prediction_stage, signal_stage,
-                opportunity_stage, portfolio_stage, risk_stage, intent_stage, simulation_stage, execution_stage,
-                execution_filled_stage, failure_stage, position_stage, accounting_stage, recovery_stage,
-                rollback_stage, audit_stage, replay_stage,
-            )},
+            "stage_hashes": {s.artifact_id: s.output_hash for s in pre_evidence_stages},
             "replay_hash": checkpoint.state_hash,
             "training_target_indices": list(training_rows),
             "final_holdout_target_count": final_holdout_target_count,
@@ -562,21 +632,17 @@ class EndToEndAcceptanceRunner:
                 raise AssertionError("E2E_EVIDENCE_STORE_INVALID")
         evidence_snapshot = build_snapshot(
             "SNAPSHOT-E2E-001", ("EVIDENCE-E2E-001",), {"run_id": self.RUN_ID, "replay_hash": checkpoint.state_hash},
-            ("GATE-E2E-001",), tuple(s.artifact_id for s in (
-                replay_stage, recovery_stage, failure_stage, rollback_stage,
-            )),
-            ("DATA-V1", "FEATURE-V1", "TARGET-V1", "MODEL-V1", "RISK-V1", "EXEC-V1"),
-            tuple(s.output_hash for s in (
-                dataset_stage, target_stage, baseline_stage, execution_filled_stage,
-                failure_stage, recovery_stage, rollback_stage,
-            )),
+            ("GATE-E2E-001",), tuple(s.artifact_id for s in pre_evidence_stages),
+            ("DATA-V1", "VALIDATION-V1", "FEATURE-V1", "TARGET-V1", "BASELINE-V1", "MODEL-V1", "RISK-V1", "EXEC-V1"),
+            tuple(s.output_hash for s in pre_evidence_stages),
             ("METHOD-E2E-001",), ("APPROVAL-VERIFICATION-ONLY",), {"environment": "SIMULATION", "scope": "E2E"},
         )
         if snapshot_content_hash(evidence_snapshot) != evidence_snapshot.content_hash:
             raise AssertionError("E2E_SNAPSHOT_HASH_INVALID")
         evidence_stage = self._stage("Evidence", evidence_snapshot.snapshot_id,
                                     (replay_stage.artifact_id, recovery_stage.artifact_id,
-                                     failure_stage.artifact_id, rollback_stage.artifact_id),
+                                     failure_stage.artifact_id, rollback_stage.artifact_id,
+                                     validation_stage.artifact_id, model_stage.artifact_id),
                                     (artifact.evidence_id, evidence_snapshot.content_hash), asdict(evidence_snapshot))
 
         gate = Gate(
@@ -584,7 +650,8 @@ class EndToEndAcceptanceRunner:
             input_versions=("DATA-V1", "FEATURE-V1", "TARGET-V1", "MODEL-V1", "RISK-V1", "EXEC-V1"),
             checks=("DETERMINISTIC_IDENTIFIERS", "PROVENANCE", "REPRODUCIBILITY", "FAILURE_INJECTION", "RECOVERY", "ROLLBACK"),
             result=GateResult.PASS,
-            required_artifacts=(evidence_snapshot.snapshot_id, recovery_stage.artifact_id,
+            required_artifacts=(evidence_snapshot.snapshot_id, validation_stage.artifact_id,
+                                model_stage.artifact_id, recovery_stage.artifact_id,
                                 failure_stage.artifact_id, rollback_stage.artifact_id),
             evidence_refs=(artifact.evidence_id,), owner="acceptance-runner", reviewer="independent-review-required",
             timestamp=RUN_AT.isoformat(), expiration=None, revalidation_condition="ANY_UPSTREAM_CHANGE",
@@ -596,10 +663,13 @@ class EndToEndAcceptanceRunner:
 
         required = (
             AcceptanceItem("DETERMINISTIC_IDENTIFIERS", AcceptanceStatus.PASS, dataset_stage.artifact_id, True),
+            AcceptanceItem("DATA_VALIDATION", AcceptanceStatus.PASS, validation_stage.artifact_id, True),
+            AcceptanceItem("MODEL_TRAINING", AcceptanceStatus.PASS, model_stage.artifact_id, True),
             AcceptanceItem("PROVENANCE", AcceptanceStatus.PASS, evidence_stage.artifact_id, True),
             AcceptanceItem("REPRODUCIBILITY", AcceptanceStatus.PASS, replay_stage.artifact_id, True),
             AcceptanceItem("FAILURE_INJECTION", AcceptanceStatus.PASS, failure_stage.artifact_id, True),
             AcceptanceItem("RECOVERY", AcceptanceStatus.PASS, recovery_stage.artifact_id, True),
+            AcceptanceItem("P_AND_L", AcceptanceStatus.PASS, pnl_stage.artifact_id, True),
             AcceptanceItem("ROLLBACK", AcceptanceStatus.PASS, rollback_stage.artifact_id, True),
             AcceptanceItem("END_TO_END_CHAIN", AcceptanceStatus.PASS, gate_stage.artifact_id, True),
         )
@@ -608,10 +678,11 @@ class EndToEndAcceptanceRunner:
             raise AssertionError("E2E_ACCEPTANCE_REPORT_NOT_PASSED")
 
         stages = (
-            dataset_stage, feature_stage, target_stage, baseline_stage, prediction_stage, signal_stage,
+            dataset_stage, validation_stage, feature_stage, target_stage, baseline_stage, model_stage,
+            prediction_stage, signal_stage,
             opportunity_stage, portfolio_stage, risk_stage, intent_stage, simulation_stage, execution_stage,
-            execution_filled_stage, failure_stage, position_stage, accounting_stage, recovery_stage,
-            rollback_stage, audit_stage, replay_stage, evidence_stage, gate_stage,
+            execution_filled_stage, failure_stage, position_stage, accounting_stage, pnl_stage,
+            recovery_stage, rollback_stage, audit_stage, replay_stage, evidence_stage, gate_stage,
         )
         result = E2EAcceptanceResult(
             run_id=self.RUN_ID, stages=stages, replay_checkpoint=checkpoint,
