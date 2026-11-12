@@ -4,7 +4,7 @@ FD-02,Repository Structure,PRESENT,docs/66_V5_REPOSITORY_STRUCTURE.md;schemas/v5
 FD-03,State Orthogonality Model,PRESENT,docs/02_STATE_MODEL.md,,
 FD-04,State Compatibility Matrix,PRESENT,schemas/state_compatibility_matrix.csv,src/trading_platform/state/compatibility.py,
 FD-05,State/Action Matrix,PRESENT,docs/14_STATE_ACTION_CONTRACT.md;schemas/state_action_matrix.csv,src/trading_platform/state/actions.py,
-FD-06,State Transition Tables,PARTIAL,,src/trading_platform/state/transition.py,Transition code exists but a canonical transition-table artifact is absent.
+FD-06,State Transition Tables,PARTIAL,docs/67_V5_STATE_TRANSITION_TABLES.md;schemas/v5_state_transition_matrix.csv,src/trading_platform/state/transition.py;tests/test_v5_state_transition_tables.py,Approved positive lifecycle/risk paths and durable atomic side-effect handling remain undefined.
 FD-07,Global Invariants Catalog,PRESENT,docs/03_INVARIANTS.md,,
 FD-08,Safety Monotonicity Matrix,PARTIAL,docs/03_INVARIANTS.md,src/trading_platform/risk/monotonicity.py,A consolidated matrix covering all safety dimensions and actions is missing.
 FD-09,Configuration Precedence Matrix,PRESENT,docs/10_CONFIG_PRECEDENCE.md;schemas/config_precedence.csv,,

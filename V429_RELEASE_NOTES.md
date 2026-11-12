@@ -2,6 +2,13 @@
 
 ## V5.0 §179 traceability and strategy card
 
+# Package 3.61.34 — State transition contract
+
+- Published the pairwise default-reject matrix for all prompt §12 lifecycle and §13 risk-state pairs.
+- Restricted the base `TransitionEngine` to its registered `START_BACKTEST` edge; unlisted edges fail closed.
+- Added tests for pair coverage, rejection without mutation, guard failure, and idempotent replay.
+- FD-06 remains PARTIAL: positive lifecycle/risk paths and durable atomic side-effect orchestration remain undefined. This release does not establish production readiness or external verification.
+
 Python package 3.61.30 adds a tested inventory of all 55 §179 first-delivery artifacts and distinguishes PRESENT, PARTIAL, and OPEN based on repository evidence. It adds the Strategy Card machine-readable template with immutable inputs, canonical JSON, and a fingerprint. The Model Card and Strategy Card fields and review boundaries are documented together. The §179 package now also includes machine-readable error, fail-safe, precedence, incident-scope, metric-applicability, objective-function, and benchmark registries. Empirical registries are marked SPECIFICATION_ONLY. TransitionEngine now rejects idempotency-key reuse with a different transition specification. Focused first-delivery checks passed 35 tests and transition/release/runner checks passed 34. The mandatory full V4.29 runner passed with 1,363 passed, 26 skipped, and RELEASE_HYGIENE=PASS; preflight READY_FOR_MILESTONE, allowed=true, pipeline PASS, zero blockers and 188 input hashes. This remains offline evidence with external_evidence=false, production_ready=false, and activation_flag=NOT_SET.
 
 ## Summary

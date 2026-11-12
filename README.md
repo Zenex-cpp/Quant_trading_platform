@@ -1,7 +1,7 @@
 # Quant Trading Platform
 
 **Repository release train:** `V4.29-RECOVERY`  
-**Python distribution version:** `3.61.33` (a separate versioning scheme).
+**Python distribution version:** `3.61.34` (a separate versioning scheme).
 
 The current repository is a recovery extension based on the available V4.28 recovery archive. Byte-for-byte canonical lineage to V4.23 and V4.26 is **not established** because those source archives are not available in the project.
 
@@ -90,6 +90,7 @@ The comparison can report agreement or divergence but cannot prove the sources a
 - [V5.0 Permission Model](docs/64_V5_PERMISSION_MODEL.md)
 - [V5.0 Security Threat Model](docs/65_V5_SECURITY_THREAT_MODEL.md)
 - [V5.0 Repository Structure](docs/66_V5_REPOSITORY_STRUCTURE.md)
+- [V5.0 State Transition Tables](docs/67_V5_STATE_TRANSITION_TABLES.md)
 - [`MASTER PROMPT.txt`](MASTER%20PROMPT.txt) is the normative system specification.
 - [`V429_VERIFICATION_REPORT.md`](V429_VERIFICATION_REPORT.md) records the recovery build and verification boundary.
 - [`V429_OPEN_GAPS_DELTA.md`](V429_OPEN_GAPS_DELTA.md) lists unresolved external and operational gates.
@@ -111,7 +112,7 @@ The 3.61.4 safety patch restricts the legacy Testnet evidence session and runner
 
 ## V5.0 first-delivery work
 
-Version 3.61.29 added the prompt §179 traceability register, the immutable machine-readable Strategy Card template, and safety/research registries. Version 3.61.30 binds state-transition idempotency keys to the full transition specification and rejects conflicting reuse. Version 3.61.31 makes §155 role/capability checks fail closed, publishes and tests the full 9 × 9 matrix, and separates credential configuration from production-trading access. Version 3.61.32 adds the complete §153 threat inventory with control evidence and residual risks. Version 3.61.33 adds a filesystem-checked repository map; §179 now records 41 PRESENT, 14 PARTIAL, 0 OPEN. FD-44 remains partial because resource-wide entitlement and trusted identity assignment are not present. These changes do not claim production readiness or external verification.
+Version 3.61.29 added the prompt §179 traceability register, the immutable machine-readable Strategy Card template, and safety/research registries. Version 3.61.30 binds state-transition idempotency keys to the full transition specification and rejects conflicting reuse. Version 3.61.31 makes §155 role/capability checks fail closed, publishes and tests the full 9 × 9 matrix, and separates credential configuration from production-trading access. Version 3.61.32 adds the complete §153 threat inventory with control evidence and residual risks. Version 3.61.33 adds a filesystem-checked repository map. Version 3.61.34 publishes pairwise default-reject transition tables and makes the base transition engine accept only its registered `START_BACKTEST` edge; §179 remains 41 PRESENT, 14 PARTIAL, 0 OPEN. FD-06 remains PARTIAL because positive lifecycle/risk paths and durable atomic side-effect handling are not defined. FD-44 remains PARTIAL because resource-wide entitlement and trusted identity assignment are not present. These changes do not claim production readiness or external verification.
 
 The final local V4.29 runner passed with 1,363 tests passed, 26 skipped, and release hygiene PASS. The preflight remains offline: external evidence is false, production readiness is false, and activation is not set.
 
