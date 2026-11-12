@@ -22,13 +22,15 @@ This is a recovery extension built from the exact V4.28 recovery archive present
 
 ## Verification results
 
-- Latest local package `3.61.22` validation on Windows/Python 3.12: **1,341 passed, 26 skipped**, mandatory runner exit code `0`, `RELEASE_HYGIENE=PASS`.
-- `.audit/V429_M18_FINAL_20261112.json`: `READY_FOR_MILESTONE`, `allowed=true`, `pipeline_status=PASS`, zero blockers, M18/M21 in the impacted set, and **165 contract-input hashes** captured in the preflight.
-- M21 remains `TESTED`. `external_evidence=false`, `production_ready=false`, and `activation_flag=NOT_SET`.
+- Latest local package `3.61.23` validation on Windows/Python 3.14.7: **1,343 passed, 26 skipped**, mandatory runner exit code `0`, `RELEASE_HYGIENE=PASS`.
+- `.audit/V429_M25_ENDPOINTS_FINAL_20261112.json`: `READY_FOR_MILESTONE`, `allowed=true`, `pipeline_status=PASS`, zero blockers, M18/M21/M25 in the impacted set, and **165 contract-input hashes** captured in the preflight.
+- M18, M21 and M25 remain `TESTED`. `external_evidence=false`, `production_ready=false`, and `activation_flag=NOT_SET`.
 
 M21's model manifest no longer sets runtime calibration state. A separately computed `CalibrationReport` is required to lift `UNKNOWN`; its fingerprint and source/sample metadata are bound to the assessment. This protects decision identity but is not a signature over upstream data or producer.
 
 M18 propagates invalidation to a fixed point across graph artifacts, evidence references, gates, candidates and promotions. The recorded revalidation targets are exact for the supplied registries; production-wide registry completeness remains unverified.
+
+M25's V391 application policy now allows exact configured hosts only over HTTPS/WSS on the default TLS port and rejects URL userinfo, malformed ports, invalid zones and non-string endpoints. The application policy is not proof of host/VPC/container enforcement, DNS integrity or actual route separation; M25 remains `TESTED`.
 
 Initial V4.29 baseline results:
 

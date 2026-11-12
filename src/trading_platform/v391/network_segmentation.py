@@ -83,19 +83,23 @@ class NetworkSegmentationPolicyV391:
                     if canonical in normalized_prod or canonical in normalized_test:
                         raise SegmentationBoundaryErrorV391("PUBLIC_DATA_TRADING_ENDPOINT_OVERLAP")
 
-    @staticmethod
-    def _host(endpoint: str) -> str:
-        parsed = urlparse(endpoint)
-        return (parsed.hostname or "").lower().rstrip(".")
-
     def decide(self, source_zone: NetworkZoneV391, endpoint: str) -> SegmentationDecisionV391:
         self.validate()
-        if source_zone not in NetworkZoneV391:
+        if not isinstance(source_zone, NetworkZoneV391) or not isinstance(endpoint, str):
             return SegmentationDecisionV391.DENY
-        parsed = urlparse(endpoint)
+        try:
+            parsed = urlparse(endpoint)
+            host = parsed.hostname
+            port = parsed.port
+        except ValueError:
+            return SegmentationDecisionV391.DENY
         if parsed.scheme not in {"https", "wss"}:
             return SegmentationDecisionV391.DENY
-        host = self._host(endpoint)
+        if parsed.username is not None or parsed.password is not None:
+            return SegmentationDecisionV391.DENY
+        if port not in (None, 443):
+            return SegmentationDecisionV391.DENY
+        host = (host or "").lower().rstrip(".")
         if not host:
             return SegmentationDecisionV391.DENY
         if source_zone is NetworkZoneV391.RESEARCH:

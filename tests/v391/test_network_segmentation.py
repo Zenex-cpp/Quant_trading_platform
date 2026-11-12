@@ -51,6 +51,22 @@ def test_non_tls_and_unknown_hosts_are_denied():
     assert p.decide(NetworkZoneV391.TESTNET_EXECUTION, "https://evil.example") is SegmentationDecisionV391.DENY
 
 
+def test_only_default_tls_port_is_allowed_for_listed_hosts():
+    p = NetworkSegmentationPolicyV391()
+    assert p.decide(NetworkZoneV391.PUBLIC_MARKET_DATA, "https://data.binance.vision/archive.zip") is SegmentationDecisionV391.ALLOW
+    assert p.decide(NetworkZoneV391.PUBLIC_MARKET_DATA, "https://data.binance.vision:443/archive.zip") is SegmentationDecisionV391.ALLOW
+    assert p.decide(NetworkZoneV391.PUBLIC_MARKET_DATA, "https://data.binance.vision:8443/archive.zip") is SegmentationDecisionV391.DENY
+    assert p.decide(NetworkZoneV391.TESTNET_EXECUTION, "wss://fstream.binancefuture.com:9443/private") is SegmentationDecisionV391.DENY
+
+
+def test_userinfo_malformed_ports_and_invalid_inputs_fail_closed():
+    p = NetworkSegmentationPolicyV391()
+    assert p.decide(NetworkZoneV391.PUBLIC_MARKET_DATA, "https://user:secret@data.binance.vision/archive.zip") is SegmentationDecisionV391.DENY
+    assert p.decide(NetworkZoneV391.PUBLIC_MARKET_DATA, "https://data.binance.vision:invalid/archive.zip") is SegmentationDecisionV391.DENY
+    assert p.decide("PUBLIC_MARKET_DATA", "https://data.binance.vision/archive.zip") is SegmentationDecisionV391.DENY
+    assert p.decide(NetworkZoneV391.PUBLIC_MARKET_DATA, None) is SegmentationDecisionV391.DENY
+
+
 def test_wildcards_are_rejected():
     bad = dict(DEFAULT_ALLOWED_HOSTS_V391)
     bad[NetworkZoneV391.TESTNET_EXECUTION] = frozenset({"*.binancefuture.com"})
