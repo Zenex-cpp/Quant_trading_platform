@@ -41,7 +41,7 @@ FD-39,Promotion Bundle Specification,PRESENT,docs/31_V10_PROMOTION_ARCHITECTURE.
 FD-40,Holdout Access Policy,PRESENT,docs/21_V05_RESEARCH_MODEL_LAB.md;docs/18_V03_COMPLETION.md,src/trading_platform/data/holdout.py,
 FD-41,Gate Dependency Matrix,PARTIAL,docs/30_V09_COMPLIANCE.md;docs/31_V10_PROMOTION_ARCHITECTURE.md,,"Gate dependencies are described but no exhaustive gate-by-dependency matrix is published."
 FD-42,Gate Invalidation Policy,PRESENT,docs/30_V09_COMPLIANCE.md,src/trading_platform/gates/contracts.py,
-FD-43,Threat Model,PARTIAL,docs/31_V10_PROMOTION_ARCHITECTURE.md,,"Security boundaries are stated but a threat inventory with actors/assets/mitigations is missing."
+FD-43,Threat Model,PRESENT,docs/65_V5_SECURITY_THREAT_MODEL.md;schemas/v5_threat_model.csv,tests/test_v5_security_threat_model.py,
 FD-44,Permission Model,PARTIAL,docs/64_V5_PERMISSION_MODEL.md;schemas/v5_permission_matrix.csv,src/trading_platform/security/permissions.py;src/trading_platform/security/credentials.py,"Role/capability grants are explicit and tested; platform-wide resource entitlements, trusted identity, and role assignment are not implemented."
 FD-45,Network Segmentation Model,PRESENT,V390_M25_NETWORK_ISOLATION.md,src/trading_platform/ops/network_policy.py,
 FD-46,Research Branch Model,PRESENT,docs/29_V09_RESEARCH_EVIDENCE.md,src/trading_platform/research/ledger.py,
