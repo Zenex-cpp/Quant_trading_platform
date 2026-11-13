@@ -11,7 +11,7 @@ from trading_platform.v21.event_store import EventStore
 from trading_platform.v30.truth import AxisSnapshot, TruthComponent, TruthStatus, build_truth
 from trading_platform.v311.dispatch_guard import DispatchGuardDenied, GuardedExecutionDispatcher
 from trading_platform.v32.capability import CapabilityAuthority
-from tests.dispatch_support import execution_authorities_for, risk_decision_ledger_for
+from tests.dispatch_support import execution_authorities_for, risk_accounting_reservation_for, risk_decision_ledger_for
 from trading_platform.v33.commit import CommitCoordinator
 from trading_platform.v34.execution_bridge import ExecutionBridge
 from trading_platform.v35.binance_execution import ExchangeOutcome, RuntimeCredentialValues, SubmitObservation
@@ -129,6 +129,9 @@ def test_final_dispatch_rejects_tampered_durable_request(tmp_path: Path):
 
 def test_final_dispatch_accepts_exact_durable_request(tmp_path: Path):
     b, i, _, request_ledger, _ = committed_bridge(tmp_path, with_durable=True)
+    accounting, reservation_gate = risk_accounting_reservation_for(
+        b, i, now_ms=int(NOW.timestamp() * 1000), directory=tmp_path,
+    )
     gateway = Gateway()
     assert request_ledger is not None
     guard = GuardedExecutionDispatcher(
@@ -136,6 +139,8 @@ def test_final_dispatch_accepts_exact_durable_request(tmp_path: Path):
         order_request_ledger=request_ledger,
         **execution_authorities_for(i, now_ms=int(NOW.timestamp() * 1000)),
         risk_decision_ledger=risk_decision_ledger_for(b, i, now_ms=int(NOW.timestamp() * 1000)),
+        accounting_authority=accounting,
+        risk_reservation_gate=reservation_gate,
         clock_ms=lambda: int(NOW.timestamp() * 1000),
     )
     receipt = guard.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))

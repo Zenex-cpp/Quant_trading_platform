@@ -1,6 +1,11 @@
 from decimal import Decimal
+from pathlib import Path
 
 from trading_platform.v21.event_store import EventStore
+from trading_platform.risk.budget import BudgetScope
+from trading_platform.v315 import DurableAccountingLedger, DurableFill
+from trading_platform.v316 import DurableAccountingAuthority
+from trading_platform.v317 import DurableRiskReservationBook, RiskReservationGate, RiskReservationRecord
 from trading_platform.v318.durable_decision import (
     DurableRiskDecisionLedger,
     RiskDecisionAction,
@@ -78,3 +83,39 @@ def execution_authorities_for(intent, *, now_ms: int):
         "market_data_authority": market,
         "causal_ttl_authority": causal,
     }
+
+
+def risk_accounting_reservation_for(
+    bridge, intent, *, now_ms: int, directory: str | Path,
+    accounting_authority: DurableAccountingAuthority | None = None,
+):
+    """Build disk-backed, reconciled accounting and a bound order reservation."""
+    if not intent.risk_reservation_id:
+        raise ValueError("TEST_INTENT_RISK_RESERVATION_ID_REQUIRED")
+    root = Path(directory)
+    committed = bridge.committed_request(intent.intent_id)
+    requested_risk = Decimal(str(committed.authority.requested_risk))
+
+    accounting = accounting_authority
+    if accounting is None:
+        accounting_ledger = DurableAccountingLedger(EventStore(str(root / "risk-accounting.db")))
+        accounting_ledger.append_fill(DurableFill(
+            f"test-fill:{intent.intent_id}", f"test-order:{intent.intent_id}",
+            intent.symbol, intent.side.value, Decimal("1"), Decimal("100"),
+        ))
+        accounting = DurableAccountingAuthority(accounting_ledger)
+        accounting.restore()
+        accounting.mark_reconciled(evidence_id=f"test-reconciliation:{intent.intent_id}")
+    accounting_hash = accounting.snapshot().projection_hash
+    if not accounting_hash:
+        raise AssertionError("TEST_ACCOUNTING_PROJECTION_HASH_REQUIRED")
+
+    book = DurableRiskReservationBook(
+        EventStore(str(root / "risk-reservations.db")), allocated=requested_risk,
+    )
+    book.reserve(RiskReservationRecord(
+        intent.risk_reservation_id, BudgetScope.ORDER, requested_risk, requested_risk,
+        intent.intent_id, intent.risk_decision_id, accounting_hash,
+        now_ms - 1, now_ms + 60_000,
+    ))
+    return accounting, RiskReservationGate(book)

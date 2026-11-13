@@ -1,5 +1,9 @@
 # 06 — Idempotency Contract
 
+## Transition engine enforcement
+
+The in-memory TransitionEngine binds each committed idempotency key to the complete TransitionSpec and result. An identical retry returns the committed result without rerunning its guard or adding another audit event. Reusing the key with a different source, target, action, transition ID, audit event type, or guard is rejected with IDEMPOTENCY_KEY_CONFLICT.
+
 Every side-effecting operation carries an idempotency key.
 
 Required domains:

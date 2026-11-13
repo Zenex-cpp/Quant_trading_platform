@@ -59,13 +59,64 @@ class InvalidationImpact:
     deployment_impact: str
 
 def propagate_invalidation(graph: EvidenceDependencyGraph, changed_component: str, evidence_index: dict[str,Evidence], gate_dependencies: dict[str,tuple[str,...]], candidates: dict[str,tuple[str,...]], promotions: dict[str,tuple[str,...]]) -> InvalidationImpact:
+    if not isinstance(changed_component, str) or not changed_component.strip():
+        raise ValueError("INVALIDATION_COMPONENT_REQUIRED")
     seen=set(); stack=[changed_component]
     while stack:
         x=stack.pop()
         if x in seen: continue
         seen.add(x); stack.extend(graph.dependents(x))
-    affected_evidence=tuple(sorted(eid for eid,e in evidence_index.items() if eid in seen or bool(set(e.dependencies)&seen)))
-    invalidated_gates=tuple(sorted(g for g,deps in gate_dependencies.items() if set(deps)&(seen|set(affected_evidence))))
-    affected_candidates=tuple(sorted(c for c,deps in candidates.items() if set(deps)&(set(invalidated_gates)|set(affected_evidence))))
-    affected_promotions=tuple(sorted(p for p,deps in promotions.items() if set(deps)&(set(affected_candidates)|set(invalidated_gates)|set(affected_evidence))))
-    return InvalidationImpact(changed_component, tuple(sorted(seen)), affected_evidence, invalidated_gates, affected_candidates, affected_promotions, affected_promotions or affected_candidates and ('REVALIDATE',) or ('NONE',), 'BLOCK_OR_REVALIDATE' if affected_promotions else 'NO_CURRENT_DEPLOYMENT')
+    affected_evidence: set[str] = set()
+    invalidated_gates: set[str] = set()
+    affected_candidates: set[str] = set()
+    affected_promotions: set[str] = set()
+    impacted = set(seen)
+
+    # Close the impact transitively across both graph nodes and the separate
+    # evidence/gate/candidate/promotion registries. Evidence may depend on an
+    # earlier evidence ID without appearing as a node in EvidenceDependencyGraph.
+    changed = True
+    while changed:
+        changed = False
+        for evidence_id, evidence in evidence_index.items():
+            references = set(evidence.dependencies) | set(evidence.source_refs)
+            if evidence_id in impacted or references & impacted:
+                if evidence_id not in affected_evidence:
+                    affected_evidence.add(evidence_id)
+                    impacted.add(evidence_id)
+                    changed = True
+        for gate_id, dependencies in gate_dependencies.items():
+            if gate_id in impacted or set(dependencies) & impacted:
+                if gate_id not in invalidated_gates:
+                    invalidated_gates.add(gate_id)
+                    impacted.add(gate_id)
+                    changed = True
+        for candidate_id, dependencies in candidates.items():
+            if candidate_id in impacted or set(dependencies) & impacted:
+                if candidate_id not in affected_candidates:
+                    affected_candidates.add(candidate_id)
+                    impacted.add(candidate_id)
+                    changed = True
+        for promotion_id, dependencies in promotions.items():
+            if promotion_id in impacted or set(dependencies) & impacted:
+                if promotion_id not in affected_promotions:
+                    affected_promotions.add(promotion_id)
+                    impacted.add(promotion_id)
+                    changed = True
+
+    affected_evidence_result = tuple(sorted(affected_evidence))
+    invalidated_gates_result = tuple(sorted(invalidated_gates))
+    affected_candidates_result = tuple(sorted(affected_candidates))
+    affected_promotions_result = tuple(sorted(affected_promotions))
+    required_revalidation = tuple(sorted(impacted - {changed_component}))
+    deployment_impact = "BLOCK_OR_REVALIDATE" if required_revalidation else "NO_REGISTERED_DEPENDENT_OBJECT"
+    return InvalidationImpact(
+        changed_component=changed_component,
+        affected_artifacts=tuple(sorted(seen)),
+        invalidated_evidence=affected_evidence_result,
+        invalidated_gates=invalidated_gates_result,
+        affected_candidates=affected_candidates_result,
+        affected_promotions=affected_promotions_result,
+        required_revalidation=required_revalidation,
+        deployment_impact=deployment_impact,
+    )

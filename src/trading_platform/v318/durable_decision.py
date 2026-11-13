@@ -8,7 +8,10 @@ import json
 from typing import Any, Mapping
 
 from trading_platform.v21.event_store import EventStore
-from trading_platform.v25.health import HealthAssessment, HealthState
+from trading_platform.v25.health import EvidenceFreshness, HealthAssessment, HealthState
+from trading_platform.v349.liquidity_assessment import LiquidityAssessment
+from trading_platform.v350.drawdown_history import DrawdownAssessment
+from trading_platform.v348.uncertainty_assessment import UncertaintyAssessment
 
 
 class RiskDecisionConflict(RuntimeError):
@@ -64,18 +67,21 @@ class RiskDecisionRecord:
     uncertainty_risk_factor: Decimal | None = None
     uncertainty_method: str | None = None
     uncertainty_method_version: str | None = None
+    uncertainty_assessment: UncertaintyAssessment | None = None
     liquidity_stress: Decimal | None = None
     liquidity_max: Decimal | None = None
     liquidity_floor: Decimal = Decimal("0")
     liquidity_risk_factor: Decimal | None = None
     liquidity_method: str | None = None
     liquidity_method_version: str | None = None
+    liquidity_assessment: LiquidityAssessment | None = None
     drawdown: Decimal | None = None
     drawdown_max: Decimal | None = None
     drawdown_floor: Decimal = Decimal("0")
     drawdown_risk_factor: Decimal | None = None
     drawdown_method: str | None = None
     drawdown_method_version: str | None = None
+    drawdown_assessment: DrawdownAssessment | None = None
     model_health: Decimal | None = None
     model_health_max: Decimal | None = None
     model_health_floor: Decimal = Decimal("0")
@@ -87,6 +93,12 @@ class RiskDecisionRecord:
     model_health_evidence_fresh: bool | None = None
     model_health_drift_critical: bool | None = None
     model_health_quality_ok: bool | None = None
+    model_health_source_evidence_id: str | None = None
+    model_health_source_captured_at_ns: int | None = None
+    model_health_source_ttl_ns: int | None = None
+    model_health_source_verified: bool | None = None
+    model_health_assessed_at_ns: int | None = None
+    model_health_source_fingerprint: str | None = None
     risk_state_factor: Decimal = Decimal("1")
     recovery_event_id: str | None = None
 
@@ -118,18 +130,30 @@ class RiskDecisionRecord:
             "uncertainty_risk_factor": None if self.uncertainty_risk_factor is None else str(self.uncertainty_risk_factor),
             "uncertainty_method": self.uncertainty_method,
             "uncertainty_method_version": self.uncertainty_method_version,
+            "uncertainty_assessment": None if self.uncertainty_assessment is None else {
+                **self.uncertainty_assessment.payload(),
+                "source_fingerprint": self.uncertainty_assessment.source_fingerprint,
+            },
             "liquidity_stress": None if self.liquidity_stress is None else str(self.liquidity_stress),
             "liquidity_max": None if self.liquidity_max is None else str(self.liquidity_max),
             "liquidity_floor": str(self.liquidity_floor),
             "liquidity_risk_factor": None if self.liquidity_risk_factor is None else str(self.liquidity_risk_factor),
             "liquidity_method": self.liquidity_method,
             "liquidity_method_version": self.liquidity_method_version,
+            "liquidity_assessment": None if self.liquidity_assessment is None else {
+                **self.liquidity_assessment.payload(),
+                "source_fingerprint": self.liquidity_assessment.source_fingerprint,
+            },
             "drawdown": None if self.drawdown is None else str(self.drawdown),
             "drawdown_max": None if self.drawdown_max is None else str(self.drawdown_max),
             "drawdown_floor": str(self.drawdown_floor),
             "drawdown_risk_factor": None if self.drawdown_risk_factor is None else str(self.drawdown_risk_factor),
             "drawdown_method": self.drawdown_method,
             "drawdown_method_version": self.drawdown_method_version,
+            "drawdown_assessment": None if self.drawdown_assessment is None else {
+                **self.drawdown_assessment.payload(),
+                "source_fingerprint": self.drawdown_assessment.source_fingerprint,
+            },
             "model_health": None if self.model_health is None else str(self.model_health),
             "model_health_max": None if self.model_health_max is None else str(self.model_health_max),
             "model_health_floor": str(self.model_health_floor),
@@ -141,6 +165,12 @@ class RiskDecisionRecord:
             "model_health_evidence_fresh": self.model_health_evidence_fresh,
             "model_health_drift_critical": self.model_health_drift_critical,
             "model_health_quality_ok": self.model_health_quality_ok,
+            "model_health_source_evidence_id": self.model_health_source_evidence_id,
+            "model_health_source_captured_at_ns": self.model_health_source_captured_at_ns,
+            "model_health_source_ttl_ns": self.model_health_source_ttl_ns,
+            "model_health_source_verified": self.model_health_source_verified,
+            "model_health_assessed_at_ns": self.model_health_assessed_at_ns,
+            "model_health_source_fingerprint": self.model_health_source_fingerprint,
             "risk_state_factor": str(self.risk_state_factor),
             "recovery_event_id": self.recovery_event_id,
         }
@@ -163,13 +193,17 @@ class RiskDecisionGateSnapshot:
     truth_hash: str
     uncertainty: Decimal | None = None
     uncertainty_risk_factor: Decimal | None = None
+    uncertainty_source_fingerprint: str | None = None
     liquidity_stress: Decimal | None = None
     liquidity_risk_factor: Decimal | None = None
+    liquidity_source_fingerprint: str | None = None
     drawdown: Decimal | None = None
     drawdown_risk_factor: Decimal | None = None
+    drawdown_source_fingerprint: str | None = None
     model_health: Decimal | None = None
     model_health_risk_factor: Decimal | None = None
     model_health_assessment_id: str | None = None
+    model_health_source_fingerprint: str | None = None
 
 
 class DurableRiskDecisionLedger:
@@ -235,10 +269,14 @@ class DurableRiskDecisionLedger:
         portfolio_version: str | None = None,
         position_version: str | None = None,
         uncertainty: Decimal | None = None,
+        uncertainty_assessment: UncertaintyAssessment | None = None,
         liquidity_stress: Decimal | None = None,
+        liquidity_assessment: LiquidityAssessment | None = None,
         drawdown: Decimal | None = None,
+        drawdown_assessment: DrawdownAssessment | None = None,
         model_health: Decimal | None = None,
         model_health_assessment_id: str | None = None,
+        model_health_assessment: HealthAssessment | None = None,
     ) -> RiskDecisionGateSnapshot:
         decision = self.get(decision_id)
         if decision is None:
@@ -262,7 +300,17 @@ class DurableRiskDecisionLedger:
             current_uncertainty = DurableRiskDecisionLedger._amount(uncertainty, "INVALID_UNCERTAINTY")
             if current_uncertainty != decision.uncertainty:
                 raise RiskDecisionConflict("RISK_DECISION_UNCERTAINTY_STALE")
-        elif uncertainty is not None:
+            if uncertainty_assessment is None:
+                raise RiskDecisionConflict("RISK_DECISION_UNCERTAINTY_SOURCE_REQUIRED")
+            if (
+                decision.uncertainty_assessment is None
+                or uncertainty_assessment != decision.uncertainty_assessment
+                or uncertainty_assessment.source_fingerprint != decision.uncertainty_assessment.source_fingerprint
+            ):
+                raise RiskDecisionConflict("RISK_DECISION_UNCERTAINTY_SOURCE_STALE")
+            if not uncertainty_assessment.source_fresh_at(now_ms * 1_000_000):
+                raise RiskDecisionConflict("RISK_DECISION_UNCERTAINTY_SOURCE_EXPIRED")
+        elif uncertainty is not None or uncertainty_assessment is not None:
             raise RiskDecisionConflict("RISK_DECISION_UNCERTAINTY_PROVENANCE_MISSING")
         if decision.liquidity_stress is not None:
             if liquidity_stress is None:
@@ -270,7 +318,18 @@ class DurableRiskDecisionLedger:
             current_liquidity = DurableRiskDecisionLedger._amount(liquidity_stress, "INVALID_LIQUIDITY_STRESS")
             if current_liquidity != decision.liquidity_stress:
                 raise RiskDecisionConflict("RISK_DECISION_LIQUIDITY_STALE")
-        elif liquidity_stress is not None:
+            if liquidity_assessment is None:
+                raise RiskDecisionConflict("RISK_DECISION_LIQUIDITY_SOURCE_REQUIRED")
+            if (
+                decision.liquidity_assessment is None
+                or liquidity_assessment.source_fingerprint != decision.liquidity_assessment.source_fingerprint
+            ):
+                raise RiskDecisionConflict("RISK_DECISION_LIQUIDITY_SOURCE_STALE")
+            if liquidity_assessment.liquidity_stress != current_liquidity:
+                raise RiskDecisionConflict("RISK_DECISION_LIQUIDITY_SOURCE_MISMATCH")
+            if not liquidity_assessment.source_fresh_at(now_ms * 1_000_000):
+                raise RiskDecisionConflict("RISK_DECISION_LIQUIDITY_SOURCE_EXPIRED")
+        elif liquidity_stress is not None or liquidity_assessment is not None:
             raise RiskDecisionConflict("RISK_DECISION_LIQUIDITY_PROVENANCE_MISSING")
         if decision.drawdown is not None:
             if drawdown is None:
@@ -278,7 +337,13 @@ class DurableRiskDecisionLedger:
             current_drawdown = DurableRiskDecisionLedger._amount(drawdown, "INVALID_DRAWDOWN")
             if current_drawdown != decision.drawdown:
                 raise RiskDecisionConflict("RISK_DECISION_DRAWDOWN_STALE")
-        elif drawdown is not None:
+            if drawdown_assessment is None:
+                raise RiskDecisionConflict("RISK_DECISION_DRAWDOWN_SOURCE_REQUIRED")
+            if decision.drawdown_assessment is None or drawdown_assessment.source_fingerprint != decision.drawdown_assessment.source_fingerprint:
+                raise RiskDecisionConflict("RISK_DECISION_DRAWDOWN_SOURCE_STALE")
+            if not drawdown_assessment.source_fresh_at(now_ms * 1_000_000):
+                raise RiskDecisionConflict("RISK_DECISION_DRAWDOWN_SOURCE_EXPIRED")
+        elif drawdown is not None or drawdown_assessment is not None:
             raise RiskDecisionConflict("RISK_DECISION_DRAWDOWN_PROVENANCE_MISSING")
         if decision.model_health is not None:
             if model_health is None:
@@ -290,7 +355,15 @@ class DurableRiskDecisionLedger:
                 raise RiskDecisionConflict("RISK_DECISION_MODEL_HEALTH_ASSESSMENT_REQUIRED")
             if model_health_assessment_id != decision.model_health_assessment_id:
                 raise RiskDecisionConflict("RISK_DECISION_MODEL_HEALTH_ASSESSMENT_STALE")
-        elif model_health is not None or model_health_assessment_id is not None:
+            if model_health_assessment is None:
+                raise RiskDecisionConflict("RISK_DECISION_MODEL_HEALTH_SOURCE_REQUIRED")
+            if model_health_assessment.assessment_id != decision.model_health_assessment_id:
+                raise RiskDecisionConflict("RISK_DECISION_MODEL_HEALTH_ASSESSMENT_STALE")
+            if model_health_assessment.source_fingerprint != decision.model_health_source_fingerprint:
+                raise RiskDecisionConflict("RISK_DECISION_MODEL_HEALTH_SOURCE_STALE")
+            if not model_health_assessment.source_fresh_at(now_ms * 1_000_000):
+                raise RiskDecisionConflict("RISK_DECISION_MODEL_HEALTH_SOURCE_EXPIRED")
+        elif model_health is not None or model_health_assessment_id is not None or model_health_assessment is not None:
             raise RiskDecisionConflict("RISK_DECISION_MODEL_HEALTH_PROVENANCE_MISSING")
         if decision.truth_hash != truth_hash:
             raise RiskDecisionConflict("RISK_DECISION_TRUTH_HASH_STALE")
@@ -314,13 +387,23 @@ class DurableRiskDecisionLedger:
             truth_hash=decision.truth_hash,
             uncertainty=decision.uncertainty,
             uncertainty_risk_factor=decision.uncertainty_risk_factor,
+            uncertainty_source_fingerprint=(
+                None if decision.uncertainty_assessment is None else decision.uncertainty_assessment.source_fingerprint
+            ),
             liquidity_stress=decision.liquidity_stress,
             liquidity_risk_factor=decision.liquidity_risk_factor,
+            liquidity_source_fingerprint=(
+                None if decision.liquidity_assessment is None else decision.liquidity_assessment.source_fingerprint
+            ),
             drawdown=decision.drawdown,
             drawdown_risk_factor=decision.drawdown_risk_factor,
+            drawdown_source_fingerprint=(
+                None if decision.drawdown_assessment is None else decision.drawdown_assessment.source_fingerprint
+            ),
             model_health=decision.model_health,
             model_health_risk_factor=decision.model_health_risk_factor,
             model_health_assessment_id=decision.model_health_assessment_id,
+            model_health_source_fingerprint=decision.model_health_source_fingerprint,
         )
 
     @staticmethod
@@ -349,12 +432,23 @@ class DurableRiskDecisionLedger:
                 raise ValueError("UNCERTAINTY_MAX_REQUIRED")
             if not decision.uncertainty_method or not decision.uncertainty_method_version:
                 raise ValueError("UNCERTAINTY_METHOD_IDENTITY_REQUIRED")
+            assessment = decision.uncertainty_assessment
+            if assessment is None or not assessment.is_valid():
+                raise ValueError("UNCERTAINTY_SOURCE_PROVENANCE_REQUIRED")
+            if assessment.uncertainty != decision.uncertainty:
+                raise ValueError("UNCERTAINTY_ASSESSMENT_VALUE_MISMATCH")
+            created_at_ns = decision.created_at_ms * 1_000_000
+            if not assessment.source_fresh_at(created_at_ns):
+                raise ValueError("UNCERTAINTY_SOURCE_NOT_FRESH_AT_DECISION")
+            if decision.expires_at_ms * 1_000_000 > assessment.valid_until_ns:
+                raise ValueError("UNCERTAINTY_DECISION_EXCEEDS_SOURCE_TTL")
             try:
                 from trading_platform.v348.uncertainty_risk_authority import bind_uncertainty_to_risk
                 binding = bind_uncertainty_to_risk(
                     uncertainty=decision.uncertainty, baseline_risk=requested,
                     max_uncertainty=decision.uncertainty_max, floor=decision.uncertainty_floor,
                     method=decision.uncertainty_method, method_version=decision.uncertainty_method_version,
+                    assessment=assessment, now_ns=created_at_ns,
                 )
             except Exception as exc:
                 raise ValueError("INVALID_UNCERTAINTY_RISK_BINDING") from exc
@@ -362,7 +456,7 @@ class DurableRiskDecisionLedger:
                 raise ValueError("UNCERTAINTY_RISK_FACTOR_MISMATCH")
             if allowed > binding.allowed_risk:
                 raise ValueError("RISK_ALLOWED_EXCEEDS_UNCERTAINTY_CAP")
-        elif any(v is not None for v in (decision.uncertainty_max, decision.uncertainty_risk_factor, decision.uncertainty_method, decision.uncertainty_method_version)):
+        elif any(v is not None for v in (decision.uncertainty_max, decision.uncertainty_risk_factor, decision.uncertainty_method, decision.uncertainty_method_version, decision.uncertainty_assessment)):
             raise ValueError("UNCERTAINTY_PROVENANCE_INCOMPLETE")
         elif decision.uncertainty_floor != Decimal("0"):
             raise ValueError("UNCERTAINTY_FLOOR_WITHOUT_UNCERTAINTY")
@@ -371,12 +465,21 @@ class DurableRiskDecisionLedger:
                 raise ValueError("LIQUIDITY_MAX_REQUIRED")
             if not decision.liquidity_method or not decision.liquidity_method_version:
                 raise ValueError("LIQUIDITY_METHOD_IDENTITY_REQUIRED")
+            assessment = decision.liquidity_assessment
+            if assessment is None or not assessment.is_valid():
+                raise ValueError("LIQUIDITY_SOURCE_PROVENANCE_REQUIRED")
+            if assessment.liquidity_stress != decision.liquidity_stress:
+                raise ValueError("LIQUIDITY_ASSESSMENT_VALUE_MISMATCH")
+            created_at_ns = decision.created_at_ms * 1_000_000
+            if not assessment.source_fresh_at(created_at_ns):
+                raise ValueError("LIQUIDITY_SOURCE_NOT_FRESH_AT_DECISION")
             try:
                 from trading_platform.v349.liquidity_risk_authority import bind_liquidity_to_risk
                 binding = bind_liquidity_to_risk(
                     liquidity_stress=decision.liquidity_stress, baseline_risk=requested,
                     max_stress=decision.liquidity_max, floor=decision.liquidity_floor,
                     method=decision.liquidity_method, method_version=decision.liquidity_method_version,
+                    assessment=assessment, now_ns=created_at_ns,
                 )
             except Exception as exc:
                 raise ValueError("INVALID_LIQUIDITY_RISK_BINDING") from exc
@@ -384,7 +487,7 @@ class DurableRiskDecisionLedger:
                 raise ValueError("LIQUIDITY_RISK_FACTOR_MISMATCH")
             if allowed > binding.allowed_risk:
                 raise ValueError("RISK_ALLOWED_EXCEEDS_LIQUIDITY_CAP")
-        elif any(v is not None for v in (decision.liquidity_max, decision.liquidity_risk_factor, decision.liquidity_method, decision.liquidity_method_version)):
+        elif any(v is not None for v in (decision.liquidity_max, decision.liquidity_risk_factor, decision.liquidity_method, decision.liquidity_method_version, decision.liquidity_assessment)):
             raise ValueError("LIQUIDITY_PROVENANCE_INCOMPLETE")
         elif decision.liquidity_floor != Decimal("0"):
             raise ValueError("LIQUIDITY_FLOOR_WITHOUT_LIQUIDITY")
@@ -393,12 +496,21 @@ class DurableRiskDecisionLedger:
                 raise ValueError("DRAWDOWN_MAX_REQUIRED")
             if not decision.drawdown_method or not decision.drawdown_method_version:
                 raise ValueError("DRAWDOWN_METHOD_IDENTITY_REQUIRED")
+            assessment = decision.drawdown_assessment
+            if assessment is None or not assessment.is_valid():
+                raise ValueError("DRAWDOWN_SOURCE_PROVENANCE_REQUIRED")
+            if assessment.drawdown != decision.drawdown:
+                raise ValueError("DRAWDOWN_ASSESSMENT_VALUE_MISMATCH")
+            created_at_ns = decision.created_at_ms * 1_000_000
+            if not assessment.source_fresh_at(created_at_ns):
+                raise ValueError("DRAWDOWN_SOURCE_NOT_FRESH_AT_DECISION")
             try:
                 from trading_platform.v350.drawdown_risk_authority import bind_drawdown_to_risk
                 binding = bind_drawdown_to_risk(
                     drawdown=decision.drawdown, baseline_risk=requested,
                     max_drawdown=decision.drawdown_max, floor=decision.drawdown_floor,
                     method=decision.drawdown_method, method_version=decision.drawdown_method_version,
+                    assessment=assessment, now_ns=created_at_ns,
                 )
             except Exception as exc:
                 raise ValueError("INVALID_DRAWDOWN_RISK_BINDING") from exc
@@ -406,7 +518,7 @@ class DurableRiskDecisionLedger:
                 raise ValueError("DRAWDOWN_RISK_FACTOR_MISMATCH")
             if allowed > binding.allowed_risk:
                 raise ValueError("RISK_ALLOWED_EXCEEDS_DRAWDOWN_CAP")
-        elif any(v is not None for v in (decision.drawdown_max, decision.drawdown_risk_factor, decision.drawdown_method, decision.drawdown_method_version)):
+        elif any(v is not None for v in (decision.drawdown_max, decision.drawdown_risk_factor, decision.drawdown_method, decision.drawdown_method_version, decision.drawdown_assessment)):
             raise ValueError("DRAWDOWN_PROVENANCE_INCOMPLETE")
         elif decision.drawdown_floor != Decimal("0"):
             raise ValueError("DRAWDOWN_FLOOR_WITHOUT_DRAWDOWN")
@@ -419,8 +531,22 @@ class DurableRiskDecisionLedger:
                 raise ValueError("MODEL_HEALTH_ASSESSMENT_PROVENANCE_REQUIRED")
             if decision.model_health_evidence_fresh is not True or decision.model_health_drift_critical is not False or decision.model_health_quality_ok is not True:
                 raise ValueError("MODEL_HEALTH_ASSESSMENT_NOT_SAFE")
+            if (
+                not decision.model_health_source_evidence_id
+                or decision.model_health_source_captured_at_ns is None
+                or decision.model_health_source_ttl_ns is None
+                or decision.model_health_source_verified is not True
+                or decision.model_health_assessed_at_ns is None
+                or not decision.model_health_source_fingerprint
+            ):
+                raise ValueError("MODEL_HEALTH_SOURCE_PROVENANCE_INCOMPLETE")
             try:
-                from trading_platform.v351.model_health_risk_authority import bind_model_health_to_risk
+                source_evidence = EvidenceFreshness(
+                    evidence_id=decision.model_health_source_evidence_id,
+                    captured_at_ns=decision.model_health_source_captured_at_ns,
+                    ttl_ns=decision.model_health_source_ttl_ns,
+                    verified=decision.model_health_source_verified,
+                )
                 assessment = HealthAssessment(
                     state=HealthState(str(decision.model_health_state)),
                     evidence_fresh=bool(decision.model_health_evidence_fresh),
@@ -428,12 +554,24 @@ class DurableRiskDecisionLedger:
                     quality_ok=bool(decision.model_health_quality_ok),
                     reason="DURABLE_RESTORED",
                     assessment_id=str(decision.model_health_assessment_id),
+                    source_evidence=source_evidence,
+                    assessed_at_ns=decision.model_health_assessed_at_ns,
                 )
+                if assessment.source_fingerprint != decision.model_health_source_fingerprint:
+                    raise ValueError("MODEL_HEALTH_SOURCE_FINGERPRINT_MISMATCH")
+                created_at_ns = decision.created_at_ms * 1_000_000
+                if decision.model_health_assessed_at_ns > created_at_ns or not assessment.source_fresh_at(created_at_ns):
+                    raise ValueError("MODEL_HEALTH_SOURCE_NOT_FRESH_AT_DECISION")
+            except Exception as exc:
+                raise ValueError("INVALID_MODEL_HEALTH_SOURCE_PROVENANCE") from exc
+            try:
+                from trading_platform.v351.model_health_risk_authority import bind_model_health_to_risk
                 binding = bind_model_health_to_risk(
                     model_health=decision.model_health, baseline_risk=requested,
                     assessment=assessment, assessment_id=decision.model_health_assessment_id,
                     max_model_health=decision.model_health_max, floor=decision.model_health_floor,
                     method=decision.model_health_method, method_version=decision.model_health_method_version,
+                    now_ns=created_at_ns,
                 )
             except Exception as exc:
                 raise ValueError("INVALID_MODEL_HEALTH_RISK_BINDING") from exc
@@ -441,7 +579,14 @@ class DurableRiskDecisionLedger:
                 raise ValueError("MODEL_HEALTH_RISK_FACTOR_MISMATCH")
             if allowed > binding.allowed_risk:
                 raise ValueError("RISK_ALLOWED_EXCEEDS_MODEL_HEALTH_CAP")
-        elif any(v is not None for v in (decision.model_health_max, decision.model_health_risk_factor, decision.model_health_method, decision.model_health_method_version, decision.model_health_assessment_id, decision.model_health_state, decision.model_health_evidence_fresh, decision.model_health_drift_critical, decision.model_health_quality_ok)):
+        elif any(v is not None for v in (
+            decision.model_health_max, decision.model_health_risk_factor, decision.model_health_method,
+            decision.model_health_method_version, decision.model_health_assessment_id, decision.model_health_state,
+            decision.model_health_evidence_fresh, decision.model_health_drift_critical, decision.model_health_quality_ok,
+            decision.model_health_source_evidence_id, decision.model_health_source_captured_at_ns,
+            decision.model_health_source_ttl_ns, decision.model_health_source_verified,
+            decision.model_health_assessed_at_ns, decision.model_health_source_fingerprint,
+        )):
             raise ValueError("MODEL_HEALTH_PROVENANCE_INCOMPLETE")
         elif decision.model_health_floor != Decimal("0"):
             raise ValueError("MODEL_HEALTH_FLOOR_WITHOUT_MODEL_HEALTH")
@@ -496,18 +641,21 @@ class DurableRiskDecisionLedger:
                 uncertainty_risk_factor=None if payload.get("uncertainty_risk_factor") is None else Decimal(str(payload["uncertainty_risk_factor"])),
                 uncertainty_method=None if payload.get("uncertainty_method") is None else str(payload["uncertainty_method"]),
                 uncertainty_method_version=None if payload.get("uncertainty_method_version") is None else str(payload["uncertainty_method_version"]),
+                uncertainty_assessment=None if payload.get("uncertainty_assessment") is None else UncertaintyAssessment.from_payload(dict(payload["uncertainty_assessment"])),
                 liquidity_stress=None if payload.get("liquidity_stress") is None else Decimal(str(payload["liquidity_stress"])),
                 liquidity_max=None if payload.get("liquidity_max") is None else Decimal(str(payload["liquidity_max"])),
                 liquidity_floor=Decimal(str(payload.get("liquidity_floor", "0"))),
                 liquidity_risk_factor=None if payload.get("liquidity_risk_factor") is None else Decimal(str(payload["liquidity_risk_factor"])),
                 liquidity_method=None if payload.get("liquidity_method") is None else str(payload["liquidity_method"]),
                 liquidity_method_version=None if payload.get("liquidity_method_version") is None else str(payload["liquidity_method_version"]),
+                liquidity_assessment=None if payload.get("liquidity_assessment") is None else LiquidityAssessment.from_payload(dict(payload["liquidity_assessment"])),
                 drawdown=None if payload.get("drawdown") is None else Decimal(str(payload["drawdown"])),
                 drawdown_max=None if payload.get("drawdown_max") is None else Decimal(str(payload["drawdown_max"])),
                 drawdown_floor=Decimal(str(payload.get("drawdown_floor", "0"))),
                 drawdown_risk_factor=None if payload.get("drawdown_risk_factor") is None else Decimal(str(payload["drawdown_risk_factor"])),
                 drawdown_method=None if payload.get("drawdown_method") is None else str(payload["drawdown_method"]),
                 drawdown_method_version=None if payload.get("drawdown_method_version") is None else str(payload["drawdown_method_version"]),
+                drawdown_assessment=None if payload.get("drawdown_assessment") is None else DrawdownAssessment.from_payload(dict(payload["drawdown_assessment"])),
                 model_health=None if payload.get("model_health") is None else Decimal(str(payload["model_health"])),
                 model_health_max=None if payload.get("model_health_max") is None else Decimal(str(payload["model_health_max"])),
                 model_health_floor=Decimal(str(payload.get("model_health_floor", "0"))),
@@ -519,6 +667,12 @@ class DurableRiskDecisionLedger:
                 model_health_evidence_fresh=None if payload.get("model_health_evidence_fresh") is None else bool(payload["model_health_evidence_fresh"]),
                 model_health_drift_critical=None if payload.get("model_health_drift_critical") is None else bool(payload["model_health_drift_critical"]),
                 model_health_quality_ok=None if payload.get("model_health_quality_ok") is None else bool(payload["model_health_quality_ok"]),
+                model_health_source_evidence_id=None if payload.get("model_health_source_evidence_id") is None else str(payload["model_health_source_evidence_id"]),
+                model_health_source_captured_at_ns=None if payload.get("model_health_source_captured_at_ns") is None else int(payload["model_health_source_captured_at_ns"]),
+                model_health_source_ttl_ns=None if payload.get("model_health_source_ttl_ns") is None else int(payload["model_health_source_ttl_ns"]),
+                model_health_source_verified=None if payload.get("model_health_source_verified") is None else bool(payload["model_health_source_verified"]),
+                model_health_assessed_at_ns=None if payload.get("model_health_assessed_at_ns") is None else int(payload["model_health_assessed_at_ns"]),
+                model_health_source_fingerprint=None if payload.get("model_health_source_fingerprint") is None else str(payload["model_health_source_fingerprint"]),
                 risk_state_factor=Decimal(str(payload.get("risk_state_factor", "1"))),
                 recovery_event_id=None if payload.get("recovery_event_id") is None else str(payload["recovery_event_id"]),
             )

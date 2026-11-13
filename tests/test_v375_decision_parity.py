@@ -1,7 +1,10 @@
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
+from tests._m14_helpers import authorize_runtime_executor, compatible_report
+from trading_platform.promotion.compatibility import Compatibility
 
 from trading_platform.execution.models import OrderAction, OrderIntent, OrderType, Side
 from trading_platform.core.ttl import ValidWindow
@@ -18,6 +21,8 @@ from trading_platform.v375.decision_parity import (
     capture_backtest_decision_trace,
     compare_decision_traces,
 )
+from trading_platform.v341.compatibility_authority import CompatibilityAuthorityInvalid
+from trading_platform.replay.replay import canonical_hash
 
 
 SYMBOL = "BTCUSDT"
@@ -109,6 +114,14 @@ def _model() -> ExecutionModelConfig:
     )
 
 
+def _compatibility_executor(events, report_provider=compatible_report):
+    return authorize_runtime_executor(events[0].event_time, report_provider=report_provider)
+
+
+def _now_provider(events):
+    return lambda: events[0].event_time
+
+
 def test_same_stages_same_events_and_position_state_are_machine_comparable():
     events = [_event(i, str(100 + i)) for i in range(4)]
 
@@ -118,7 +131,9 @@ def test_same_stages_same_events_and_position_state_are_machine_comparable():
         SYMBOL,
         events,
     )
-    live_result = LiveDecisionEngine(_stages()).run(
+    live_result = LiveDecisionEngine(
+        _stages(), compatibility_executor=_compatibility_executor(events), now_provider=_now_provider(events)
+    ).run(
         events,
         backtest_trace.position_quantities,
     )
@@ -142,7 +157,9 @@ def test_parity_trace_has_deterministic_hash():
 def test_live_stage_change_is_detected_as_parity_failure():
     events = [_event(i, str(100 + i)) for i in range(3)]
     backtest_trace, _ = capture_backtest_decision_trace(_stages(), _model(), SYMBOL, events)
-    live_result = LiveDecisionEngine(_stages(broken_risk=True)).run(
+    live_result = LiveDecisionEngine(
+        _stages(broken_risk=True), compatibility_executor=_compatibility_executor(events), now_provider=_now_provider(events)
+    ).run(
         events,
         backtest_trace.position_quantities,
     )
@@ -151,20 +168,156 @@ def test_live_stage_change_is_detected_as_parity_failure():
     assert comparison.mismatch_offsets == (0, 1, 2)
 
 
+def _rehash_trace(trace, *, records=None, trace_version=None):
+    records = trace.records if records is None else tuple(records)
+    trace_version = trace.trace_version if trace_version is None else trace_version
+    state = {
+        "trace_version": trace_version,
+        "records": [record.as_dict() for record in records],
+    }
+    return replace(
+        trace,
+        trace_version=trace_version,
+        records=records,
+        state_hash=canonical_hash(state),
+    )
+
+
+def test_trace_comparison_rejects_duplicate_event_offsets_even_with_valid_hash():
+    events = [_event(i, str(100 + i)) for i in range(3)]
+    trace, _ = capture_backtest_decision_trace(_stages(), _model(), SYMBOL, events)
+    duplicate = _rehash_trace(trace, records=(trace.records[0], *trace.records))
+
+    comparison = compare_decision_traces(trace, duplicate)
+
+    assert not comparison.passed
+    assert "LIVE_TRACE_DUPLICATE_EVENT_OFFSETS" in comparison.validation_errors
+    assert comparison.mismatch_offsets == (0,)
+
+
+def test_trace_comparison_rejects_a_tampered_state_hash():
+    events = [_event(i, str(100 + i)) for i in range(2)]
+    trace, _ = capture_backtest_decision_trace(_stages(), _model(), SYMBOL, events)
+    tampered = replace(trace, state_hash="0" * 64)
+
+    comparison = compare_decision_traces(trace, tampered)
+
+    assert not comparison.passed
+    assert "LIVE_TRACE_STATE_HASH_MISMATCH" in comparison.validation_errors
+
+
+def test_trace_comparison_rejects_unsupported_versions_and_empty_traces():
+    events = [_event(0, "100")]
+    trace, _ = capture_backtest_decision_trace(_stages(), _model(), SYMBOL, events)
+    unknown_version = _rehash_trace(trace, trace_version="V375_DECISION_TRACE_UNKNOWN")
+    empty = _rehash_trace(trace, records=())
+
+    version_comparison = compare_decision_traces(trace, unknown_version)
+    empty_comparison = compare_decision_traces(empty, empty)
+
+    assert not version_comparison.passed
+    assert "LIVE_TRACE_VERSION_UNSUPPORTED" in version_comparison.validation_errors
+    assert not empty_comparison.passed
+    assert "BACKTEST_TRACE_EMPTY" in empty_comparison.validation_errors
+    assert "LIVE_TRACE_EMPTY" in empty_comparison.validation_errors
+
+
+def test_trace_comparison_rejects_mutable_records_invalid_offsets_and_reordering():
+    events = [_event(i, str(100 + i)) for i in range(2)]
+    trace, _ = capture_backtest_decision_trace(_stages(), _model(), SYMBOL, events)
+    mutable = replace(trace, records=list(trace.records))
+    invalid_offset = _rehash_trace(
+        trace,
+        records=(replace(trace.records[0], event_offset=-1), trace.records[1]),
+    )
+    reordered = _rehash_trace(trace, records=tuple(reversed(trace.records)))
+
+    mutable_comparison = compare_decision_traces(trace, mutable)
+    invalid_offset_comparison = compare_decision_traces(trace, invalid_offset)
+    reordered_comparison = compare_decision_traces(trace, reordered)
+
+    assert "LIVE_TRACE_RECORDS_NOT_IMMUTABLE" in mutable_comparison.validation_errors
+    assert "LIVE_TRACE_EVENT_OFFSET_INVALID" in invalid_offset_comparison.validation_errors
+    assert "LIVE_TRACE_EVENT_OFFSETS_OUT_OF_ORDER" in reordered_comparison.validation_errors
+    assert all(not result.passed for result in (
+        mutable_comparison,
+        invalid_offset_comparison,
+        reordered_comparison,
+    ))
+
+
 def test_live_runner_rejects_position_length_mismatch():
     events = [_event(0, "100"), _event(1, "101")]
     with pytest.raises(ParityInputError):
-        LiveDecisionEngine(_stages()).run(events, [Decimal("0")])
+        LiveDecisionEngine(
+            _stages(), compatibility_executor=_compatibility_executor(events), now_provider=_now_provider(events)
+        ).run(events, [Decimal("0")])
 
 
 def test_live_runner_rejects_out_of_order_events():
     events = [_event(1, "101"), _event(0, "100")]
     with pytest.raises(ParityInputError, match="OUT_OF_ORDER_LIVE_EVENT"):
-        LiveDecisionEngine(_stages()).run(events, [Decimal("0"), Decimal("0")])
+        LiveDecisionEngine(
+            _stages(), compatibility_executor=_compatibility_executor(events), now_provider=_now_provider(events)
+        ).run(events, [Decimal("0"), Decimal("0")])
 
 
 def test_live_runner_has_no_execution_side_effects():
     events = [_event(0, "100"), _event(1, "101")]
-    result = LiveDecisionEngine(_stages()).run(events, [Decimal("0"), Decimal("1")])
+    result = LiveDecisionEngine(
+        _stages(), compatibility_executor=_compatibility_executor(events), now_provider=_now_provider(events)
+    ).run(events, [Decimal("0"), Decimal("1")])
     assert len(result.intents) == 2
     assert all(intent is not None for intent in result.intents)
+
+
+@pytest.mark.parametrize("compatibility", [Compatibility.INCOMPATIBLE, Compatibility.UNKNOWN])
+def test_live_runtime_never_calls_artifact_when_current_compatibility_is_not_pass(compatibility):
+    events = [_event(0, "100")]
+    stages = _stages()
+    executed = []
+    stages = replace(
+        stages,
+        feature_fn=lambda *_: executed.append("feature") or {"close": Decimal("100")},
+        prediction_fn=lambda *_: executed.append("prediction") or {"expected": Decimal("1")},
+    )
+    changed_report = replace(compatible_report(), runtime_input_schema=compatibility)
+
+    with pytest.raises(
+        CompatibilityAuthorityInvalid,
+        match=f"ARTIFACT_COMPATIBILITY_{compatibility.value}",
+    ):
+        LiveDecisionEngine(
+            stages,
+            compatibility_executor=_compatibility_executor(
+                events, report_provider=lambda: changed_report
+            ),
+            now_provider=_now_provider(events),
+        ).run(events, [Decimal("0")])
+
+    assert executed == []
+
+
+def test_live_runtime_requires_compatibility_executor():
+    with pytest.raises(ParityInputError, match="RUNTIME_COMPATIBILITY_EXECUTOR_REQUIRED"):
+        LiveDecisionEngine(
+            _stages(), compatibility_executor=None,
+            now_provider=lambda: datetime.now(timezone.utc),
+        )
+
+
+def test_live_runtime_rejects_naive_clock_before_prediction():
+    events = [_event(0, "100")]
+    executed = []
+    stages = replace(
+        _stages(), prediction_fn=lambda *_: executed.append("prediction")
+    )
+
+    with pytest.raises(ParityInputError, match="RUNTIME_CLOCK_TIMEZONE_REQUIRED"):
+        LiveDecisionEngine(
+            stages,
+            compatibility_executor=_compatibility_executor(events),
+            now_provider=lambda: datetime(2026, 1, 1),
+        ).run(events, [Decimal("0")])
+
+    assert executed == []

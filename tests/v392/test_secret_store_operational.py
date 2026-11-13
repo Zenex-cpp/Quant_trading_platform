@@ -40,6 +40,18 @@ def test_external_attested_store_is_admitted():
     assert d.reason == "SECRET_STORE_READY"
 
 
+def test_attested_windows_credential_manager_backend_is_admitted():
+    backend = SecretStoreBackendV392.WINDOWS_CREDENTIAL_MANAGER
+    policy = SecretStoreOperationalPolicyV392(production_backend=backend)
+    d = assert_production_secret_store_ready(
+        policy=policy,
+        attestation=attestation(backend=backend),
+        lease=lease(backend=backend),
+        now_ms=NOW,
+    )
+    assert d.allowed is True and d.reason == "SECRET_STORE_READY"
+
+
 def test_missing_attestation_fails_closed():
     d = assert_production_secret_store_ready(policy=SecretStoreOperationalPolicyV392(), attestation=None, lease=lease(), now_ms=NOW)
     assert d.allowed is False and d.reason == "SECRET_STORE_ATTESTATION_REQUIRED"

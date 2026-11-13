@@ -18,6 +18,43 @@ def test_v429_milestone_runner_matrix_workflow_and_security_controls_are_aligned
     for value in ("V4.29-RECOVERY", "V4.28-RECOVERY", "compliance_v429.csv", "V428_BASELINE_ARCHIVE_SHA256.txt"):
         assert value in runner
         assert value in workflow
+    for value in (
+        "docs/60_V5_FIRST_DELIVERY_TRACEABILITY.md",
+        "docs/61_V5_MODEL_AND_STRATEGY_CARDS.md",
+        "docs/62_V5_SAFETY_AND_INCIDENT_MATRICES.md",
+        "docs/63_V5_RESEARCH_REGISTRIES.md",
+        "docs/69_V5_EVENT_SCHEMAS_AND_REGISTRY.md",
+        "docs/70_V5_SOURCE_OF_TRUTH.md",
+        "docs/71_V5_RISK_RESERVATION_FLOW.md",
+        "docs/06_IDEMPOTENCY.md",
+        "schemas/v5_first_delivery_traceability.csv",
+        "schemas/v5_error_taxonomy.csv",
+        "schemas/v5_fail_safe_matrix.csv",
+        "schemas/v5_failure_precedence.csv",
+        "schemas/v5_incident_severity_scope.csv",
+        "schemas/v5_metric_applicability_registry.csv",
+        "schemas/v5_objective_function_registry.csv",
+        "schemas/v5_benchmark_registry.csv",
+        "schemas/v5_event_schema_registry.csv",
+        "schemas/v5_event_envelope.v1.schema.json",
+        "schemas/v5_event_payload_schemas/governance.v1.schema.json",
+        "schemas/v5_event_payload_schemas/deployment.v1.schema.json",
+        "schemas/v5_event_payload_schemas/provenance.v1.schema.json",
+        "schemas/v5_source_of_truth_matrix.csv",
+        "schemas/v5_risk_reservation_flow.csv",
+        "src/trading_platform/research/strategy_card.py",
+        "src/trading_platform/events/envelope.py",
+        "src/trading_platform/events/registry.py",
+        "src/trading_platform/realtime/events.py",
+        "src/trading_platform/state/transition.py",
+        "tests/test_v02_foundation.py",
+        "tests/test_v5_first_delivery_traceability.py",
+        "tests/test_v5_source_of_truth_matrix.py",
+        "tests/test_v5_risk_reservation_flow.py",
+        "tests/test_v5_event_schema_registry.py",
+        "tests/test_strategy_card.py",
+    ):
+        assert value in runner
     for value in ("src/trading_platform/v429/external_file_safety.py", "tests/v429/test_external_file_safety_v429.py", "tests/v429/test_signer_hardening_v429.py"):
         assert value in runner
 
@@ -118,3 +155,155 @@ def test_v429_m7_matrix_points_to_durable_exact_gate_run_authority():
     assert "gate_fingerprints" in authority
     assert "passed_gate_ids: Iterable" not in authority
     assert '"M7"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")
+
+
+def test_v429_m14_matrix_points_to_guarded_runtime_execution():
+    with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
+        m14 = next(row for row in csv.DictReader(stream) if row["machine_check_id"] == "M14")
+    assert m14["implementation_status"] == "TESTED"
+    assert "trading_platform/v341/compatibility_authority.py" in m14["code_reference"]
+    assert "trading_platform/v375/decision_parity.py" in m14["code_reference"]
+    assert "trading_platform/v379/execution_parity.py" in m14["code_reference"]
+    assert "tests/test_v341_m14_compatibility_authority.py" in m14["test_reference"]
+    assert "tests/test_v375_decision_parity.py" in m14["test_reference"]
+    assert "tests/test_v379_execution_parity.py" in m14["test_reference"]
+    assert "tests/test_v344_m17_gate_reuse.py" in m14["test_reference"]
+    assert m14["evidence_reference"] == "V429_M14_REMEDIATION_REPORT.md"
+    assert "Production" in m14["unresolved_gap"]
+    assert '"M14"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")
+
+
+def test_v429_m15_matrix_points_to_signed_model_artifact_loading():
+    with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
+        m15 = next(row for row in csv.DictReader(stream) if row["machine_check_id"] == "M15")
+    assert m15["implementation_status"] == "TESTED"
+    assert "trading_platform/model/artifact_runtime.py" in m15["code_reference"]
+    assert "tests/test_model_artifact_runtime.py" in m15["test_reference"]
+    assert m15["evidence_reference"] == "V429_M15_REMEDIATION_REPORT.md"
+    assert "trust-root" in m15["unresolved_gap"]
+    assert '"M15"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")
+
+
+def test_v429_m9_matrix_points_to_research_credential_boundary():
+    with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
+        m9 = next(row for row in csv.DictReader(stream) if row["machine_check_id"] == "M9")
+    assert m9["implementation_status"] == "TESTED"
+    assert "trading_platform/security/credentials.py" in m9["code_reference"]
+    assert "trading_platform/security/credential_backends.py" in m9["code_reference"]
+    assert "trading_platform/data/holdout.py" in m9["code_reference"]
+    assert "tests/v336_test_production_credentials.py" in m9["test_reference"]
+    assert "tests/test_credential_backends.py" in m9["test_reference"]
+    assert "tests/v335/test_tuning_surface.py" in m9["test_reference"]
+    assert m9["evidence_reference"] == "V429_M9_REMEDIATION_REPORT.md"
+    assert "process isolation" in m9["unresolved_gap"]
+    assert '"M9"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")
+
+
+def test_v429_m10_matrix_points_to_thread_safe_durable_event_ledger():
+    with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
+        m10 = next(row for row in csv.DictReader(stream) if row["machine_check_id"] == "M10")
+    assert m10["implementation_status"] == "TESTED"
+    assert "trading_platform/v21/event_store.py" in m10["code_reference"]
+    assert "trading_platform/security/credentials.py" in m10["code_reference"]
+    assert "tests/test_event_store_thread_safety.py" in m10["test_reference"]
+    assert m10["evidence_reference"] == "V429_M10_REMEDIATION_REPORT.md"
+    assert "independent storage tamper review" in m10["unresolved_gap"]
+    assert '"M10"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")
+
+
+def test_v429_m24_matrix_points_to_fingerprinted_durable_health_source():
+    with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
+        m24 = next(row for row in csv.DictReader(stream) if row["machine_check_id"] == "M24")
+    assert m24["implementation_status"] == "TESTED"
+    assert "trading_platform/v25/health.py" in m24["code_reference"]
+    assert "trading_platform/v31/authority.py" in m24["code_reference"]
+    assert "trading_platform/v318/durable_decision.py" in m24["code_reference"]
+    assert "trading_platform/v32/capability.py" in m24["code_reference"]
+    assert "trading_platform/v351/model_health_risk_authority.py" in m24["code_reference"]
+    assert "tests/test_v351_m24_model_health.py" in m24["test_reference"]
+    assert "tests/v25/test_drift_health.py" in m24["test_reference"]
+    assert "tests/v318/test_durable_decision.py" in m24["test_reference"]
+    assert m24["evidence_reference"] == "V429_M24_REMEDIATION_REPORT.md"
+    assert "signed" in m24["unresolved_gap"].lower()
+    assert '"M24"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")
+
+
+def test_v429_m23_matrix_points_to_source_bound_durable_drawdown_history():
+    with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
+        m23 = next(row for row in csv.DictReader(stream) if row["machine_check_id"] == "M23")
+    assert m23["implementation_status"] == "TESTED"
+    assert "trading_platform/v350/drawdown_history.py" in m23["code_reference"]
+    assert "trading_platform/v350/drawdown_risk_authority.py" in m23["code_reference"]
+    assert "trading_platform/v31/authority.py" in m23["code_reference"]
+    assert "trading_platform/v318/durable_decision.py" in m23["code_reference"]
+    assert "tests/test_v350_m23_drawdown_risk.py" in m23["test_reference"]
+    assert "tests/v318/test_durable_decision.py" in m23["test_reference"]
+    assert m23["evidence_reference"] == "V429_M23_REMEDIATION_REPORT.md"
+    assert "Independent" in m23["unresolved_gap"]
+    assert '"M23"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")
+
+
+def test_v429_m22_matrix_points_to_source_bound_orderbook_liquidity():
+    with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
+        m22 = next(row for row in csv.DictReader(stream) if row["machine_check_id"] == "M22")
+    assert m22["implementation_status"] == "TESTED"
+    assert "trading_platform/v349/liquidity_assessment.py" in m22["code_reference"]
+    assert "trading_platform/v31/authority.py" in m22["code_reference"]
+    assert "trading_platform/v318/durable_decision.py" in m22["code_reference"]
+    assert "trading_platform/v311/dispatch_guard.py" in m22["code_reference"]
+    assert "tests/test_v349_m22_liquidity_risk.py" in m22["test_reference"]
+    assert m22["evidence_reference"] == "V429_M22_REMEDIATION_REPORT.md"
+    assert "calibration" in m22["unresolved_gap"].lower()
+    assert '"M22"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")
+
+
+def test_v429_m21_matrix_points_to_source_bound_uncertainty_and_calibration():
+    with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
+        m21 = next(row for row in csv.DictReader(stream) if row["machine_check_id"] == "M21")
+    assert m21["implementation_status"] == "TESTED"
+    assert "trading_platform/v348/uncertainty_assessment.py" in m21["code_reference"]
+    assert "trading_platform/v348/uncertainty_risk_authority.py" in m21["code_reference"]
+    assert "trading_platform/v31/authority.py" in m21["code_reference"]
+    assert "trading_platform/v318/durable_decision.py" in m21["code_reference"]
+    assert "tests/test_v348_m21_uncertainty_risk.py" in m21["test_reference"]
+    assert "tests/test_v04_model.py" in m21["test_reference"]
+    assert m21["evidence_reference"] == "V429_M21_REMEDIATION_REPORT.md"
+    assert "ablation" in m21["unresolved_gap"].lower()
+    assert '"M21"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")
+
+
+def test_v429_m18_matrix_points_to_transitive_evidence_invalidation():
+    with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
+        m18 = next(row for row in csv.DictReader(stream) if row["machine_check_id"] == "M18")
+    assert m18["implementation_status"] == "TESTED"
+    assert "trading_platform/evidence/graph.py" in m18["code_reference"]
+    assert "test_v09.py" in m18["test_reference"]
+    assert m18["evidence_reference"] == "V429_M18_REMEDIATION_REPORT.md"
+    assert "independent review" in m18["unresolved_gap"].lower()
+    assert '"M18"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")
+
+
+def test_v429_m25_matrix_points_to_isolated_public_archive_downloader():
+    with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
+        m25 = next(row for row in csv.DictReader(stream) if row["machine_check_id"] == "M25")
+    assert m25["implementation_status"] == "TESTED"
+    assert "trading_platform/v391/network_segmentation.py" in m25["code_reference"]
+    assert "trading_platform/data/binance_public_data.py" in m25["code_reference"]
+    assert "tests/test_binance_public_data_import.py" in m25["test_reference"]
+    assert "tests/v391/test_network_segmentation.py" in m25["test_reference"]
+    assert m25["evidence_reference"] == "V429_M25_PUBLIC_DATA_REPORT.md"
+    assert "Infrastructure" in m25["unresolved_gap"]
+    assert '"M25"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")
+
+
+def test_v429_m11_matrix_points_to_durable_retry_replay_boundary():
+    with (ROOT / "compliance_v429.csv").open(newline="", encoding="utf-8") as stream:
+        m11 = next(row for row in csv.DictReader(stream) if row["machine_check_id"] == "M11")
+    assert m11["implementation_status"] == "TESTED"
+    assert "trading_platform/v311/dispatch_guard.py" in m11["code_reference"]
+    assert "trading_platform/v312/execution_runtime.py" in m11["code_reference"]
+    assert "tests/v321/test_durable_dispatch.py" in m11["test_reference"]
+    assert "tests/v312/test_execution_runtime.py" in m11["test_reference"]
+    assert m11["evidence_reference"] == "V429_M11_REMEDIATION_REPORT.md"
+    assert "venue" in m11["unresolved_gap"].lower()
+    assert '"M11"' in (ROOT / "scripts/run_milestone_validation_v429.py").read_text(encoding="utf-8")

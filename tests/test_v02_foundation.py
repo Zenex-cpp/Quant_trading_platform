@@ -38,6 +38,20 @@ def test_transition_is_idempotent():
     e=TransitionEngine(); spec=TransitionSpec("t1",a,b,"START_BACKTEST",idempotency_key="k")
     assert e.apply(spec)==b; assert e.apply(spec)==b; assert len(e.audit)==1
 
+def test_transition_rejects_idempotency_key_reuse_for_different_spec():
+    a=OrthogonalState(Lifecycle.APPROVED,OperationalMode.RESEARCH,Health.HEALTHY,Approval.APPROVED,Deployment.ACTIVE,Role.CHAMPION)
+    b=OrthogonalState(Lifecycle.APPROVED,OperationalMode.BACKTEST,Health.HEALTHY,Approval.APPROVED,Deployment.ACTIVE,Role.CHAMPION)
+    c=OrthogonalState(Lifecycle.APPROVED,OperationalMode.RESEARCH,Health.DEGRADED,Approval.APPROVED,Deployment.ACTIVE,Role.CHAMPION)
+    engine=TransitionEngine()
+    original=TransitionSpec("t1",a,b,"START_BACKTEST",idempotency_key="same-key")
+    conflicting=TransitionSpec("t2",a,c,"START_BACKTEST",idempotency_key="same-key")
+
+    assert engine.apply(original)==b
+    with pytest.raises(ValueError,match="IDEMPOTENCY_KEY_CONFLICT"):
+        engine.apply(conflicting)
+    assert engine.apply(original)==b
+    assert len(engine.audit)==1
+
 def test_config_conflict():
     xs=[ConfigValue("x",1,Precedence.RUNTIME,"a","1"),ConfigValue("x",2,Precedence.RUNTIME,"b","1")]
     with pytest.raises(ValueError,match="CONFIG_CONFLICT"): resolve_config(xs)

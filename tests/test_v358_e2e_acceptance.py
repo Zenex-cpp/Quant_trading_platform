@@ -22,11 +22,17 @@ def test_v358_e2e_acceptance_chain_is_complete_and_ordered():
     result = run_acceptance()
     names = [s.stage for s in result.stages]
     assert names == [
-        "Historical Data", "Feature", "Target", "Baseline", "Prediction", "Signal",
+        "Historical Data", "Validation", "Feature", "Target", "Baseline", "Model", "Prediction", "Signal",
         "Opportunity", "Portfolio", "Risk", "Intent", "Order Simulation", "Execution",
-        "Fill", "Failure Injection", "Position", "Accounting / P&L", "Recovery", "Rollback",
+        "Fill", "Failure Injection", "Position", "Accounting", "P&L", "Recovery", "Rollback",
         "Audit", "Replay", "Evidence", "Gate",
     ]
+    required_prompt_chain = (
+        "Historical Data", "Validation", "Feature", "Target", "Baseline", "Model", "Prediction",
+        "Signal", "Opportunity", "Portfolio", "Risk", "Intent", "Order Simulation", "Execution",
+        "Fill", "Position", "Accounting", "P&L", "Audit", "Replay", "Evidence", "Gate",
+    )
+    assert tuple(name for name in names if name in required_prompt_chain) == required_prompt_chain
     prior_ids = set()
     for index, stage in enumerate(result.stages):
         assert len(set(stage.upstream)) == len(stage.upstream)
@@ -34,14 +40,30 @@ def test_v358_e2e_acceptance_chain_is_complete_and_ordered():
         assert index == 0 or stage.stage == "Rollback" or stage.upstream
         prior_ids.add(stage.artifact_id)
     by_name = {stage.stage: stage for stage in result.stages}
+    assert by_name["Validation"].upstream == (by_name["Historical Data"].artifact_id,)
+    assert by_name["Feature"].upstream == (by_name["Validation"].artifact_id,)
+    assert by_name["Target"].upstream == (by_name["Feature"].artifact_id, by_name["Validation"].artifact_id)
+    assert by_name["Baseline"].upstream == (by_name["Target"].artifact_id, by_name["Feature"].artifact_id)
+    assert by_name["Model"].upstream == (
+        by_name["Baseline"].artifact_id,
+        by_name["Target"].artifact_id,
+        by_name["Feature"].artifact_id,
+    )
     assert by_name["Prediction"].upstream == (
+        by_name["Model"].artifact_id,
         by_name["Baseline"].artifact_id,
         by_name["Feature"].artifact_id,
     )
     assert by_name["Target"].artifact_id not in by_name["Prediction"].upstream
+    assert by_name["P&L"].upstream == (
+        by_name["Accounting"].artifact_id,
+        by_name["Position"].artifact_id,
+    )
     assert by_name["Failure Injection"].artifact_id in result.gate_required_artifacts
     assert by_name["Recovery"].artifact_id in result.gate_required_artifacts
     assert by_name["Rollback"].artifact_id in result.gate_required_artifacts
+    assert by_name["Validation"].artifact_id in result.gate_required_artifacts
+    assert by_name["Model"].artifact_id in result.gate_required_artifacts
     assert set(result.gate_required_artifacts) <= prior_ids
     evidence_refs = {item.evidence_ref for item in result.acceptance.items}
     assert evidence_refs <= prior_ids
@@ -52,6 +74,10 @@ def test_v358_e2e_acceptance_records_only_training_targets_and_real_recovery_pro
     by_name = {stage.stage: stage for stage in result.stages}
 
     assert "TRAIN_ONLY" in by_name["Target"].provenance
+    assert "QUALITY_STATUS:VALID" in by_name["Validation"].provenance
+    assert "TRAIN_TARGETS_ONLY" in by_name["Model"].provenance
+    assert "SOURCE:DURABLE_FILL" in by_name["Position"].provenance
+    assert "ACCOUNTING_MATCH:PASS" in by_name["Position"].provenance
     assert "SQLITE_REOPEN" in by_name["Recovery"].provenance
     assert "DEPLOYMENT_ROLLBACK" in by_name["Rollback"].provenance
     assert "NO_RESIDUAL_RISK" in by_name["Rollback"].provenance

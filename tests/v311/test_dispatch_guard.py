@@ -8,9 +8,11 @@ from trading_platform.v34.execution_bridge import ExecutionBridge, BridgeStatus
 from trading_platform.v35.binance_execution import ExchangeOutcome, RuntimeCredentialValues, SubmitObservation
 from trading_platform.v310.runtime_orchestrator import OrchestrationState, RuntimeCycleSnapshot
 from trading_platform.v311.dispatch_guard import DispatchGuardDenied, GuardedExecutionDispatcher
+from trading_platform.v21.event_store import EventStore
+from trading_platform.v338.side_effects import DurableSideEffectLedger
 from trading_platform.execution.models import OrderIntent, OrderAction, OrderType, PositionState, Side
 from trading_platform.core.ttl import ValidWindow
-from tests.dispatch_support import execution_authorities_for, risk_decision_ledger_for
+from tests.dispatch_support import execution_authorities_for, risk_accounting_reservation_for, risk_decision_ledger_for
 
 NOW = datetime(2026, 9, 13, tzinfo=timezone.utc)
 WIN = ValidWindow(NOW - timedelta(seconds=1), NOW + timedelta(minutes=5))
@@ -28,7 +30,7 @@ def truth():
 
 
 def intent():
-    return OrderIntent("I311", "D311", "P311", "R311", "S311", "M311", "E311", "BTCUSDT", Side.BUY, OrderAction.OPEN, Decimal("0.001"), OrderType.MARKET, WIN)
+    return OrderIntent("I311", "D311", "P311", "R311", "S311", "M311", "E311", "BTCUSDT", Side.BUY, OrderAction.OPEN, Decimal("0.001"), OrderType.MARKET, WIN, risk_reservation_id="RR311")
 
 
 def payload():
@@ -67,12 +69,17 @@ def test_denied_runtime_blocks_before_transport():
     assert g.calls == []
 
 
-def test_allowed_runtime_dispatches_exact_committed_request():
+def test_allowed_runtime_dispatches_exact_committed_request(tmp_path):
     b, i = valid_bridge()
     g = FakeGateway(SubmitObservation(ExchangeOutcome.ACKNOWLEDGED, b._requests[i.intent_id].request.client_order_id, "EX123"))
+    accounting, reservation_gate = risk_accounting_reservation_for(
+        b, i, now_ms=int(NOW.timestamp() * 1000), directory=tmp_path,
+    )
     d = GuardedExecutionDispatcher(bridge=b, gateway=g, permission_snapshot=lambda: snap(True),
         **execution_authorities_for(i, now_ms=int(NOW.timestamp() * 1000)),
         risk_decision_ledger=risk_decision_ledger_for(b, i, now_ms=int(NOW.timestamp() * 1000)),
+        accounting_authority=accounting, risk_reservation_gate=reservation_gate,
+        side_effect_ledger=DurableSideEffectLedger(EventStore(str(tmp_path / "side-effect.db"))),
         clock_ms=lambda: int(NOW.timestamp() * 1000))
     receipt = d.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
     assert len(g.calls) == 1
@@ -104,12 +111,12 @@ def test_unknown_local_lifecycle_blocks_dispatch():
     assert not g.calls
 
 
-def test_accounting_unknown_blocks_before_transport():
+def test_accounting_unknown_blocks_before_transport(tmp_path):
     from trading_platform.v21.event_store import EventStore
     from trading_platform.v315 import DurableAccountingLedger, DurableFill
     from trading_platform.v316 import DurableAccountingAuthority
 
-    ledger = DurableAccountingLedger(EventStore())
+    ledger = DurableAccountingLedger(EventStore(str(tmp_path / "accounting-unknown.db")))
     ledger.append_fill(DurableFill("af1", "ao1", "BTCUSDT", "BUY", Decimal("1"), Decimal("100")))
     authority = DurableAccountingAuthority(ledger)
     authority.restore()
@@ -129,23 +136,28 @@ def test_accounting_unknown_blocks_before_transport():
     assert g.calls == []
 
 
-def test_reconciled_accounting_allows_transport():
+def test_reconciled_accounting_allows_transport(tmp_path):
     from trading_platform.v21.event_store import EventStore
     from trading_platform.v315 import DurableAccountingLedger, DurableFill
     from trading_platform.v316 import DurableAccountingAuthority
 
-    ledger = DurableAccountingLedger(EventStore())
+    ledger = DurableAccountingLedger(EventStore(str(tmp_path / "accounting.db")))
     ledger.append_fill(DurableFill("af2", "ao2", "BTCUSDT", "BUY", Decimal("1"), Decimal("100")))
     authority = DurableAccountingAuthority(ledger)
     authority.restore()
     authority.mark_reconciled(evidence_id="recon-1")
     b, i = valid_bridge()
+    accounting, reservation_gate = risk_accounting_reservation_for(
+        b, i, now_ms=int(NOW.timestamp() * 1000), directory=tmp_path,
+        accounting_authority=authority,
+    )
     g = FakeGateway(SubmitObservation(ExchangeOutcome.ACKNOWLEDGED, b._requests[i.intent_id].request.client_order_id, "EX-A"))
     d = GuardedExecutionDispatcher(
         bridge=b,
         gateway=g,
         permission_snapshot=lambda: snap(True),
-        accounting_authority=authority,
+        accounting_authority=accounting,
+        risk_reservation_gate=reservation_gate,
         **execution_authorities_for(i, now_ms=int(NOW.timestamp() * 1000)),
         risk_decision_ledger=risk_decision_ledger_for(b, i, now_ms=int(NOW.timestamp() * 1000)),
         clock_ms=lambda: int(NOW.timestamp() * 1000),

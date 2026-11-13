@@ -42,6 +42,18 @@ jobs:
           --impacted-requirement M4
           --impacted-requirement M5
           --impacted-requirement M7
+          --impacted-requirement M9
+          --impacted-requirement M10
+          --impacted-requirement M11
+          --impacted-requirement M14
+          --impacted-requirement M15
+          --impacted-requirement M18
+          --impacted-requirement M20
+          --impacted-requirement M21
+          --impacted-requirement M22
+          --impacted-requirement M23
+          --impacted-requirement M24
+          --impacted-requirement M25
           --impacted-requirement REPO-GOV-01
           --impacted-requirement REPO-GOV-02
           --impacted-requirement REPO-GOV-03

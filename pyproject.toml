@@ -4,9 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "trading-platform"
-version = "3.61.7"
+version = "3.61.38"
 description = "Specification-first quantitative trading platform with mandatory Champion gate authority, causal TTL enforcement, dependency invalidation, final-holdout access control, and unified operational truth across governance, deployment, health, provenance, accounting, reconciliation, and risk"
 requires-python = ">=3.10"
+dependencies = ["jsonschema>=4.26,<5"]
+
+[project.scripts]
+trading-platform = "trading_platform.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -18,3 +22,4 @@ include = ["trading_platform*"]
 [tool.pytest.ini_options]
 pythonpath = ["src", "."]
 testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py", "v336_test_production_credentials.py"]

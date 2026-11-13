@@ -10,7 +10,11 @@ from tests.v329.test_dependency_authority import graph, evidence_index
 from trading_platform.v21.event_store import EventStore
 from trading_platform.v329.dependency_authority import DependencyInvalidationLedger, DependencyInvalidationBlocked
 from trading_platform.v334.champion_authority import ChampionGateAuthorityLedger, ChampionGateAuthorityError
-from trading_platform.v341.compatibility_authority import CompatibilityAuthorityInvalid, CompatibilityAuthorityLedger
+from trading_platform.v341.compatibility_authority import (
+    CompatibilityAuthorityInvalid,
+    CompatibilityAuthorityLedger,
+    CompatibilityGuardedArtifactExecutor,
+)
 from trading_platform.v342.artifact_integrity import ArtifactIntegrityAuthorityInvalid, ArtifactIntegrityAuthorityLedger
 from tests.champion_gate_support import register_pass_gates
 
@@ -94,7 +98,22 @@ def test_compatibility_gate_must_be_reissued_after_invalidating_change(tmp_path)
         valid_from=NOW - timedelta(minutes=1), expires_at=NOW + timedelta(minutes=30),
         reviewer="reviewer", recorded_at_ms=1, dependency_authority=dep,
     )[0]
+    runtime = CompatibilityGuardedArtifactExecutor(
+        ledger=CompatibilityAuthorityLedger(store),
+        authorization_id=auth.authorization_id,
+        artifact_id=b.bundle_id,
+        artifact_hashes=b.artifact_hashes,
+        code_version=b.code_version,
+        configuration_version=b.configuration_version,
+        execution_model_version=b.execution_model_version,
+        report_provider=compatible_report,
+        dependency_authority=dep,
+    )
     invalidate_and_revalidate(dep, "INC-COMPAT", b.bundle_id)
+    executed = []
+    with pytest.raises(CompatibilityAuthorityInvalid, match="COMPATIBILITY_STALE_AFTER_INVALIDATION"):
+        runtime.execute(lambda: executed.append("called"), now=NOW + timedelta(minutes=1))
+    assert executed == []
     with pytest.raises(CompatibilityAuthorityInvalid, match="COMPATIBILITY_STALE_AFTER_INVALIDATION"):
         CompatibilityAuthorityLedger(store).assert_valid(
             auth.authorization_id, now=NOW + timedelta(minutes=1), artifact_id=b.bundle_id,

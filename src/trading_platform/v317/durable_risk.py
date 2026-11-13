@@ -158,24 +158,25 @@ class DurableRiskReservationBook:
 
     def reserve(self, record: RiskReservationRecord) -> RiskReservationSnapshot:
         self._validate_record(record)
-        prior = self._safe_get(record.reservation_id)
-        if prior is not None:
-            if prior.record != record:
-                raise RiskReservationConflict("RESERVATION_ID_PAYLOAD_CONFLICT")
-            return prior
-        projection = self.projection
-        if record.allowed > projection.remaining:
-            raise RiskReservationConflict("RISK_BUDGET_EXCEEDED")
-        event = self.store.append(
-            event_id=f"risk:reserve:{record.reservation_id}",
-            occurred_at_ms=record.created_at_ms,
-            event_type=self.RESERVED,
-            aggregate_id=record.reservation_id,
-            payload=record.payload(),
-        )
-        if event.duplicate:
-            return self._snapshot_for(record.reservation_id)
-        return RiskReservationSnapshot(record, RiskReservationState.RESERVED)
+        with self.store.atomic():
+            prior = self._safe_get(record.reservation_id)
+            if prior is not None:
+                if prior.record != record:
+                    raise RiskReservationConflict("RESERVATION_ID_PAYLOAD_CONFLICT")
+                return prior
+            projection = self.projection
+            if record.allowed > projection.remaining:
+                raise RiskReservationConflict("RISK_BUDGET_EXCEEDED")
+            event = self.store.append(
+                event_id=f"risk:reserve:{record.reservation_id}",
+                occurred_at_ms=record.created_at_ms,
+                event_type=self.RESERVED,
+                aggregate_id=record.reservation_id,
+                payload=record.payload(),
+            )
+            if event.duplicate:
+                return self._snapshot_for(record.reservation_id)
+            return RiskReservationSnapshot(record, RiskReservationState.RESERVED)
 
     def consume(self, reservation_id: str, *, intent_id: str, risk_decision_id: str,
                 requested_risk: Decimal, accounting_projection_hash: str, occurred_at_ms: int,
@@ -224,6 +225,8 @@ class DurableRiskReservationBook:
         current = self._required(reservation_id)
         if current.state is not RiskReservationState.RESERVED:
             raise RiskReservationConflict(f"RESERVATION_NOT_EXPIRABLE:{current.state.value}")
+        if current.record.expires_at_ms is None or occurred_at_ms < current.record.expires_at_ms:
+            raise RiskReservationConflict("RESERVATION_NOT_EXPIRED")
         try:
             self.store.append_exclusive(
                 event_id=f"risk:expire:{reservation_id}", occurred_at_ms=occurred_at_ms,

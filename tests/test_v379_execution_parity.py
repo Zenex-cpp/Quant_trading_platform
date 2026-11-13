@@ -1,7 +1,11 @@
+from dataclasses import replace
 from datetime import datetime, timezone
 from decimal import Decimal
 
 import pytest
+from tests._m14_helpers import authorize_runtime_executor, compatible_report
+from trading_platform.promotion.compatibility import Compatibility
+from trading_platform.v341.compatibility_authority import CompatibilityAuthorityInvalid
 
 from trading_platform.core.ttl import ValidWindow
 from trading_platform.execution.models import OrderAction, OrderIntent, OrderType, Side
@@ -88,6 +92,8 @@ def test_execution_parity_is_non_vacuous_and_tracks_intents():
     comparison, result = ExecutionParityHarness().run(
         stages=_stages(), execution_model=_model(), symbol=SYMBOL,
         venue_events=[_event(0), _event(1)], adapter=adapter,
+        compatibility_executor=authorize_runtime_executor(TS),
+        now_provider=lambda: TS,
     )
     assert comparison.passed
     assert comparison.compared_intents == 2
@@ -106,8 +112,33 @@ def test_adapter_scripted_observation_is_captured():
     comparison, _ = ExecutionParityHarness().run(
         stages=_stages(), execution_model=_model(), symbol=SYMBOL,
         venue_events=[_event(0)], adapter=adapter,
+        compatibility_executor=authorize_runtime_executor(TS),
+        now_provider=lambda: TS,
     )
     assert comparison.passed
+
+
+def test_parity_harness_checks_compatibility_before_any_stage_execution():
+    executed = []
+    stages = replace(
+        _stages(), feature_fn=lambda *_: executed.append("feature") or {"close": Decimal("100")}
+    )
+    report = replace(compatible_report(), venue_rules=Compatibility.UNKNOWN)
+
+    with pytest.raises(CompatibilityAuthorityInvalid, match="ARTIFACT_COMPATIBILITY_UNKNOWN"):
+        ExecutionParityHarness().run(
+            stages=stages,
+            execution_model=_model(),
+            symbol=SYMBOL,
+            venue_events=[_event(0)],
+            adapter=LiveShadowExecutionAdapter(),
+            compatibility_executor=authorize_runtime_executor(
+                TS, report_provider=lambda: report
+            ),
+            now_provider=lambda: TS,
+        )
+
+    assert executed == []
 
 
 def test_testnet_mutation_gate_is_fail_closed_by_default():
@@ -141,7 +172,10 @@ def test_deliberate_live_stage_mutation_is_detected():
         ),
         SYMBOL, [e.market for e in events],
     )
-    live = LiveDecisionEngine(_stages(broken_risk=True)).run(
+    live = LiveDecisionEngine(
+        _stages(broken_risk=True), compatibility_executor=authorize_runtime_executor(TS),
+        now_provider=lambda: TS,
+    ).run(
         [e.market for e in events], collector.position_quantities,
     )
     comparison = compare_decision_traces(collector, live.trace)

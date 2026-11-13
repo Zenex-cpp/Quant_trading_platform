@@ -13,6 +13,7 @@ from trading_platform.evidence.graph import Evidence, EvidenceDependencyGraph
 from trading_platform.v329.dependency_authority import DependencyInvalidationLedger, DependencyInvalidationError
 from trading_platform.v354.holdout_compromise import HoldoutCompromiseAuthorityBlocked, HoldoutCompromiseAuthorityError, HoldoutCompromiseAuthorityLedger
 from trading_platform.v21.event_store import EventStore
+from trading_platform.security.credentials import assert_research_arguments
 
 
 class Workflow(str, Enum):
@@ -137,6 +138,7 @@ class TuningDataView:
     __slots__ = ("__train", "__validation", "__oos")
 
     def __init__(self, *, train: Sequence[Any], validation: Sequence[Any], oos: Sequence[Any]) -> None:
+        assert_research_arguments(train, validation, oos)
         self.__train = tuple(train)
         self.__validation = tuple(validation)
         self.__oos = tuple(oos)

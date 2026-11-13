@@ -18,7 +18,11 @@ PRODUCTION_LIQUIDITY_METHODS: tuple[LiquidityMethodSpec, ...] = (
     LiquidityMethodSpec(
         method="CONSERVATIVE_LINEAR",
         version="1",
-        definition="risk_factor=max(floor, 1-min(1, liquidity_stress/max_stress))",
+        definition=(
+            "liquidity_stress=min(1,max(depth_utilization,spread_bps/max_spread_bps,"
+            "market_impact_bps/max_impact_bps)); "
+            "risk_factor=max(floor,1-min(1,liquidity_stress/max_stress))"
+        ),
         minimum_stress="0",
         maximum_stress="1",
         action="HIGHER_LIQUIDITY_STRESS_REDUCES_OR_PRESERVES_RISK",

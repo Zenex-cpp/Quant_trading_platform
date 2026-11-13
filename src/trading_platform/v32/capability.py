@@ -1,12 +1,15 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from hashlib import sha256
 import json
 from typing import Any
 
 from trading_platform.v25.health import HealthAssessment
+from trading_platform.v349.liquidity_assessment import LiquidityAssessment
+from trading_platform.v350.drawdown_history import DrawdownAssessment
+from trading_platform.v348.uncertainty_assessment import UncertaintyAssessment
 from trading_platform.v30.truth import CanonicalAction, OperationalTruth
 from trading_platform.v31.authority import AuthorityDecision, AuthorityStatus, RuntimeAuthority
 
@@ -21,6 +24,9 @@ class TradeCapability:
     expires_at: datetime
     consumed: bool = False
     model_health_assessment: HealthAssessment | None = None
+    liquidity_assessment: LiquidityAssessment | None = None
+    drawdown_assessment: DrawdownAssessment | None = None
+    uncertainty_assessment: UncertaintyAssessment | None = None
 
     @property
     def truth_hash(self) -> str:
@@ -42,21 +48,41 @@ class CapabilityAuthority:
               uncertainty_floor: Decimal = Decimal("0"),
               uncertainty_method: str = "CONSERVATIVE_LINEAR",
               uncertainty_method_version: str = "1",
+              uncertainty_assessment: UncertaintyAssessment | None = None,
+              liquidity_stress: Decimal | None = None, max_liquidity_stress: Decimal = Decimal("1"),
+              liquidity_floor: Decimal = Decimal("0"), liquidity_method: str = "CONSERVATIVE_LINEAR",
+              liquidity_method_version: str = "1", liquidity_assessment: LiquidityAssessment | None = None,
               drawdown: Decimal | None = None, max_drawdown: Decimal = Decimal("1"),
               drawdown_floor: Decimal = Decimal("0"), drawdown_method: str = "CONSERVATIVE_LINEAR",
-              drawdown_method_version: str = "1",
+              drawdown_method_version: str = "1", drawdown_assessment: DrawdownAssessment | None = None,
               model_health: Decimal | None = None, max_model_health: Decimal = Decimal("1"),
               model_health_floor: Decimal = Decimal("0"), model_health_method: str = "CONSERVATIVE_LINEAR",
               model_health_method_version: str = "1", model_health_assessment: HealthAssessment | None = None,
               model_health_assessment_id: str | None = None) -> TradeCapability:
+        if uncertainty_assessment is not None:
+            if not uncertainty_assessment.is_valid():
+                raise CapabilityError("INVALID_UNCERTAINTY_ASSESSMENT")
+            if self._datetime_to_epoch_ns(expires_at) > uncertainty_assessment.valid_until_ns:
+                raise CapabilityError("UNCERTAINTY_CAPABILITY_EXCEEDS_SOURCE_TTL")
+        if liquidity_assessment is not None and not liquidity_assessment.matches_order(
+            symbol=str(intent_payload.get("symbol", "")), side=str(intent_payload.get("side", "")),
+            quantity=intent_payload.get("quantity", ""),
+        ):
+            raise CapabilityError("LIQUIDITY_INTENT_MISMATCH")
         decision = self.authority.evaluate(
             truth=truth, action=CanonicalAction.TRADE, requested_risk=requested_risk,
             decision_id=decision_id, input_payload=intent_payload,
             uncertainty=uncertainty, max_uncertainty=max_uncertainty,
             uncertainty_floor=uncertainty_floor, uncertainty_method=uncertainty_method,
             uncertainty_method_version=uncertainty_method_version,
+            uncertainty_assessment=uncertainty_assessment,
+            liquidity_stress=liquidity_stress, max_liquidity_stress=max_liquidity_stress,
+            liquidity_floor=liquidity_floor, liquidity_method=liquidity_method,
+            liquidity_method_version=liquidity_method_version,
+            liquidity_assessment=liquidity_assessment,
             drawdown=drawdown, max_drawdown=max_drawdown, drawdown_floor=drawdown_floor,
             drawdown_method=drawdown_method, drawdown_method_version=drawdown_method_version,
+            drawdown_assessment=drawdown_assessment,
             model_health=model_health, max_model_health=max_model_health, model_health_floor=model_health_floor,
             model_health_method=model_health_method, model_health_method_version=model_health_method_version,
             model_health_assessment=model_health_assessment, model_health_assessment_id=model_health_assessment_id,
@@ -70,24 +96,60 @@ class CapabilityAuthority:
                                           "uncertainty_floor": str(uncertainty_floor),
                                           "uncertainty_method": uncertainty_method,
                                           "uncertainty_method_version": uncertainty_method_version,
+                                          "uncertainty_assessment_id": (
+                                              None if uncertainty_assessment is None else uncertainty_assessment.assessment_id
+                                          ),
+                                          "uncertainty_source_fingerprint": (
+                                              None if uncertainty_assessment is None else uncertainty_assessment.source_fingerprint
+                                          ),
+                                          "liquidity_stress": None if liquidity_stress is None else str(liquidity_stress),
+                                          "max_liquidity_stress": str(max_liquidity_stress),
+                                          "liquidity_floor": str(liquidity_floor),
+                                          "liquidity_method": liquidity_method,
+                                          "liquidity_method_version": liquidity_method_version,
+                                          "liquidity_assessment_id": (
+                                              None if liquidity_assessment is None else liquidity_assessment.assessment_id
+                                          ),
+                                          "liquidity_source_fingerprint": (
+                                              None if liquidity_assessment is None else liquidity_assessment.source_fingerprint
+                                          ),
                                           "drawdown": None if drawdown is None else str(drawdown),
                                           "max_drawdown": str(max_drawdown),
                                           "drawdown_floor": str(drawdown_floor),
                                           "drawdown_method": drawdown_method,
                                           "drawdown_method_version": drawdown_method_version,
+                                          "drawdown_assessment_id": (
+                                              None if drawdown_assessment is None else drawdown_assessment.assessment_id
+                                          ),
+                                          "drawdown_source_fingerprint": (
+                                              None if drawdown_assessment is None else drawdown_assessment.source_fingerprint
+                                          ),
                                           "model_health": None if model_health is None else str(model_health),
                                           "max_model_health": str(max_model_health),
                                           "model_health_floor": str(model_health_floor),
                                           "model_health_method": model_health_method,
                                           "model_health_method_version": model_health_method_version,
-                                          "model_health_assessment_id": model_health_assessment_id})
+                                          "model_health_assessment_id": model_health_assessment_id,
+                                          "model_health_assessment_fingerprint": (
+                                              None if model_health_assessment is None
+                                              else model_health_assessment.source_fingerprint
+                                          )})
         cap_id = f"cap:{decision.decision_id}:{fp[:24]}"
-        return TradeCapability(cap_id, decision, TradeCapability.fingerprint(intent_payload), expires_at, False, model_health_assessment)
+        return TradeCapability(
+            cap_id, decision, TradeCapability.fingerprint(intent_payload), expires_at,
+            consumed=False, model_health_assessment=model_health_assessment,
+            liquidity_assessment=liquidity_assessment,
+            drawdown_assessment=drawdown_assessment,
+            uncertainty_assessment=uncertainty_assessment,
+        )
 
     def validate(self, capability: TradeCapability, *, now: datetime, truth: OperationalTruth,
                  intent_payload: dict[str, Any], model_health: Decimal | None = None,
                  model_health_assessment: HealthAssessment | None = None,
-                 model_health_assessment_id: str | None = None) -> None:
+                 model_health_assessment_id: str | None = None,
+                 liquidity_assessment: LiquidityAssessment | None = None,
+                 drawdown_assessment: DrawdownAssessment | None = None,
+                 uncertainty_assessment: UncertaintyAssessment | None = None) -> None:
         if capability.capability_id in self._consumed or capability.consumed:
             raise CapabilityError("CAPABILITY_ALREADY_CONSUMED")
         if now >= capability.expires_at:
@@ -96,6 +158,47 @@ class CapabilityAuthority:
             raise CapabilityError("TRUTH_HASH_CHANGED")
         if not truth.decision_fresh or not truth.trading_allowed:
             raise CapabilityError("TRUTH_NO_LONGER_AUTHORIZES_TRADE")
+        if capability.authority.uncertainty is not None:
+            if uncertainty_assessment is None:
+                raise CapabilityError("UNCERTAINTY_REVALIDATION_REQUIRED")
+            if (
+                uncertainty_assessment != capability.uncertainty_assessment
+                or uncertainty_assessment.assessment_id != capability.authority.uncertainty_assessment_id
+                or uncertainty_assessment.source_fingerprint != capability.authority.uncertainty_source_fingerprint
+                or uncertainty_assessment.uncertainty != capability.authority.uncertainty
+            ):
+                raise CapabilityError("UNCERTAINTY_SOURCE_CHANGED")
+            if not uncertainty_assessment.source_fresh_at(self._datetime_to_epoch_ns(now)):
+                raise CapabilityError("UNCERTAINTY_SOURCE_EXPIRED")
+        elif uncertainty_assessment is not None:
+            raise CapabilityError("UNCERTAINTY_UNEXPECTED_PROVENANCE")
+        if capability.authority.liquidity_stress is not None:
+            if liquidity_assessment is None:
+                raise CapabilityError("LIQUIDITY_REVALIDATION_REQUIRED")
+            if liquidity_assessment != capability.liquidity_assessment:
+                raise CapabilityError("LIQUIDITY_SOURCE_CHANGED")
+            if liquidity_assessment.source_fingerprint != capability.authority.liquidity_source_fingerprint:
+                raise CapabilityError("LIQUIDITY_SOURCE_CHANGED")
+            if not liquidity_assessment.matches_order(
+                symbol=str(intent_payload.get("symbol", "")), side=str(intent_payload.get("side", "")),
+                quantity=intent_payload.get("quantity", ""),
+            ):
+                raise CapabilityError("LIQUIDITY_INTENT_MISMATCH")
+            if not liquidity_assessment.source_fresh_at(self._datetime_to_epoch_ns(now)):
+                raise CapabilityError("LIQUIDITY_SOURCE_EXPIRED")
+        elif liquidity_assessment is not None:
+            raise CapabilityError("LIQUIDITY_UNEXPECTED_PROVENANCE")
+        if capability.authority.drawdown is not None:
+            if drawdown_assessment is None:
+                raise CapabilityError("DRAWDOWN_REVALIDATION_REQUIRED")
+            if drawdown_assessment != capability.drawdown_assessment:
+                raise CapabilityError("DRAWDOWN_SOURCE_CHANGED")
+            if drawdown_assessment.source_fingerprint != capability.authority.drawdown_source_fingerprint:
+                raise CapabilityError("DRAWDOWN_SOURCE_CHANGED")
+            if not drawdown_assessment.source_fresh_at(self._datetime_to_epoch_ns(now)):
+                raise CapabilityError("DRAWDOWN_SOURCE_EXPIRED")
+        elif drawdown_assessment is not None:
+            raise CapabilityError("DRAWDOWN_UNEXPECTED_PROVENANCE")
         if capability.authority.model_health is not None:
             if model_health is None or model_health_assessment is None or not model_health_assessment_id:
                 raise CapabilityError("MODEL_HEALTH_REVALIDATION_REQUIRED")
@@ -105,6 +208,8 @@ class CapabilityAuthority:
                 raise CapabilityError("MODEL_HEALTH_ASSESSMENT_CHANGED")
             if model_health_assessment != capability.model_health_assessment:
                 raise CapabilityError("MODEL_HEALTH_SOURCE_CHANGED")
+            if not model_health_assessment.source_fresh_at(self._datetime_to_epoch_ns(now)):
+                raise CapabilityError("MODEL_HEALTH_SOURCE_EXPIRED")
         elif model_health is not None or model_health_assessment is not None or model_health_assessment_id is not None:
             raise CapabilityError("MODEL_HEALTH_UNEXPECTED_PROVENANCE")
         if TradeCapability.fingerprint(intent_payload) != capability.intent_fingerprint:
@@ -113,10 +218,28 @@ class CapabilityAuthority:
     def consume(self, capability: TradeCapability, *, now: datetime, truth: OperationalTruth,
                 intent_payload: dict[str, Any], model_health: Decimal | None = None,
                 model_health_assessment: HealthAssessment | None = None,
-                model_health_assessment_id: str | None = None) -> TradeCapability:
+                model_health_assessment_id: str | None = None,
+                liquidity_assessment: LiquidityAssessment | None = None,
+                drawdown_assessment: DrawdownAssessment | None = None,
+                uncertainty_assessment: UncertaintyAssessment | None = None) -> TradeCapability:
         self.validate(capability, now=now, truth=truth, intent_payload=intent_payload,
                       model_health=model_health, model_health_assessment=model_health_assessment,
-                      model_health_assessment_id=model_health_assessment_id)
+                      model_health_assessment_id=model_health_assessment_id,
+                      liquidity_assessment=liquidity_assessment,
+                      drawdown_assessment=drawdown_assessment,
+                      uncertainty_assessment=uncertainty_assessment)
         self._consumed.add(capability.capability_id)
         return TradeCapability(capability.capability_id, capability.authority, capability.intent_fingerprint,
-                               capability.expires_at, consumed=True, model_health_assessment=capability.model_health_assessment)
+                               capability.expires_at, consumed=True,
+                               model_health_assessment=capability.model_health_assessment,
+                               liquidity_assessment=capability.liquidity_assessment,
+                               drawdown_assessment=capability.drawdown_assessment,
+                               uncertainty_assessment=capability.uncertainty_assessment)
+
+    @staticmethod
+    def _datetime_to_epoch_ns(value: datetime) -> int:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise CapabilityError("MODEL_HEALTH_REVALIDATION_TIMEZONE_REQUIRED")
+        utc_value = value.astimezone(timezone.utc)
+        delta = utc_value - datetime(1970, 1, 1, tzinfo=timezone.utc)
+        return ((delta.days * 86400 + delta.seconds) * 1_000_000_000) + delta.microseconds * 1_000

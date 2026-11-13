@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quant-trading-platform.invalid/schemas/provenance-event-payload/v1",
+  "title": "Provenance Event Payload v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["sequence", "event_type", "release_id", "actor", "reference_id", "reason", "timestamp_ns", "previous_hash", "event_hash"],
+  "properties": {
+    "sequence": {"type": "integer", "minimum": 1},
+    "event_type": {"enum": ["RELEASE_CREATED", "APPROVAL_ATTACHED", "EVIDENCE_ATTACHED", "CONFIG_FINGERPRINTED", "DEPLOYMENT_LINKED", "ROLLBACK_LINKED", "RELEASE_REVOKED"]},
+    "release_id": {"type": "string", "minLength": 1},
+    "actor": {"type": "string", "minLength": 1},
+    "reference_id": {"type": "string", "minLength": 1},
+    "reason": {"type": "string", "minLength": 1},
+    "timestamp_ns": {"type": "integer", "minimum": 0},
+    "previous_hash": {"type": "string", "pattern": "^(GENESIS|[0-9a-f]{64})$"},
+    "event_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}
