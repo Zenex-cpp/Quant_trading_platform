@@ -17,7 +17,7 @@ def test_v429_ci_workflow_contract_passes_and_preserves_capture_artifact_compati
     assert "V428_MILESTONE_PREFLIGHT.json" in text
     assert "V428_MILESTONE_PREFLIGHT.sqlite3" in text
     assert "--impacted-requirement M1" in text
-    for requirement_id in ("M2", "M3", "M4", "M5", "M7", "M9", "M10", "M11", "M14", "M15", "M18", "M21", "M22", "M23", "M24", "M25"):
+    for requirement_id in ("M2", "M3", "M4", "M5", "M7", "M9", "M10", "M11", "M14", "M15", "M18", "M20", "M21", "M22", "M23", "M24", "M25"):
         assert f"--impacted-requirement {requirement_id}" in text
 
 
@@ -30,6 +30,7 @@ def test_v429_workflow_contract_rejects_legacy_entrypoint_or_warn_only_artifacts
     altered = altered.replace("--impacted-requirement M11", "--impacted-requirement M3")
     altered = altered.replace("--impacted-requirement M15", "--impacted-requirement M3")
     altered = altered.replace("--impacted-requirement M18", "--impacted-requirement M3")
+    altered = altered.replace("--impacted-requirement M20", "--impacted-requirement M3")
     altered = altered.replace("--impacted-requirement M21", "--impacted-requirement M3")
     altered = altered.replace("--impacted-requirement M22", "--impacted-requirement M3")
     altered = altered.replace("--impacted-requirement M23", "--impacted-requirement M3")
@@ -44,6 +45,7 @@ def test_v429_workflow_contract_rejects_legacy_entrypoint_or_warn_only_artifacts
     assert "WORKFLOW_M11_IMPACT_MISSING" in blockers
     assert "WORKFLOW_M15_IMPACT_MISSING" in blockers
     assert "WORKFLOW_M18_IMPACT_MISSING" in blockers
+    assert "WORKFLOW_M20_IMPACT_MISSING" in blockers
     assert "WORKFLOW_M21_IMPACT_MISSING" in blockers
     assert "WORKFLOW_M22_IMPACT_MISSING" in blockers
     assert "WORKFLOW_M23_IMPACT_MISSING" in blockers

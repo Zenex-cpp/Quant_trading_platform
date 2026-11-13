@@ -14,6 +14,7 @@ from trading_platform.v34.execution_bridge import ExecutionBridge, BridgeStatus
 from trading_platform.v35.binance_execution import ExchangeOutcome, RuntimeCredentialValues, SubmitObservation
 from trading_platform.v310.runtime_orchestrator import OrchestrationState, RuntimeCycleSnapshot
 from trading_platform.v311.dispatch_guard import DispatchGuardDenied, GuardedExecutionDispatcher
+from trading_platform.v338.side_effects import DurableSideEffectLedger
 from trading_platform.execution.models import OrderIntent, OrderAction, OrderType, PositionState, Side
 from trading_platform.core.ttl import ValidWindow
 from tests.dispatch_support import execution_authorities_for, risk_decision_ledger_for
@@ -82,6 +83,54 @@ def test_missing_reservation_blocks_before_transport(tmp_path: Path):
     g = FakeGateway()
     d = GuardedExecutionDispatcher(bridge=b, gateway=g, permission_snapshot=snap, accounting_authority=accounting(tmp_path), risk_reservation_gate=RiskReservationGate(book=DurableRiskReservationBook(EventStore(str(tmp_path / "unused.db")), allocated=Decimal("10"))), **execution_authorities_for(i, now_ms=BASE_MS), risk_decision_ledger=risk_decision_ledger_for(b, i, now_ms=BASE_MS), clock_ms=lambda: BASE_MS)
     with pytest.raises(DispatchGuardDenied, match="RISK_RESERVATION_DENIED:RESERVATION_NOT_FOUND"):
+        d.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
+    assert g.calls == []
+
+
+def test_unconfigured_reservation_gate_blocks_before_transport(tmp_path: Path):
+    b, i = build_pair()
+    acct = accounting(tmp_path)
+    g = FakeGateway()
+    d = GuardedExecutionDispatcher(
+        bridge=b, gateway=g, permission_snapshot=snap, accounting_authority=acct,
+        **execution_authorities_for(i, now_ms=BASE_MS),
+        risk_decision_ledger=risk_decision_ledger_for(b, i, now_ms=BASE_MS),
+        clock_ms=lambda: BASE_MS,
+    )
+    with pytest.raises(DispatchGuardDenied, match="RISK_RESERVATION_GATE_REQUIRED"):
+        d.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
+    assert g.calls == []
+
+
+def test_ephemeral_reservation_ledger_blocks_before_transport(tmp_path: Path):
+    b, i = build_pair()
+    acct = accounting(tmp_path)
+    gate = RiskReservationGate(DurableRiskReservationBook(EventStore(), allocated=Decimal("10")))
+    g = FakeGateway()
+    d = GuardedExecutionDispatcher(
+        bridge=b, gateway=g, permission_snapshot=snap, accounting_authority=acct,
+        risk_reservation_gate=gate,
+        **execution_authorities_for(i, now_ms=BASE_MS),
+        risk_decision_ledger=risk_decision_ledger_for(b, i, now_ms=BASE_MS),
+        clock_ms=lambda: BASE_MS,
+    )
+    with pytest.raises(DispatchGuardDenied, match="RISK_RESERVATION_LEDGER_NOT_PERSISTENT"):
+        d.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
+    assert g.calls == []
+
+
+def test_missing_accounting_authority_blocks_risk_reservation_before_transport(tmp_path: Path):
+    b, i = build_pair()
+    gate, _ = reservation(tmp_path, "unreachable-accounting-hash")
+    g = FakeGateway()
+    d = GuardedExecutionDispatcher(
+        bridge=b, gateway=g, permission_snapshot=snap, risk_reservation_gate=gate,
+        **execution_authorities_for(i, now_ms=BASE_MS),
+        risk_decision_ledger=risk_decision_ledger_for(b, i, now_ms=BASE_MS),
+        side_effect_ledger=DurableSideEffectLedger(EventStore(str(tmp_path / "side-effects.db"))),
+        clock_ms=lambda: BASE_MS,
+    )
+    with pytest.raises(DispatchGuardDenied, match="RISK_ACCOUNTING_AUTHORITY_REQUIRED"):
         d.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
     assert g.calls == []
 

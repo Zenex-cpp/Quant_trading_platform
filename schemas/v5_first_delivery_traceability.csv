@@ -21,7 +21,7 @@ FD-19,Failure Precedence Matrix,PRESENT,docs/62_V5_SAFETY_AND_INCIDENT_MATRICES.
 FD-20,Incident Severity x Scope Matrix,PRESENT,docs/62_V5_SAFETY_AND_INCIDENT_MATRICES.md;schemas/v5_incident_severity_scope.csv,,
 FD-21,Risk State Model,PARTIAL,docs/02_STATE_MODEL.md,src/trading_platform/risk/budget.py,"Risk-related state is implemented but is not specified as a complete state model."
 FD-22,Risk Budget Model,PRESENT,docs/11_RISK_BUDGET.md;docs/24_V06_PORTFOLIO.md,src/trading_platform/risk/budget.py,
-FD-23,Risk Reservation Flow,PARTIAL,docs/11_RISK_BUDGET.md,src/trading_platform/risk/budget.py,"The reservation lifecycle is named but the complete actor/event/recovery flow is not documented."
+FD-23,Risk Reservation Flow,PRESENT,docs/71_V5_RISK_RESERVATION_FLOW.md;docs/11_RISK_BUDGET.md,src/trading_platform/v317/durable_risk.py;src/trading_platform/v311/dispatch_guard.py;src/trading_platform/v312/execution_runtime.py;src/trading_platform/v385/controlled_testnet_submit.py,
 FD-24,Decision TTL Contract,PARTIAL,docs/08_FIRST_DELIVERY.md,src/trading_platform/core/ttl.py;src/trading_platform/core/decision.py,"A TTL primitive exists but its decision-class policy and expiry precedence are not specified."
 FD-25,Causal Dependency Graph,PARTIAL,docs/01_ARCHITECTURE.md,src/trading_platform/contracts/causal.py,"Causal checks exist but a canonical end-to-end dependency graph artifact is absent."
 FD-26,Evidence State Model,PRESENT,docs/29_V09_RESEARCH_EVIDENCE.md,src/trading_platform/evidence/model.py,

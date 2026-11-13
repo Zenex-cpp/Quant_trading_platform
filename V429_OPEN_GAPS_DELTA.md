@@ -3,6 +3,7 @@
 ## V5.0 §179 traceability audit — 12 November 2026
 
 - Added a 55-entry, test-enforced register. The current audit marks 39 items PRESENT, 16 PARTIAL and 0 OPEN. PRESENT means a canonical repository artifact exists; it does not mean independent review or production verification.
+- Current register status is 43 PRESENT, 12 PARTIAL, and 0 OPEN after FD-23 was supplied with a canonical flow and transition inventory. The register tracks repository artifacts, not production readiness.
 - Added the error taxonomy, fail-safe matrix, failure-precedence matrix, incident severity-by-scope matrix, metric applicability registry, objective-function registry, and benchmark registry. The safety and research registries are machine-readable, contract-tested, and explicitly specification-only where empirical validation is required. Remaining PARTIAL entries are listed in schemas/v5_first_delivery_traceability.csv.
 - Package 3.61.30 closes a transition-engine idempotency collision: an existing key cannot silently return success for a different TransitionSpec. The final local runner reports 1,363 passed, 26 skipped, RELEASE_HYGIENE=PASS; its preflight is READY_FOR_MILESTONE, allowed=true, pipeline PASS, zero blockers and 188 input hashes.
 - PR #21 controlled-milestone-validation runs 43226746432 and 43226732855 on commit 6b21d7c3cb048db0ffb7df265be0a106aa775cd1 both completed successfully: 1,376 passed, 3 skipped, RELEASE_HYGIENE=PASS. Uploaded audit artifact digests were 23eab2fbee88cb90a40e2e21175e55652a6f4bd0f5eef42eef3cf95640e015f5 and 6287a30c1246f9317a34a704fe793563704d1c0c5a8b22559fcad9e09daf86a4. The separate REPOSITORY_GOVERNANCE phase remains BLOCKED; PR checks do not prove a protected-main push or accepted independent trust evidence.
@@ -17,6 +18,13 @@
 
 - Package 3.61.37 adds the 25-domain source-of-truth register and a test for domain coverage, repository paths, and fail-closed conflict boundaries. FD-16 is PRESENT as a §179 repository artifact; status does not mean every listed authority is operationally configured.
 - Raw market/account records, independent data-source proof, trusted actor/reviewer identity, host time synchronization, durable EventStore wiring across all services, protected-branch proof, and production integrations remain external or incomplete as identified per row in `schemas/v5_source_of_truth_matrix.csv`.
+
+## FD-23 durable risk reservation — 12 November 2026
+
+- Package 3.61.38 makes reservation check-plus-append atomic across SQLite writers and closes final-submit paths that could omit a reservation. Risk-increasing dispatch now requires persistent, reconciled accounting and a reservation bound to the same projection hash; V3.85 also requires a persistent dispatch journal and matching pre-trade snapshot.
+- The §179 flow and CSV inventory describe the reservation actors, lifecycle events, dispatch ordering, and restart/recovery rules. FD-23 is PRESENT as an artifact; this does not prove production-wide store wiring or authenticated operator permissions.
+- M20 now has explicit V4.29 preflight/CI coverage for concurrent reservation allocation, one terminal reservation outcome, and fail-closed dispatch. No external or live trading evidence was produced.
+- Focused validation passed 146 tests. The fixed runner passed with 1,410 passed, 26 skipped, and `RELEASE_HYGIENE=PASS`; preflight was `READY_FOR_MILESTONE`, allowed, zero blockers, and 237 input hashes. `external_evidence=false`, `production_ready=false`, and `activation_flag=NOT_SET`.
 
 ## Closed locally
 

@@ -1,5 +1,13 @@
 # Trading Platform V4.29 Recovery — Release Notes
 
+## Package 3.61.38 — Durable risk reservation flow
+
+- Risk reservation budget checks and writes now run under SQLite `BEGIN IMMEDIATE`, preventing concurrent persistent writers from allocating the same remaining budget.
+- V3.11/V3.12 risk-increasing dispatch requires reconciled persistent accounting, a matching durable reservation, and a persistent reservation ledger. V3.85 applies the same reservation check and validates the pre-trade accounting projection hash; its dispatch event store must also be persistent.
+- Added the §179 risk reservation lifecycle, event inventory, recovery rules, and integration limits. FD-23 is PRESENT as a repository artifact; production store wiring and authenticated actor enforcement remain incomplete.
+- Added M20 regression coverage for concurrent budget allocation, terminal state, missing/ephemeral authorities, and Testnet dispatch. No live order or deployment was performed.
+- Verification: focused dispatch, reservation, traceability, release-contract, and milestone-contract suites passed **146 tests**. The fixed V4.29 runner passed with **1,410 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`; preflight was `READY_FOR_MILESTONE`, `allowed=true`, M20 included, with zero blockers and 237 input hashes. It remains offline: `external_evidence=false`, `production_ready=false`, `activation_flag=NOT_SET`.
+
 ## Package 3.61.37 — Cross-domain source-of-truth matrix
 
 - Added a 25-domain §179 matrix defining authoritative records, identity/version bindings, derived views, conflict actions, and external/persistence boundaries.

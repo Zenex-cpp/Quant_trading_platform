@@ -28,7 +28,7 @@ EXPECTED_MILESTONE_ID = "V4.29-RECOVERY"
 EXPECTED_BASELINE_VERSION = "V4.28-RECOVERY"
 EXPECTED_MATRIX_PATH = "compliance_v429.csv"
 EXPECTED_BASELINE_HASH_PATH = "V428_BASELINE_ARCHIVE_SHA256.txt"
-EXPECTED_IMPACTED_IDS = ("CI-PREFLIGHT-01", "M1", "M2", "M3", "M4", "M5", "M7", "M9", "M10", "M11", "M14", "M15", "M18", "M21", "M22", "M23", "M24", "M25", "REPO-GOV-01", "REPO-GOV-02", "REPO-GOV-03", "REPO-GOV-CAPTURE-01", "REPO-GOV-SIGN-01", "REPO-GOV-PATH-01", "REPO-GOV-PATH-02", "REPO-GOV-PATH-03", "REPO-GOV-PATH-04")
+EXPECTED_IMPACTED_IDS = ("CI-PREFLIGHT-01", "M1", "M2", "M3", "M4", "M5", "M7", "M9", "M10", "M11", "M14", "M15", "M18", "M20", "M21", "M22", "M23", "M24", "M25", "REPO-GOV-01", "REPO-GOV-02", "REPO-GOV-03", "REPO-GOV-CAPTURE-01", "REPO-GOV-SIGN-01", "REPO-GOV-PATH-01", "REPO-GOV-PATH-02", "REPO-GOV-PATH-03", "REPO-GOV-PATH-04")
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 if str(ROOT / "src") not in sys.path:
@@ -71,6 +71,7 @@ CONTRACT_FILES = (
     "V429_M23_REMEDIATION_REPORT.md",
     "V429_M24_REMEDIATION_REPORT.md",
     "V429_M25_PUBLIC_DATA_REPORT.md",
+    "V429_M20_REMEDIATION_REPORT.md",
     "V429_DATASET_01_CSV_AUDIT_REPORT.md",
     "docs/00_REPOSITORY_SOURCE_OF_TRUTH.md",
     "docs/60_V5_FIRST_DELIVERY_TRACEABILITY.md",
@@ -84,6 +85,7 @@ CONTRACT_FILES = (
     "docs/68_V5_SAFETY_MONOTONICITY.md",
     "docs/69_V5_EVENT_SCHEMAS_AND_REGISTRY.md",
     "docs/70_V5_SOURCE_OF_TRUTH.md",
+    "docs/71_V5_RISK_RESERVATION_FLOW.md",
     "docs/06_IDEMPOTENCY.md",
     "schemas/v5_first_delivery_traceability.csv",
     "schemas/v5_error_taxonomy.csv",
@@ -104,6 +106,7 @@ CONTRACT_FILES = (
     "schemas/v5_event_payload_schemas/deployment.v1.schema.json",
     "schemas/v5_event_payload_schemas/provenance.v1.schema.json",
     "schemas/v5_source_of_truth_matrix.csv",
+    "schemas/v5_risk_reservation_flow.csv",
     "src/trading_platform/research/strategy_card.py",
     "src/trading_platform/state/transition.py",
     "src/trading_platform/risk/monotonicity.py",
@@ -111,9 +114,11 @@ CONTRACT_FILES = (
     "src/trading_platform/events/envelope.py",
     "src/trading_platform/events/registry.py",
     "src/trading_platform/realtime/events.py",
+    "src/trading_platform/v317/durable_risk.py",
     "tests/test_v02_foundation.py",
     "tests/test_v5_first_delivery_traceability.py",
     "tests/test_v5_source_of_truth_matrix.py",
+    "tests/test_v5_risk_reservation_flow.py",
     "tests/test_strategy_card.py",
     "tests/test_security_permissions.py",
     "tests/test_v5_security_threat_model.py",
@@ -271,6 +276,8 @@ CONTRACT_FILES = (
     "tests/test_v365_release_hygiene.py",
     "tests/test_python_syntax_compatibility.py",
     "tests/v317/test_dispatch_risk_gate.py",
+    "tests/v317/test_durable_risk.py",
+    "tests/v347/test_m20_risk_consumption.py",
     "tests/v318/test_dispatch_freshness.py",
     "tests/v320/test_dispatch_order_request.py",
     "tests/v321/test_durable_dispatch.py",

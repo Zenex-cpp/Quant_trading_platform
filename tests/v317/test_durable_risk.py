@@ -111,6 +111,16 @@ def test_expired_reservation_cannot_be_consumed(tmp_path: Path):
     assert b.reservations()[0].state is RiskReservationState.RESERVED
 
 
+def test_reservation_cannot_be_expired_before_its_recorded_deadline(tmp_path: Path):
+    b = DurableRiskReservationBook(EventStore(str(tmp_path / "risk.db")), allocated=Decimal("10"))
+    b.reserve(record())
+    with pytest.raises(RiskReservationConflict, match="RESERVATION_NOT_EXPIRED"):
+        b.expire("r1", occurred_at_ms=1099)
+    assert b.reservations()[0].state is RiskReservationState.RESERVED
+    expired = b.expire("r1", occurred_at_ms=1100)
+    assert expired.state is RiskReservationState.EXPIRED
+
+
 def test_release_does_not_double_credit_remaining_budget(tmp_path: Path):
     b = DurableRiskReservationBook(EventStore(str(tmp_path / "risk.db")), allocated=Decimal("10"))
     b.reserve(record())

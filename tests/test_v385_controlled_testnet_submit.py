@@ -14,6 +14,7 @@ from trading_platform.v384 import (
     TestnetExecutionActivationAuthorityV384,
     TestnetExecutionActivationConfigV384 as ActivationConfigV384,
 )
+from trading_platform.v317 import DurableRiskReservationBook, RiskReservationGate
 from trading_platform.v385 import ControlledSubmitError, ControlledTestnetSubmitAuthorityV385
 from trading_platform.v379 import TestnetMutationGate
 from trading_platform.v380 import BinanceTestnetOrderAdapterV380
@@ -89,6 +90,7 @@ def activation():
 
 def control(
     *,
+    tmp_path,
     fail=False,
     risk_expires_at_ms=None,
     missing_authority=None,
@@ -97,17 +99,20 @@ def control(
     authorities = build_v385_submit_authorities(
         order_intent,
         BASE,
+        storage_dir=tmp_path,
         risk_expires_at_ms=risk_expires_at_ms,
     )
     authority_args = {
         "risk_decision_ledger": authorities.risk_decision_ledger,
+        "accounting_authority": authorities.accounting_authority,
+        "risk_reservation_gate": authorities.risk_reservation_gate,
         "position_authority": authorities.position_authority,
         "market_data_authority": authorities.market_data_authority,
         "causal_ttl_authority": authorities.causal_ttl_authority,
     }
     if missing_authority is not None:
         authority_args[missing_authority] = None
-    store = EventStore()
+    store = EventStore(str(tmp_path / "submit.db"))
     gateway = Gateway(fail=fail)
     submitter = ControlledTestnetSubmitAuthorityV385(
         activation=activation(), gateway=gateway, event_store=store,
@@ -117,8 +122,8 @@ def control(
     return order_intent, snapshot, store, gateway, submitter
 
 
-def test_happy_path_has_durable_snapshot_and_dispatch_claim():
-    order_intent, snapshot, store, gateway, submitter = control()
+def test_happy_path_has_durable_snapshot_and_dispatch_claim(tmp_path):
+    order_intent, snapshot, store, gateway, submitter = control(tmp_path=tmp_path)
     result = submitter.submit(
         order_intent,
         credentials=RuntimeCredentialValues("TEST_KEY_SENTINEL", b"TEST_SECRET_SENTINEL"),
@@ -133,8 +138,8 @@ def test_happy_path_has_durable_snapshot_and_dispatch_claim():
     assert restored == snapshot
 
 
-def test_repeat_submit_is_blocked_and_does_not_duplicate_side_effect():
-    order_intent, snapshot, _, gateway, submitter = control()
+def test_repeat_submit_is_blocked_and_does_not_duplicate_side_effect(tmp_path):
+    order_intent, snapshot, _, gateway, submitter = control(tmp_path=tmp_path)
     submitter.submit(
         order_intent,
         credentials=RuntimeCredentialValues("TEST_KEY_SENTINEL", b"TEST_SECRET_SENTINEL"),
@@ -151,8 +156,8 @@ def test_repeat_submit_is_blocked_and_does_not_duplicate_side_effect():
     assert len(gateway.calls) == 1
 
 
-def test_transport_exception_becomes_unknown_and_blocks_retry():
-    order_intent, snapshot, _, gateway, submitter = control(fail=True)
+def test_transport_exception_becomes_unknown_and_blocks_retry(tmp_path):
+    order_intent, snapshot, _, gateway, submitter = control(tmp_path=tmp_path, fail=True)
     with pytest.raises(ControlledSubmitError, match="UNKNOWN"):
         submitter.submit(
             order_intent,
@@ -175,13 +180,15 @@ def test_transport_exception_becomes_unknown_and_blocks_retry():
     ("missing_authority", "reason"),
     [
         ("risk_decision_ledger", "RISK_DECISION_LEDGER_REQUIRED"),
+        ("accounting_authority", "RISK_ACCOUNTING_AUTHORITY_REQUIRED"),
+        ("risk_reservation_gate", "RISK_RESERVATION_GATE_REQUIRED"),
         ("position_authority", "POSITION_AUTHORITY_REQUIRED"),
         ("market_data_authority", "MARKET_DATA_AUTHORITY_REQUIRED"),
         ("causal_ttl_authority", "CAUSAL_TTL_AUTHORITY_REQUIRED"),
     ],
 )
-def test_missing_m1_m5_authority_blocks_before_gateway(missing_authority, reason):
-    order_intent, snapshot, _, gateway, submitter = control(missing_authority=missing_authority)
+def test_missing_m1_m5_authority_blocks_before_gateway(missing_authority, reason, tmp_path):
+    order_intent, snapshot, _, gateway, submitter = control(tmp_path=tmp_path, missing_authority=missing_authority)
     with pytest.raises(ControlledSubmitError, match=reason):
         submitter.submit(
             order_intent,
@@ -192,9 +199,9 @@ def test_missing_m1_m5_authority_blocks_before_gateway(missing_authority, reason
     assert gateway.calls == []
 
 
-def test_expired_risk_decision_blocks_before_gateway():
+def test_expired_risk_decision_blocks_before_gateway(tmp_path):
     expired_at = int(BASE.timestamp() * 1000)
-    order_intent, snapshot, _, gateway, submitter = control(risk_expires_at_ms=expired_at)
+    order_intent, snapshot, _, gateway, submitter = control(tmp_path=tmp_path, risk_expires_at_ms=expired_at)
     with pytest.raises(ControlledSubmitError, match="RISK_DECISION_DENIED:RISK_DECISION_EXPIRED_OR_NOT_YET_VALID"):
         submitter.submit(
             order_intent,
@@ -205,8 +212,8 @@ def test_expired_risk_decision_blocks_before_gateway():
     assert gateway.calls == []
 
 
-def test_snapshot_risk_hash_mismatch_blocks_before_gateway():
-    order_intent, snapshot, _, gateway, submitter = control()
+def test_snapshot_risk_hash_mismatch_blocks_before_gateway(tmp_path):
+    order_intent, snapshot, _, gateway, submitter = control(tmp_path=tmp_path)
     snapshot = type(snapshot)(**{**snapshot.__dict__, "risk_hash": "wrong-risk-hash"})
     with pytest.raises(ControlledSubmitError, match="PRE_TRADE_RISK_DECISION_FINGERPRINT_MISMATCH"):
         submitter.submit(
@@ -218,8 +225,8 @@ def test_snapshot_risk_hash_mismatch_blocks_before_gateway():
     assert gateway.calls == []
 
 
-def test_snapshot_exposure_mismatch_blocks_before_gateway():
-    order_intent, snapshot, _, gateway, submitter = control()
+def test_snapshot_exposure_mismatch_blocks_before_gateway(tmp_path):
+    order_intent, snapshot, _, gateway, submitter = control(tmp_path=tmp_path)
     snapshot = type(snapshot)(**{**snapshot.__dict__, "requested_exposure": Decimal("1")})
     with pytest.raises(ControlledSubmitError, match="PRE_TRADE_RISK_EXPOSURE_MISMATCH"):
         submitter.submit(
@@ -231,8 +238,8 @@ def test_snapshot_exposure_mismatch_blocks_before_gateway():
     assert gateway.calls == []
 
 
-def test_unknown_position_blocks_before_external_submit():
-    order_intent, snapshot, _, gateway, submitter = control()
+def test_unknown_position_blocks_before_external_submit(tmp_path):
+    order_intent, snapshot, _, gateway, submitter = control(tmp_path=tmp_path)
     snapshot = type(snapshot)(**{**snapshot.__dict__, "position_state": "UNKNOWN"})
     with pytest.raises(ControlledSubmitError, match="POSITION_UNKNOWN"):
         submitter.submit(
@@ -244,8 +251,8 @@ def test_unknown_position_blocks_before_external_submit():
     assert gateway.calls == []
 
 
-def test_position_authority_from_missing_history_blocks_before_submit():
-    order_intent, snapshot, _, gateway, submitter = control(missing_authority="position_authority")
+def test_position_authority_from_missing_history_blocks_before_submit(tmp_path):
+    order_intent, snapshot, _, gateway, submitter = control(tmp_path=tmp_path, missing_authority="position_authority")
     with pytest.raises(ControlledSubmitError, match="POSITION_AUTHORITY_REQUIRED"):
         submitter.submit(
             order_intent,
@@ -256,8 +263,8 @@ def test_position_authority_from_missing_history_blocks_before_submit():
     assert gateway.calls == []
 
 
-def test_stale_market_snapshot_blocks_before_external_submit():
-    order_intent, snapshot, _, gateway, submitter = control()
+def test_stale_market_snapshot_blocks_before_external_submit(tmp_path):
+    order_intent, snapshot, _, gateway, submitter = control(tmp_path=tmp_path)
     snapshot = type(snapshot)(**{**snapshot.__dict__, "market_stale": True})
     with pytest.raises(ControlledSubmitError, match="MARKET_DATA_STALE"):
         submitter.submit(
@@ -269,8 +276,8 @@ def test_stale_market_snapshot_blocks_before_external_submit():
     assert gateway.calls == []
 
 
-def test_expired_market_authority_blocks_even_with_fresh_snapshot_before_submit():
-    order_intent, snapshot, _, gateway, submitter = control()
+def test_expired_market_authority_blocks_even_with_fresh_snapshot_before_submit(tmp_path):
+    order_intent, snapshot, _, gateway, submitter = control(tmp_path=tmp_path)
     now_ms = int(BASE.timestamp() * 1000)
     submitter.market_data_authority.record_observation(
         symbol=order_intent.symbol,
@@ -292,10 +299,51 @@ def test_expired_market_authority_blocks_even_with_fresh_snapshot_before_submit(
     assert gateway.calls == []
 
 
-def test_snapshot_binding_conflict_blocks_submit():
-    order_intent, snapshot, _, gateway, submitter = control()
+def test_snapshot_binding_conflict_blocks_submit(tmp_path):
+    order_intent, snapshot, _, gateway, submitter = control(tmp_path=tmp_path)
     snapshot = type(snapshot)(**{**snapshot.__dict__, "order_request_id": "wrong"})
     with pytest.raises(ControlledSubmitError, match="ORDER_REQUEST_MISMATCH"):
+        submitter.submit(
+            order_intent,
+            credentials=RuntimeCredentialValues("TEST_KEY_SENTINEL", b"TEST_SECRET_SENTINEL"),
+            pre_trade_snapshot=snapshot,
+            now=BASE,
+        )
+    assert gateway.calls == []
+
+
+def test_stale_accounting_snapshot_blocks_before_gateway(tmp_path):
+    order_intent, snapshot, _, gateway, submitter = control(tmp_path=tmp_path)
+    snapshot = type(snapshot)(**{**snapshot.__dict__, "accounting_projection_hash": "stale-accounting"})
+    with pytest.raises(ControlledSubmitError, match="PRE_TRADE_ACCOUNTING_HASH_STALE"):
+        submitter.submit(
+            order_intent,
+            credentials=RuntimeCredentialValues("TEST_KEY_SENTINEL", b"TEST_SECRET_SENTINEL"),
+            pre_trade_snapshot=snapshot,
+            now=BASE,
+        )
+    assert gateway.calls == []
+
+
+def test_ephemeral_dispatch_store_blocks_before_gateway(tmp_path):
+    order_intent, snapshot, _, gateway, submitter = control(tmp_path=tmp_path)
+    submitter.store = EventStore()
+    with pytest.raises(ControlledSubmitError, match="DISPATCH_EVENT_STORE_NOT_PERSISTENT"):
+        submitter.submit(
+            order_intent,
+            credentials=RuntimeCredentialValues("TEST_KEY_SENTINEL", b"TEST_SECRET_SENTINEL"),
+            pre_trade_snapshot=snapshot,
+            now=BASE,
+        )
+    assert gateway.calls == []
+
+
+def test_ephemeral_reservation_store_blocks_before_gateway(tmp_path):
+    order_intent, snapshot, _, gateway, submitter = control(tmp_path=tmp_path)
+    submitter.risk_reservation_gate = RiskReservationGate(
+        DurableRiskReservationBook(EventStore(), allocated=Decimal("25")),
+    )
+    with pytest.raises(ControlledSubmitError, match="RISK_RESERVATION_LEDGER_NOT_PERSISTENT"):
         submitter.submit(
             order_intent,
             credentials=RuntimeCredentialValues("TEST_KEY_SENTINEL", b"TEST_SECRET_SENTINEL"),

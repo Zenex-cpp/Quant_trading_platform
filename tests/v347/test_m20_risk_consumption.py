@@ -1,6 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal
 from pathlib import Path
+from threading import Barrier
 
 import pytest
 
@@ -44,6 +45,32 @@ def test_concurrent_consume_consume_has_one_terminal_event(tmp_path):
     assert len(consumed) == 1
 
 
+def test_concurrent_reservations_cannot_overdraw_budget(tmp_path):
+    path = tmp_path / "reserve-race.db"
+    DurableRiskReservationBook(EventStore(str(path)), allocated=Decimal("3"))
+    start = Barrier(2)
+
+    def worker(reservation_id):
+        book = DurableRiskReservationBook(EventStore(str(path)), allocated=Decimal("3"))
+        start.wait()
+        try:
+            return book.reserve(RiskReservationRecord(
+                reservation_id, BudgetScope.ORDER, Decimal("3"), Decimal("3"),
+                f"I-{reservation_id}", f"RD-{reservation_id}", "A20", 100, 100000,
+            ))
+        except RiskReservationConflict as exc:
+            return exc
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        out = list(pool.map(worker, ("R20-A", "R20-B")))
+
+    assert sum(isinstance(value, RiskReservationConflict) for value in out) == 1
+    assert any(isinstance(value, RiskReservationConflict) and str(value) == "RISK_BUDGET_EXCEEDED" for value in out)
+    restored = DurableRiskReservationBook(EventStore(str(path)), allocated=Decimal("3"))
+    assert restored.projection.reserved == Decimal("3")
+    assert len(restored.reservations()) == 1
+
+
 @pytest.mark.parametrize("terminal", ["release", "expire", "override"])
 def test_consume_races_other_terminal_transition(tmp_path, terminal):
     path = tmp_path / f"risk_{terminal}.db"
@@ -59,7 +86,7 @@ def test_consume_races_other_terminal_transition(tmp_path, terminal):
     def terminal_worker():
         book = DurableRiskReservationBook(EventStore(str(path)), allocated=Decimal("10"))
         fn = {"release": lambda: book.release("R20", reason="TEST", occurred_at_ms=101),
-              "expire": lambda: book.expire("R20", occurred_at_ms=101),
+              "expire": lambda: book.expire("R20", occurred_at_ms=100000),
               "override": lambda: book.override("R20", reason="TEST", occurred_at_ms=101)}[terminal]
         try:
             return (terminal, fn())

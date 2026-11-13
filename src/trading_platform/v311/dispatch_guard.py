@@ -291,6 +291,7 @@ class GuardedExecutionDispatcher:
                 self.accounting_authority.assert_new_risk_allowed()
             except AccountingGateDenied as exc:
                 raise DispatchGuardDenied(str(exc)) from exc
+        consumes_risk_budget = intent.action in {OrderAction.OPEN, OrderAction.INCREASE}
         if self.dispatch_attempt_ledger is not None:
             try:
                 self.dispatch_attempt_ledger.assert_dispatchable_new(
@@ -306,6 +307,17 @@ class GuardedExecutionDispatcher:
         self.bridge.assert_dispatchable(intent.intent_id)
         if not self.side_effect_ledger.store.is_persistent:
             raise DispatchGuardDenied("SIDE_EFFECT_LEDGER_NOT_PERSISTENT")
+        if consumes_risk_budget:
+            if self.accounting_authority is None:
+                raise DispatchGuardDenied("RISK_ACCOUNTING_AUTHORITY_REQUIRED")
+            accounting_store = getattr(getattr(self.accounting_authority, "ledger", None), "store", None)
+            if accounting_store is None or not accounting_store.is_persistent:
+                raise DispatchGuardDenied("RISK_ACCOUNTING_LEDGER_NOT_PERSISTENT")
+            if self.risk_reservation_gate is None:
+                raise DispatchGuardDenied("RISK_RESERVATION_GATE_REQUIRED")
+            reservation_store = getattr(getattr(self.risk_reservation_gate, "book", None), "store", None)
+            if reservation_store is None or not reservation_store.is_persistent:
+                raise DispatchGuardDenied("RISK_RESERVATION_LEDGER_NOT_PERSISTENT")
         accounting_hash = None
         if self.accounting_authority is not None:
             accounting_hash = self.accounting_authority.snapshot().projection_hash
@@ -329,7 +341,7 @@ class GuardedExecutionDispatcher:
             except DispatchAttemptConflict as exc:
                 raise DispatchGuardDenied(f"DISPATCH_ATTEMPT_DENIED:{exc}") from exc
 
-        if self.risk_reservation_gate is not None:
+        if consumes_risk_budget:
             reservation_id = intent.risk_reservation_id
             if not reservation_id:
                 raise DispatchGuardDenied("RISK_RESERVATION_REQUIRED")

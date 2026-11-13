@@ -19,16 +19,18 @@ BASE=datetime(2026,10,5,10,0,tzinfo=timezone.utc)
 class G:
     def __init__(self): self.calls=0
     def submit(self,o,*,credentials): self.calls+=1; return SubmitObservation(ExchangeOutcome.ACKNOWLEDGED,o.client_order_id,'EX-387',raw={'status':'NEW'})
-def mk():
+def mk(tmp_path):
     i=OrderIntent('I-387','D-387','P-387','R-387','S-387','M-387','V387','BTCUSDT',Side.BUY,OrderAction.OPEN,Decimal('0.0002'),OrderType.LIMIT,ValidWindow(BASE,BASE+timedelta(minutes=5)),Decimal('49900'),'GTC','RR-387')
     rid='or-'+hashlib.sha256((i.intent_id+i.execution_version).encode()).hexdigest()[:24]
-    authorities=build_v385_submit_authorities(i,BASE)
+    authorities=build_v385_submit_authorities(i,BASE,storage_dir=tmp_path/'authorities')
     snap=authorities.snapshot(i,'SNP-387')
     a=TestnetExecutionActivationAuthorityV384(ActivationConfigV384(max_notional=Decimal('25')),clock=lambda:BASE)
     a.activate(connectivity=ConnectivityProofV384('VERIFIED','EV-387',BASE,BASE+timedelta(minutes=5),'https://testnet.binancefuture.com',0),approval=OperatorApprovalV384('APR-387','operator','TESTNET_ORDER_MUTATION',BASE,BASE+timedelta(minutes=5),'controlled'),reconciliation_state='GREEN',now=BASE)
-    g=G(); store=EventStore(); ctl=ControlledTestnetSubmitAuthorityV385(
+    g=G(); store=EventStore(str(tmp_path/'submit.db')); ctl=ControlledTestnetSubmitAuthorityV385(
         activation=a,gateway=g,event_store=store,clock=lambda:BASE,
         risk_decision_ledger=authorities.risk_decision_ledger,
+        accounting_authority=authorities.accounting_authority,
+        risk_reservation_gate=authorities.risk_reservation_gate,
         position_authority=authorities.position_authority,
         market_data_authority=authorities.market_data_authority,
         causal_ttl_authority=authorities.causal_ttl_authority,
@@ -39,37 +41,37 @@ def mk():
     quote=QuoteSnapshotV387('BTCUSDT',Decimal('50010'),Decimal('50020'),BASE)
     return i,snap,g,gate,runner,quote
 
-def test_arms_only_with_non_marketable_fresh_quote():
-    i,s,g,gate,r,q=mk(); out=r.prepare(gate=gate,intent=i,quote=q,now=BASE); assert out.allowed and r.state.value=='ARMED'
+def test_arms_only_with_non_marketable_fresh_quote(tmp_path):
+    i,s,g,gate,r,q=mk(tmp_path); out=r.prepare(gate=gate,intent=i,quote=q,now=BASE); assert out.allowed and r.state.value=='ARMED'
 
-def test_marketable_price_blocked():
-    i,s,g,gate,r,q=mk(); i=OrderIntent(**{**i.__dict__,'price':Decimal('50015')}); out=r.prepare(gate=gate,intent=i,quote=q,now=BASE); assert not out.allowed and out.reason=='NON_MARKETABLE_PRICE'
+def test_marketable_price_blocked(tmp_path):
+    i,s,g,gate,r,q=mk(tmp_path); i=OrderIntent(**{**i.__dict__,'price':Decimal('50015')}); out=r.prepare(gate=gate,intent=i,quote=q,now=BASE); assert not out.allowed and out.reason=='NON_MARKETABLE_PRICE'
 
-def test_stale_quote_blocked():
-    i,s,g,gate,r,q=mk(); q=QuoteSnapshotV387('BTCUSDT',Decimal('50010'),Decimal('50020'),BASE-timedelta(seconds=3)); out=r.prepare(gate=gate,intent=i,quote=q,now=BASE); assert not out.allowed and out.reason=='QUOTE_STALE'
+def test_stale_quote_blocked(tmp_path):
+    i,s,g,gate,r,q=mk(tmp_path); q=QuoteSnapshotV387('BTCUSDT',Decimal('50010'),Decimal('50020'),BASE-timedelta(seconds=3)); out=r.prepare(gate=gate,intent=i,quote=q,now=BASE); assert not out.allowed and out.reason=='QUOTE_STALE'
 
-def test_wrong_tif_blocked():
-    i,s,g,gate,r,q=mk(); i=OrderIntent(**{**i.__dict__,'time_in_force':'IOC'}); out=r.prepare(gate=gate,intent=i,quote=q,now=BASE); assert not out.allowed and out.reason=='TIME_IN_FORCE_GTC'
+def test_wrong_tif_blocked(tmp_path):
+    i,s,g,gate,r,q=mk(tmp_path); i=OrderIntent(**{**i.__dict__,'time_in_force':'IOC'}); out=r.prepare(gate=gate,intent=i,quote=q,now=BASE); assert not out.allowed and out.reason=='TIME_IN_FORCE_GTC'
 
-def test_single_shot_submit_and_unknown_does_not_retry():
-    i,s,g,gate,r,q=mk(); prep=r.prepare(gate=gate,intent=i,quote=q,now=BASE); out=r.submit_once(preparation=prep,gate=gate,intent=i,credentials=RuntimeCredentialValues('K',b'S'),pre_trade_snapshot=s,now=BASE); assert out.status=='ACKNOWLEDGED' and g.calls==1
+def test_single_shot_submit_and_unknown_does_not_retry(tmp_path):
+    i,s,g,gate,r,q=mk(tmp_path); prep=r.prepare(gate=gate,intent=i,quote=q,now=BASE); out=r.submit_once(preparation=prep,gate=gate,intent=i,credentials=RuntimeCredentialValues('K',b'S'),pre_trade_snapshot=s,now=BASE); assert out.status=='ACKNOWLEDGED' and g.calls==1
     with pytest.raises(PermissionError,match='FIRST_TESTNET_SINGLE_SHOT_ONLY'): r.submit_once(preparation=prep,gate=gate,intent=i,credentials=RuntimeCredentialValues('K',b'S'),pre_trade_snapshot=s,now=BASE)
     assert g.calls==1
 
-def test_observation_requires_correlation_and_monotonic_time():
-    i,s,g,gate,r,q=mk(); prep=r.prepare(gate=gate,intent=i,quote=q,now=BASE); out=r.submit_once(preparation=prep,gate=gate,intent=i,credentials=RuntimeCredentialValues('K',b'S'),pre_trade_snapshot=s,now=BASE)
+def test_observation_requires_correlation_and_monotonic_time(tmp_path):
+    i,s,g,gate,r,q=mk(tmp_path); prep=r.prepare(gate=gate,intent=i,quote=q,now=BASE); out=r.submit_once(preparation=prep,gate=gate,intent=i,credentials=RuntimeCredentialValues('K',b'S'),pre_trade_snapshot=s,now=BASE)
     with pytest.raises(PermissionError,match='ORDER_EVENT_CORRELATION_MISMATCH'):
         r.observe(OrderEventObservationV387('WRONG-CID','NEW',BASE+timedelta(seconds=1)))
     r.observe(OrderEventObservationV387(out.client_order_id,'NEW',BASE+timedelta(seconds=2)))
     with pytest.raises(PermissionError,match='ORDER_EVENT_OUT_OF_ORDER'):
         r.observe(OrderEventObservationV387(out.client_order_id,'CANCELED',BASE+timedelta(seconds=1)))
 
-def test_terminal_observation_and_reconciliation_complete():
-    i,s,g,gate,r,q=mk(); prep=r.prepare(gate=gate,intent=i,quote=q,now=BASE); out=r.submit_once(preparation=prep,gate=gate,intent=i,credentials=RuntimeCredentialValues('K',b'S'),pre_trade_snapshot=s,now=BASE); r.observe(OrderEventObservationV387(out.client_order_id,'NEW',BASE+timedelta(seconds=1))); r.observe(OrderEventObservationV387(out.client_order_id,'CANCELED',BASE+timedelta(seconds=2))); r.complete(reconciliation=ReconciliationResultV387(True,out.client_order_id,'EX-387',True,True,'GREEN')); assert r.state.value=='COMPLETE'
+def test_terminal_observation_and_reconciliation_complete(tmp_path):
+    i,s,g,gate,r,q=mk(tmp_path); prep=r.prepare(gate=gate,intent=i,quote=q,now=BASE); out=r.submit_once(preparation=prep,gate=gate,intent=i,credentials=RuntimeCredentialValues('K',b'S'),pre_trade_snapshot=s,now=BASE); r.observe(OrderEventObservationV387(out.client_order_id,'NEW',BASE+timedelta(seconds=1))); r.observe(OrderEventObservationV387(out.client_order_id,'CANCELED',BASE+timedelta(seconds=2))); r.complete(reconciliation=ReconciliationResultV387(True,out.client_order_id,'EX-387',True,True,'GREEN')); assert r.state.value=='COMPLETE'
 
-def test_out_of_order_event_blocked():
-    i,s,g,gate,r,q=mk(); prep=r.prepare(gate=gate,intent=i,quote=q,now=BASE); out=r.submit_once(preparation=prep,gate=gate,intent=i,credentials=RuntimeCredentialValues('K',b'S'),pre_trade_snapshot=s,now=BASE); r.observe(OrderEventObservationV387(out.client_order_id,'NEW',BASE+timedelta(seconds=2))); 
+def test_out_of_order_event_blocked(tmp_path):
+    i,s,g,gate,r,q=mk(tmp_path); prep=r.prepare(gate=gate,intent=i,quote=q,now=BASE); out=r.submit_once(preparation=prep,gate=gate,intent=i,credentials=RuntimeCredentialValues('K',b'S'),pre_trade_snapshot=s,now=BASE); r.observe(OrderEventObservationV387(out.client_order_id,'NEW',BASE+timedelta(seconds=2)));
     with pytest.raises(PermissionError,match='ORDER_EVENT_OUT_OF_ORDER'): r.observe(OrderEventObservationV387(out.client_order_id,'CANCELED',BASE+timedelta(seconds=1)))
 
-def test_expired_in_match_treated_terminal():
-    i,s,g,gate,r,q=mk(); prep=r.prepare(gate=gate,intent=i,quote=q,now=BASE); out=r.submit_once(preparation=prep,gate=gate,intent=i,credentials=RuntimeCredentialValues('K',b'S'),pre_trade_snapshot=s,now=BASE); r.observe(OrderEventObservationV387(out.client_order_id,'EXPIRED_IN_MATCH',BASE+timedelta(seconds=1))); assert r.state.value=='RECONCILING'
+def test_expired_in_match_treated_terminal(tmp_path):
+    i,s,g,gate,r,q=mk(tmp_path); prep=r.prepare(gate=gate,intent=i,quote=q,now=BASE); out=r.submit_once(preparation=prep,gate=gate,intent=i,credentials=RuntimeCredentialValues('K',b'S'),pre_trade_snapshot=s,now=BASE); r.observe(OrderEventObservationV387(out.client_order_id,'EXPIRED_IN_MATCH',BASE+timedelta(seconds=1))); assert r.state.value=='RECONCILING'

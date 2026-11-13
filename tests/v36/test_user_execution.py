@@ -15,7 +15,7 @@ from trading_platform.v32.capability import CapabilityAuthority
 from trading_platform.v33.commit import CommitCoordinator
 from trading_platform.v21.event_store import EventStore
 from trading_platform.v321 import DurableDispatchAttemptLedger
-from tests.dispatch_support import execution_authorities_for, risk_decision_ledger_for
+from tests.dispatch_support import execution_authorities_for, risk_accounting_reservation_for, risk_decision_ledger_for
 
 NOW = datetime(2026, 9, 13, tzinfo=timezone.utc)
 WINDOW = ValidWindow(NOW, NOW.replace(second=1))
@@ -26,6 +26,7 @@ def intent():
         intent_id="intent-1", decision_id="d1", portfolio_decision_id="p1", risk_decision_id="r1",
         strategy_id="s1", model_id="m1", execution_version="v36", symbol="BTCUSDT", side=Side.BUY,
         action=OrderAction.OPEN, quantity=Decimal("0.002"), order_type=OrderType.MARKET, window=WINDOW,
+        risk_reservation_id="RR36",
     )
 
 
@@ -152,6 +153,9 @@ def setup_guarded_dispatcher(gateway, tmp_path):
         risk_valid=True,
     )
     now_ms = int(NOW.timestamp() * 1000)
+    accounting, reservation_gate = risk_accounting_reservation_for(
+        bridge, order_intent, now_ms=now_ms, directory=tmp_path,
+    )
     runtime = RuntimeCycleSnapshot(
         OrchestrationState.ACTIVE, "ACTIVE", "OPEN", True, True, False, False, "TEST", 0, "OK",
     )
@@ -161,6 +165,8 @@ def setup_guarded_dispatcher(gateway, tmp_path):
         permission_snapshot=lambda: runtime,
         **execution_authorities_for(order_intent, now_ms=now_ms),
         risk_decision_ledger=risk_decision_ledger_for(bridge, order_intent, now_ms=now_ms),
+        accounting_authority=accounting,
+        risk_reservation_gate=reservation_gate,
         dispatch_attempt_ledger=DurableDispatchAttemptLedger(EventStore(str(tmp_path / "attempt.db"))),
         clock_ms=lambda: now_ms,
     )

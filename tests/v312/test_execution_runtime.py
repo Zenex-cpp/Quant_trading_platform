@@ -16,7 +16,7 @@ from tests.causal_helpers import causal_authority_for_intent
 from trading_platform.core.ttl import ValidWindow
 from trading_platform.portfolio.config import ConfigValue, Precedence
 from trading_platform.v343.config_authority import ConfigurationAuthorityLedger
-from tests.dispatch_support import risk_decision_ledger_for
+from tests.dispatch_support import risk_accounting_reservation_for, risk_decision_ledger_for
 from trading_platform.v21.event_store import EventStore
 from trading_platform.v321 import DurableDispatchAttemptLedger
 
@@ -36,7 +36,7 @@ def truth(configuration):
 
 
 def intent():
-    return OrderIntent("I312","D312","P312","R312","S312","M312","E312","BTCUSDT",Side.BUY,OrderAction.OPEN,Decimal("0.001"),OrderType.MARKET,WIN)
+    return OrderIntent("I312","D312","P312","R312","S312","M312","E312","BTCUSDT",Side.BUY,OrderAction.OPEN,Decimal("0.001"),OrderType.MARKET,WIN,risk_reservation_id="RR312")
 
 
 
@@ -123,8 +123,11 @@ class FakeOrchestrator:
 
 def test_true_path_uses_committed_bridge_request_and_testnet_gateway(tmp_path):
     b, config, resolution, values = runtime_inputs(); o = FakeOrchestrator()
+    accounting, reservation_gate = risk_accounting_reservation_for(
+        b, intent(), now_ms=BASE_MS, directory=tmp_path,
+    )
     g = FakeGateway(lambda order, credentials: SubmitObservation(ExchangeOutcome.ACKNOWLEDGED, order.client_order_id, "EX312"))
-    rt = ExecutionRuntimeIntegration(orchestrator=o, bridge=b, gateway=g, position_authority=position_authority(), market_data_authority=market_authority(), causal_ttl_authority=causal_authority_for_intent(intent()), risk_decision_ledger=risk_authority(b), dispatch_attempt_ledger=DurableDispatchAttemptLedger(EventStore(str(tmp_path / "attempt.db"))), configuration_authority=config)
+    rt = ExecutionRuntimeIntegration(orchestrator=o, bridge=b, gateway=g, position_authority=position_authority(), market_data_authority=market_authority(), causal_ttl_authority=causal_authority_for_intent(intent()), risk_decision_ledger=risk_authority(b), accounting_authority=accounting, risk_reservation_gate=reservation_gate, dispatch_attempt_ledger=DurableDispatchAttemptLedger(EventStore(str(tmp_path / "attempt.db"))), configuration_authority=config)
     res = rt.dispatch(intent=intent(), credentials=RuntimeCredentialValues("API", b"SECRET"), now_epoch=NOW.timestamp(), configuration_resolution_id=resolution.resolution_id, configuration_values=values)
     assert res.submitted is True and res.exchange_uncertain is False
     assert res.receipt is not None and res.receipt.exchange_order_id == "EX312"
@@ -153,9 +156,12 @@ def test_runtime_without_persistent_side_effect_store_fails_closed():
 
 def test_transport_uncertainty_marks_unknown_and_requires_reconciliation(tmp_path):
     b, config, resolution, values = runtime_inputs(); o = FakeOrchestrator()
+    accounting, reservation_gate = risk_accounting_reservation_for(
+        b, intent(), now_ms=BASE_MS, directory=tmp_path,
+    )
     def uncertain(order, credentials): raise ExchangeUncertain("SUBMIT_OUTCOME_UNKNOWN")
     g = FakeGateway(uncertain)
-    rt = ExecutionRuntimeIntegration(orchestrator=o, bridge=b, gateway=g, position_authority=position_authority(), market_data_authority=market_authority(), causal_ttl_authority=causal_authority_for_intent(intent()), risk_decision_ledger=risk_authority(b), dispatch_attempt_ledger=DurableDispatchAttemptLedger(EventStore(str(tmp_path / "attempt.db"))), configuration_authority=config)
+    rt = ExecutionRuntimeIntegration(orchestrator=o, bridge=b, gateway=g, position_authority=position_authority(), market_data_authority=market_authority(), causal_ttl_authority=causal_authority_for_intent(intent()), risk_decision_ledger=risk_authority(b), accounting_authority=accounting, risk_reservation_gate=reservation_gate, dispatch_attempt_ledger=DurableDispatchAttemptLedger(EventStore(str(tmp_path / "attempt.db"))), configuration_authority=config)
     res = rt.dispatch(intent=intent(), credentials=RuntimeCredentialValues("API", b"SECRET"), now_epoch=NOW.timestamp(), configuration_resolution_id=resolution.resolution_id, configuration_values=values)
     assert res.exchange_uncertain is True and res.recovery_required is True
     assert b._lifecycles[intent().intent_id].state.value == "UNKNOWN"
@@ -163,11 +169,14 @@ def test_transport_uncertainty_marks_unknown_and_requires_reconciliation(tmp_pat
 
 def test_permission_lost_after_network_dispatch_is_not_reported_as_clean_cycle(tmp_path):
     b, config, resolution, values = runtime_inputs(); o = FakeOrchestrator()
+    accounting, reservation_gate = risk_accounting_reservation_for(
+        b, intent(), now_ms=BASE_MS, directory=tmp_path,
+    )
     def behavior(order, credentials):
         o.allowed = False
         return SubmitObservation(ExchangeOutcome.ACKNOWLEDGED, order.client_order_id, "EX312-RACE")
     g = FakeGateway(behavior)
-    rt = ExecutionRuntimeIntegration(orchestrator=o, bridge=b, gateway=g, position_authority=position_authority(), market_data_authority=market_authority(), causal_ttl_authority=causal_authority_for_intent(intent()), risk_decision_ledger=risk_authority(b), dispatch_attempt_ledger=DurableDispatchAttemptLedger(EventStore(str(tmp_path / "attempt.db"))), configuration_authority=config)
+    rt = ExecutionRuntimeIntegration(orchestrator=o, bridge=b, gateway=g, position_authority=position_authority(), market_data_authority=market_authority(), causal_ttl_authority=causal_authority_for_intent(intent()), risk_decision_ledger=risk_authority(b), accounting_authority=accounting, risk_reservation_gate=reservation_gate, dispatch_attempt_ledger=DurableDispatchAttemptLedger(EventStore(str(tmp_path / "attempt.db"))), configuration_authority=config)
     res = rt.dispatch(intent=intent(), credentials=RuntimeCredentialValues("API", b"SECRET"), now_epoch=NOW.timestamp(), configuration_resolution_id=resolution.resolution_id, configuration_values=values)
     assert res.submitted is True
     assert res.recovery_required is True

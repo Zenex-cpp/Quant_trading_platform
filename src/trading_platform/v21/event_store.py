@@ -1,11 +1,12 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from contextlib import contextmanager
 from functools import wraps
 from hashlib import sha256
 import json, sqlite3
 from threading import RLock
-from typing import Any, Iterable, Mapping
+from typing import Any, Iterable, Iterator, Mapping
 
 
 def canonical_json(value: Any) -> bytes:
@@ -82,6 +83,25 @@ class EventStore:
     def is_persistent(self) -> bool:
         """Whether events survive closing and reopening this store."""
         return self._path not in {"", ":memory:"}
+
+    @contextmanager
+    def atomic(self) -> Iterator["EventStore"]:
+        """Serialize a read/check/append sequence across SQLite connections.
+
+        The write lock is acquired before callers inspect the event stream. A nested
+        ``append`` commits the completed operation, so the state check and its event
+        remain one indivisible reservation decision for competing writers.
+        """
+        with self._lock:
+            self._db.execute("BEGIN IMMEDIATE")
+            try:
+                yield self
+                if self._db.in_transaction:
+                    self._db.commit()
+            except BaseException:
+                if self._db.in_transaction:
+                    self._db.rollback()
+                raise
 
     @_store_locked
     def close(self) -> None:

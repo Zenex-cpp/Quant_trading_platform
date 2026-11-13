@@ -25,6 +25,7 @@ def test_v429_milestone_runner_matrix_workflow_and_security_controls_are_aligned
         "docs/63_V5_RESEARCH_REGISTRIES.md",
         "docs/69_V5_EVENT_SCHEMAS_AND_REGISTRY.md",
         "docs/70_V5_SOURCE_OF_TRUTH.md",
+        "docs/71_V5_RISK_RESERVATION_FLOW.md",
         "docs/06_IDEMPOTENCY.md",
         "schemas/v5_first_delivery_traceability.csv",
         "schemas/v5_error_taxonomy.csv",
@@ -40,6 +41,7 @@ def test_v429_milestone_runner_matrix_workflow_and_security_controls_are_aligned
         "schemas/v5_event_payload_schemas/deployment.v1.schema.json",
         "schemas/v5_event_payload_schemas/provenance.v1.schema.json",
         "schemas/v5_source_of_truth_matrix.csv",
+        "schemas/v5_risk_reservation_flow.csv",
         "src/trading_platform/research/strategy_card.py",
         "src/trading_platform/events/envelope.py",
         "src/trading_platform/events/registry.py",
@@ -48,6 +50,7 @@ def test_v429_milestone_runner_matrix_workflow_and_security_controls_are_aligned
         "tests/test_v02_foundation.py",
         "tests/test_v5_first_delivery_traceability.py",
         "tests/test_v5_source_of_truth_matrix.py",
+        "tests/test_v5_risk_reservation_flow.py",
         "tests/test_v5_event_schema_registry.py",
         "tests/test_strategy_card.py",
     ):
