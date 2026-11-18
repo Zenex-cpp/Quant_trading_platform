@@ -64,9 +64,17 @@ def test_v5_event_registry_covers_all_typed_governance_deployment_and_provenance
         "ACCOUNTING_FUNDING",
         "ACCOUNTING_CASH_ADJUSTMENT",
     }
-    assert len(registry.registrations) == 27
-    assert registered == expected | credential_events | accounting_events
-    assert len({item.schema_id for item in registry.registrations}) == 27
+    risk_reservation_events = {
+        "RISK_BUDGET_INIT",
+        "RISK_RESERVED",
+        "RISK_CONSUMED",
+        "RISK_RELEASED",
+        "RISK_EXPIRED",
+        "RISK_OVERRIDDEN",
+    }
+    assert len(registry.registrations) == 33
+    assert registered == expected | credential_events | accounting_events | risk_reservation_events
+    assert len({item.schema_id for item in registry.registrations}) == 33
     assert {item.version for item in registry.registrations} == {"0.9", "1.0"}
     assert sum(item.version == "0.9" for item in registry.registrations) == 1
     assert all(item.compatibility_mode == "NONE" for item in registry.registrations)

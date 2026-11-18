@@ -1,7 +1,7 @@
 # Quant Trading Platform
 
 **Repository release train:** `V4.29-RECOVERY`  
-**Python distribution version:** `3.61.46` (a separate versioning scheme).
+**Python distribution version:** `3.61.47` (a separate versioning scheme).
 
 The current repository is a recovery extension based on the available V4.28 recovery archive. Byte-for-byte canonical lineage to V4.23 and V4.26 is **not established** because those source archives are not available in the project.
 
@@ -13,6 +13,7 @@ The current repository is a recovery extension based on the available V4.28 reco
 - M16 configuration authority is enforced at final Testnet dispatch and deployment activation. Resolution ID, fingerprint, status and expiry are checked against the durable ledger; failures stop dispatch or activation before the external action.
 - The final dispatch boundary requires durable risk-decision, position, fresh-market and causal-TTL authorities for risk-increasing orders. Missing or expired authority blocks before the gateway.
 - Package 3.61.46 registers strict schemas for durable accounting fills, funding and cash adjustments. Persistent accounting ledgers require the registry and validate payloads before append and during replay. The fixed local V4.29 runner passed with 1,451 tests, 26 skipped and release hygiene PASS; FD-10/FD-11 remain PARTIAL because schema versions are not persisted in the generic EventStore and other ledgers remain outside the registry.
+- Package 3.61.47 adds strict schemas and persistent write/replay validation for all six V3.17 durable risk reservation events. The broader registry now covers the main reservation lifecycle while FD-10/FD-11 remain PARTIAL because EventStore does not persist schema versions and other ledgers remain outside the registry.
 - Package 3.61.43 adds `PersistentTransitionEngine` for the registered `START_BACKTEST` edge. It commits current state, idempotency record, and audit event in one file-backed SQLite transaction and recovers exact retries after restart; caller callbacks and external effects are not supported.
 - Package 3.61.44 requires a trusted identity and resource authorization provider for production credential operations. The provider binds capability decisions to a specific credential, and successful register/revoke/resolve ledger events record the authenticated actor and decision ID without storing the identity token. The provider integration point does not supply an identity system; FD-44 remains PARTIAL.
 - Package 3.61.45 registers versioned schemas for credential registration, revocation, resolution, and denied resolution. Production credential vaults now require the event registry and validate these payloads before append and during ledger replay; legacy registrations retain a v0.9 schema. FD-10/FD-11 remain PARTIAL because the generic EventStore envelope/version and other ledger families are not yet wired.
@@ -131,7 +132,7 @@ The 3.61.4 safety patch restricts the legacy Testnet evidence session and runner
 
 ## V5.0 first-delivery work
 
-Version 3.61.46 registers schemas for the V3.15 durable accounting fill, funding, and cash-adjustment events. Persistent accounting ledgers require a complete registry and validate records before append and during reconstruction. FD-10/FD-11 remain PARTIAL: the generic EventStore does not persist a canonical envelope/schema version and other authority-ledger families remain outside the registry.
+Version 3.61.47 registers schemas for all six V3.17 durable risk reservation events and requires registry validation before persistent writes and during replay. Version 3.61.46 added the same boundary for V3.15 accounting fills, funding, and cash adjustments. FD-10/FD-11 remain PARTIAL: the generic EventStore does not persist a canonical envelope/schema version and other authority-ledger families remain outside the registry.
 
 Version 3.61.44 adds a fail-closed authorization boundary to `ProductionCredentialVault`: production construction requires an injected trusted provider, production operations require an authenticated identity, and capability grants are checked against the exact credential resource. Caller-supplied roles are accepted only by the explicit test factory. Audits record actor and decision IDs; the opaque identity token is never persisted. The focused suite passed 41 tests, and the full local V4.29 runner passed with 1,444 passed, 26 skipped, and `RELEASE_HYGIENE=PASS`. The provider implementation, identity lifecycle, and universal resource authorization remain external/platform-wide work, so FD-44 remains PARTIAL.
 

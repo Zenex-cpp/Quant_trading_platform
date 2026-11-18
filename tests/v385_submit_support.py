@@ -16,7 +16,7 @@ from trading_platform.v318.durable_decision import (
     RiskDecisionRecord,
     RiskSystemState,
 )
-from tests.event_schema_support import accounting_ledger_for_tests
+from tests.event_schema_support import accounting_ledger_for_tests, risk_reservation_book_for_tests
 from trading_platform.v331.position_authority import PositionAuthorityLedger
 from trading_platform.v332.market_authority import MarketDataAuthorityLedger
 from trading_platform.v333.causal_ttl import CausalTTLAuthorityLedger
@@ -126,7 +126,7 @@ def build_v385_submit_authorities(
         raise AssertionError("TEST_ACCOUNTING_PROJECTION_HASH_REQUIRED")
     if not intent.risk_reservation_id:
         raise ValueError("TEST_RISK_RESERVATION_ID_REQUIRED")
-    reservation_book = DurableRiskReservationBook(
+    reservation_book = risk_reservation_book_for_tests(
         EventStore(str(root / "risk-reservations.db")), allocated=requested_exposure,
     )
     reservation_book.reserve(RiskReservationRecord(

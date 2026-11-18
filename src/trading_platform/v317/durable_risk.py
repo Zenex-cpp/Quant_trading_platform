@@ -5,6 +5,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import Any, Mapping
 
+from trading_platform.events import EventSchemaRegistry
 from trading_platform.risk.budget import BudgetScope
 from trading_platform.v21.event_store import EventStore, LedgerEvent
 
@@ -89,9 +90,51 @@ class DurableRiskReservationBook:
     RELEASED = "RISK_RELEASED"
     EXPIRED = "RISK_EXPIRED"
     OVERRIDDEN = "RISK_OVERRIDDEN"
+    EVENT_TYPES = (BUDGET_INIT, RESERVED, CONSUMED, RELEASED, EXPIRED, OVERRIDDEN)
 
-    def __init__(self, store: EventStore | None = None, *, allocated: Decimal = Decimal("0")) -> None:
+    def __init__(
+        self,
+        store: EventStore | None = None,
+        *,
+        allocated: Decimal = Decimal("0"),
+        event_schema_registry: EventSchemaRegistry | None = None,
+    ) -> None:
         self.store = store or EventStore()
+        if event_schema_registry is not None and not isinstance(event_schema_registry, EventSchemaRegistry):
+            raise TypeError("RISK_EVENT_SCHEMA_REGISTRY_INVALID")
+        if self.store.is_persistent and event_schema_registry is None:
+            raise ValueError("RISK_EVENT_SCHEMA_REGISTRY_REQUIRED")
+        self._event_schema_registry = event_schema_registry
+        if event_schema_registry is not None:
+            required_schemas = {(event_type, "1.0") for event_type in self.EVENT_TYPES}
+            registered_schemas = {
+                (item.event_type, item.version) for item in event_schema_registry.registrations
+            }
+            if required_schemas - registered_schemas:
+                raise ValueError("RISK_EVENT_SCHEMA_REGISTRY_INCOMPLETE")
+            probes = {
+                self.BUDGET_INIT: {"allocated": "0"},
+                self.RESERVED: {
+                    "reservation_id": "registry-probe",
+                    "scope": "ORDER",
+                    "requested": "1",
+                    "allowed": "1",
+                    "intent_id": "registry-probe",
+                    "risk_decision_id": "registry-probe",
+                    "accounting_projection_hash": "registry-probe",
+                    "created_at_ms": 0,
+                    "expires_at_ms": None,
+                },
+                self.CONSUMED: {"reservation_id": "registry-probe", "reason": "registry-probe"},
+                self.RELEASED: {"reservation_id": "registry-probe", "reason": "registry-probe"},
+                self.EXPIRED: {"reservation_id": "registry-probe", "reason": "registry-probe"},
+                self.OVERRIDDEN: {"reservation_id": "registry-probe", "reason": "registry-probe"},
+            }
+            try:
+                for event_type, payload in probes.items():
+                    event_schema_registry.validate_payload(event_type, "1.0", payload)
+            except (KeyError, TypeError, ValueError) as exc:
+                raise ValueError("RISK_EVENT_SCHEMA_REGISTRY_INVALID") from exc
         self._configured_allocated = self._validate_amount(allocated, "INVALID_ALLOCATED_BUDGET")
         self._ensure_budget_init()
 
@@ -103,6 +146,11 @@ class DurableRiskReservationBook:
         reservations: dict[str, RiskReservationSnapshot] = {}
         for event in self.store.iter_events():
             try:
+                if event.event_type in self.EVENT_TYPES:
+                    try:
+                        self._validate_event_payload(event.event_type, event.payload)
+                    except ValueError as exc:
+                        raise RiskReservationReplayError("RISK_EVENT_SCHEMA_INVALID") from exc
                 if event.event_type == self.BUDGET_INIT:
                     allocation = self._decimal(event.payload.get("allocated"), "INVALID_ALLOCATED_BUDGET_EVENT")
                     if state.allocated != Decimal("0") and state.allocated != allocation:
@@ -110,6 +158,7 @@ class DurableRiskReservationBook:
                     state = RiskBudgetProjection(allocation, state.reserved, state.consumed, state.released, state.expired, state.overridden)
                 elif event.event_type == self.RESERVED:
                     record = self._record_from_payload(event.payload)
+                    self._validate_record(record)
                     if record.reservation_id in reservations:
                         raise RiskReservationReplayError("DUPLICATE_RESERVATION_ID")
                     if record.allowed > state.remaining:
@@ -172,7 +221,7 @@ class DurableRiskReservationBook:
                 occurred_at_ms=record.created_at_ms,
                 event_type=self.RESERVED,
                 aggregate_id=record.reservation_id,
-                payload=record.payload(),
+                payload=self._validated_payload(self.RESERVED, record.payload()),
             )
             if event.duplicate:
                 return self._snapshot_for(record.reservation_id)
@@ -187,13 +236,16 @@ class DurableRiskReservationBook:
             raise RiskReservationConflict("RESERVATION_EXPIRED")
         if current.state is not RiskReservationState.RESERVED:
             raise RiskReservationConflict(f"RESERVATION_NOT_CONSUMABLE:{current.state.value}")
+        payload = self._validated_payload(
+            self.CONSUMED, {"reservation_id": reservation_id, "reason": reason}
+        )
         try:
             self.store.append_exclusive(
                 event_id=f"risk:consume:{reservation_id}",
                 occurred_at_ms=occurred_at_ms,
                 event_type=self.CONSUMED,
                 aggregate_id=reservation_id,
-                payload={"reservation_id": reservation_id, "reason": reason},
+                payload=payload,
                 exclusive_event_types=(self.CONSUMED, self.RELEASED, self.EXPIRED, self.OVERRIDDEN),
             )
         except RuntimeError as exc:
@@ -210,11 +262,14 @@ class DurableRiskReservationBook:
             raise RiskReservationConflict(f"RESERVATION_NOT_RELEASABLE:{current.state.value}")
         if not reason:
             raise ValueError("RISK_RELEASE_REASON_REQUIRED")
+        payload = self._validated_payload(
+            self.RELEASED, {"reservation_id": reservation_id, "reason": reason}
+        )
         try:
             self.store.append_exclusive(
                 event_id=f"risk:release:{reservation_id}", occurred_at_ms=occurred_at_ms,
                 event_type=self.RELEASED, aggregate_id=reservation_id,
-                payload={"reservation_id": reservation_id, "reason": reason},
+                payload=payload,
                 exclusive_event_types=(self.CONSUMED, self.RELEASED, self.EXPIRED, self.OVERRIDDEN),
             )
         except RuntimeError as exc:
@@ -227,11 +282,14 @@ class DurableRiskReservationBook:
             raise RiskReservationConflict(f"RESERVATION_NOT_EXPIRABLE:{current.state.value}")
         if current.record.expires_at_ms is None or occurred_at_ms < current.record.expires_at_ms:
             raise RiskReservationConflict("RESERVATION_NOT_EXPIRED")
+        payload = self._validated_payload(
+            self.EXPIRED, {"reservation_id": reservation_id, "reason": reason}
+        )
         try:
             self.store.append_exclusive(
                 event_id=f"risk:expire:{reservation_id}", occurred_at_ms=occurred_at_ms,
                 event_type=self.EXPIRED, aggregate_id=reservation_id,
-                payload={"reservation_id": reservation_id, "reason": reason},
+                payload=payload,
                 exclusive_event_types=(self.CONSUMED, self.RELEASED, self.EXPIRED, self.OVERRIDDEN),
             )
         except RuntimeError as exc:
@@ -244,11 +302,14 @@ class DurableRiskReservationBook:
             raise RiskReservationConflict(f"RESERVATION_NOT_OVERRIDABLE:{current.state.value}")
         if not reason:
             raise ValueError("RISK_OVERRIDE_REASON_REQUIRED")
+        payload = self._validated_payload(
+            self.OVERRIDDEN, {"reservation_id": reservation_id, "reason": reason}
+        )
         try:
             self.store.append_exclusive(
                 event_id=f"risk:override:{reservation_id}", occurred_at_ms=occurred_at_ms,
                 event_type=self.OVERRIDDEN, aggregate_id=reservation_id,
-                payload={"reservation_id": reservation_id, "reason": reason},
+                payload=payload,
                 exclusive_event_types=(self.CONSUMED, self.RELEASED, self.EXPIRED, self.OVERRIDDEN),
             )
         except RuntimeError as exc:
@@ -258,16 +319,23 @@ class DurableRiskReservationBook:
     def _ensure_budget_init(self) -> None:
         first = next(self.store.iter_events(), None)
         if first is None:
+            payload = self._validated_payload(
+                self.BUDGET_INIT, {"allocated": str(self._configured_allocated)}
+            )
             self.store.append(
                 event_id="risk:budget:init",
                 occurred_at_ms=0,
                 event_type=self.BUDGET_INIT,
                 aggregate_id="RISK_BUDGET",
-                payload={"allocated": str(self._configured_allocated)},
+                payload=payload,
             )
             return
         if first.event_type != self.BUDGET_INIT:
             raise RiskReservationReplayError("RISK_BUDGET_INIT_MISSING")
+        try:
+            self._validate_event_payload(first.event_type, first.payload)
+        except ValueError as exc:
+            raise RiskReservationReplayError("RISK_EVENT_SCHEMA_INVALID") from exc
         persisted = self._decimal(first.payload.get("allocated"), "INVALID_ALLOCATED_BUDGET_EVENT")
         if persisted != self._configured_allocated:
             raise RiskReservationConflict("BUDGET_ALLOCATION_CHANGED")
@@ -319,6 +387,18 @@ class DurableRiskReservationBook:
             raise ValueError("INVALID_RISK_RESERVATION_TIMESTAMP")
         if record.expires_at_ms is not None and record.expires_at_ms <= record.created_at_ms:
             raise ValueError("INVALID_RISK_RESERVATION_EXPIRY")
+
+    def _validate_event_payload(self, event_type: str, payload: Mapping[str, Any]) -> None:
+        if self._event_schema_registry is None:
+            return
+        try:
+            self._event_schema_registry.validate_payload(event_type, "1.0", payload)
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError("RISK_EVENT_SCHEMA_INVALID") from exc
+
+    def _validated_payload(self, event_type: str, payload: Mapping[str, Any]) -> dict[str, Any]:
+        self._validate_event_payload(event_type, payload)
+        return dict(payload)
 
     @staticmethod
     def _validate_amount(value: Decimal, error: str) -> Decimal:

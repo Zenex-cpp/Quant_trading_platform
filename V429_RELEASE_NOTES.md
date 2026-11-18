@@ -1,5 +1,13 @@
 # Trading Platform V4.29 Recovery — Release Notes
 
+## Package 3.61.47 — Validate durable risk reservation event schemas
+
+- Registered strict v1.0 payload schemas for budget initialization, reservation, consumption, release, expiry, and override; the registry now has 33 versioned registrations across 32 event types.
+- Persistent `DurableRiskReservationBook` instances require all six registry entries and validate payloads before writes and again during projection replay after event-chain verification.
+- Focused risk schema, reservation, dispatch, Testnet, and registry regression checks passed **63 tests**.
+- The fixed local V4.29 runner passed on Windows/Python 3.14.7 with **1,453 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`. Preflight `.audit/V429_RISK_RESERVATION_SCHEMA_FINAL_20261118.json` was `READY_FOR_MILESTONE`, `allowed=true`, with **284** input hashes and zero blockers; `external_evidence=false`, `production_ready=false`, and `activation_flag=NOT_SET`.
+- FD-10/FD-11 remain PARTIAL: generic EventStore does not persist envelope/schema-version metadata, and other authority-ledger families remain outside the registry.
+
 ## Package 3.61.46 — Validate durable accounting event schemas
 
 - Registered strict v1.0 payload schemas for durable accounting fills, funding, and cash adjustments; the registry now has 27 versioned registrations across 26 event types.

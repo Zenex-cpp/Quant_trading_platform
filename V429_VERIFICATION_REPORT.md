@@ -1,6 +1,10 @@
 # V4.29 Recovery — Verification Report
 
-## Current package — 3.61.46
+## Current package — 3.61.47
+
+Package 3.61.47 registers strict schemas for durable risk budget initialization and the five reservation lifecycle transitions. Persistent `DurableRiskReservationBook` instances require a complete injected registry and validate payloads before writes and during projection replay. Focused risk schema, reservation, dispatch, Testnet, and registry checks passed **63 tests**. The fixed local V4.29 runner passed on Windows/Python 3.14.7 with **1,453 passed, 26 skipped**, exit code 0, and `RELEASE_HYGIENE=PASS`. Preflight `.audit/V429_RISK_RESERVATION_SCHEMA_FINAL_20261118.json` recorded `READY_FOR_MILESTONE`, `allowed=true`, `pipeline_status=PASS`, **284** input hashes, and zero blockers; `external_evidence=false`, `production_ready=false`, and `activation_flag=NOT_SET`. FD-10/FD-11 remain PARTIAL because EventStore does not persist canonical envelope/schema-version metadata and other authority-ledger families remain outside the registry.
+
+## Package 3.61.46
 
 Package 3.61.46 registers strict schemas for the durable accounting fill, funding, and cash-adjustment event types. Persistent `DurableAccountingLedger` instances require a complete injected registry and validate payloads before append and during replay. Focused schema, accounting, dispatch, E2E, and Testnet checks passed **72 tests**. The fixed local V4.29 runner passed on Windows/Python 3.14.7 with **1,451 passed, 26 skipped**, exit code 0, and `RELEASE_HYGIENE=PASS`. Preflight `.audit/V429_ACCOUNTING_SCHEMA_FINAL4_20261118.json` recorded `READY_FOR_MILESTONE`, `allowed=true`, `pipeline_status=PASS`, **278** input hashes, and zero blockers; `external_evidence=false`, `production_ready=false`, and `activation_flag=NOT_SET`. FD-10/FD-11 remain PARTIAL because EventStore does not persist canonical envelope/schema-version metadata, other authority-ledger families remain outside the registry, and the accounting ledger selects v1.0 in code.
 

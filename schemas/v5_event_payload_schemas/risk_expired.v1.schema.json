@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Durable risk reservation expiry payload v1",
+  "type": "object",
+  "properties": {
+    "reservation_id": {"type": "string", "minLength": 1},
+    "reason": {"type": "string", "minLength": 1}
+  },
+  "required": ["reservation_id", "reason"],
+  "additionalProperties": false
+}

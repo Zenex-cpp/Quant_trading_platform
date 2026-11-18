@@ -19,6 +19,7 @@ from trading_platform.v385 import ControlledSubmitError, ControlledTestnetSubmit
 from trading_platform.v379 import TestnetMutationGate
 from trading_platform.v380 import BinanceTestnetOrderAdapterV380
 from tests.v385_submit_support import build_v385_submit_authorities
+from tests.event_schema_support import risk_reservation_book_for_tests
 
 
 BASE = datetime(2026, 10, 5, 10, 0, tzinfo=timezone.utc)
@@ -341,7 +342,7 @@ def test_ephemeral_dispatch_store_blocks_before_gateway(tmp_path):
 def test_ephemeral_reservation_store_blocks_before_gateway(tmp_path):
     order_intent, snapshot, _, gateway, submitter = control(tmp_path=tmp_path)
     submitter.risk_reservation_gate = RiskReservationGate(
-        DurableRiskReservationBook(EventStore(), allocated=Decimal("25")),
+        risk_reservation_book_for_tests(EventStore(), allocated=Decimal("25")),
     )
     with pytest.raises(ControlledSubmitError, match="RISK_RESERVATION_LEDGER_NOT_PERSISTENT"):
         submitter.submit(
