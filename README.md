@@ -1,7 +1,7 @@
 # Quant Trading Platform
 
 **Repository release train:** `V4.29-RECOVERY`  
-**Python distribution version:** `3.61.42` (a separate versioning scheme).
+**Python distribution version:** `3.61.43` (a separate versioning scheme).
 
 The current repository is a recovery extension based on the available V4.28 recovery archive. Byte-for-byte canonical lineage to V4.23 and V4.26 is **not established** because those source archives are not available in the project.
 
@@ -12,6 +12,7 @@ The current repository is a recovery extension based on the available V4.28 reco
 - Holdout incidents are reconciled from the durable event store at context startup, so an interrupted invalidation is completed before dependents can be used.
 - M16 configuration authority is enforced at final Testnet dispatch and deployment activation. Resolution ID, fingerprint, status and expiry are checked against the durable ledger; failures stop dispatch or activation before the external action.
 - The final dispatch boundary requires durable risk-decision, position, fresh-market and causal-TTL authorities for risk-increasing orders. Missing or expired authority blocks before the gateway.
+- Package 3.61.43 adds `PersistentTransitionEngine` for the registered `START_BACKTEST` edge. It commits current state, idempotency record, and audit event in one file-backed SQLite transaction and recovers exact retries after restart; caller callbacks and external effects are not supported.
 - Package 3.61.42 binds each EventStore event ID to the complete canonical event hash. Exact retries return the stored event; changed timestamp, event type, aggregate, or payload raise `EVENT_APPEND_CONFLICT` without changing the chain.
 - Package 3.61.41 adds deterministic §28 event ordering for replay batches and fail-closed live stream cursors. The cursor rejects late or out-of-order events and distinguishes source-local sequence from cross-source tie-breaking. Persistent cursor integration and platform-wide registry wiring remain separate gaps.
 - Package 3.61.40 adds normalized monotone execution-risk position caps and concentration-adjusted correlated-exposure caps. The §179 register records 50 PRESENT, 5 PARTIAL, and 0 OPEN repository artifacts; FD-06, FD-08, FD-10/FD-11, and FD-44 remain PARTIAL.

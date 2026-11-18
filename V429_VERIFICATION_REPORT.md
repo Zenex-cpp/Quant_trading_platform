@@ -1,6 +1,12 @@
 # V4.29 Recovery — Verification Report
 
-## Current package — 3.61.42
+## Current package — 3.61.43
+
+Package 3.61.43 adds `PersistentTransitionEngine` for the single registered `START_BACKTEST` transition. The engine persists the current orthogonal state, idempotency record, and audit event in one SQLite transaction, recovers exact retries after restart, rejects changed specifications and stale source states, and serializes concurrent writers. A trigger-injected audit failure verifies all records roll back together. Caller callbacks and external side effects are deliberately unsupported. The focused state-transition and release checks passed **19 tests**. The full V4.29 runner passed on Windows/Python 3.14.7 with **1,441 passed, 26 skipped**, exit code 0, and `RELEASE_HYGIENE=PASS`. Preflight: `READY_FOR_MILESTONE`, `allowed=true`, `pipeline_status=PASS`, 265 unique input hashes, zero blockers; `external_evidence=false`, `production_ready=false`, `activation_flag=NOT_SET`. Hosted CI is pending for this package.
+
+FD-06 remains `PARTIAL`: the named system-lifecycle and risk-state machines still have no approved positive paths, and external side-effect recovery is not implemented.
+
+## Package 3.61.42
 
 Package 3.61.42 binds EventStore event-ID retries to the persisted canonical event hash over timestamp, type, aggregate, and payload. Exact retries return the prior record; changed content raises `EVENT_APPEND_CONFLICT`. Regression tests cover each field and confirm the original event and chain remain unchanged after rejection. The stable attestation timestamp also keeps V3.96 retries byte-for-byte idempotent after a process restart. Focused EventStore, concurrency, V3.96 attestation, and release checks passed **29 tests**. The full V4.29 runner passed on Windows/Python 3.14.7 with **1,435 passed, 26 skipped**, exit code 0, and `RELEASE_HYGIENE=PASS`. Preflight: `READY_FOR_MILESTONE`, `allowed=true`, `pipeline_status=PASS`, 265 unique input hashes, zero blockers; `external_evidence=false`, `production_ready=false`, `activation_flag=NOT_SET`. Hosted CI is pending for this package.
 

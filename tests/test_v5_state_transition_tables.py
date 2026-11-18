@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import csv
+import sqlite3
+from concurrent.futures import ThreadPoolExecutor
 from itertools import product
 from pathlib import Path
 
@@ -8,7 +10,11 @@ import pytest
 
 from trading_platform.state import Approval, Deployment, Health, Lifecycle, OperationalMode, Role
 from trading_platform.state.compatibility import OrthogonalState
-from trading_platform.state.transition import TransitionEngine, TransitionSpec
+from trading_platform.state.transition import (
+    PersistentTransitionEngine,
+    TransitionEngine,
+    TransitionSpec,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -65,6 +71,9 @@ def test_transition_catalog_documents_every_atomicity_field_and_default_deny():
         "idempotency_key", "failure_state", "recovery_path",
     ):
         assert row[field]
+    assert "PersistentTransitionEngine" in row["guards"]
+    assert "file-backed SQLite" in row["preconditions"]
+    assert "one SQLite transaction" in row["side_effects"]
     wildcard = [
         row for row in rows
         if row["machine"] == "ORTHOGONAL_OPERATIONAL" and row["decision"] == "REJECT_UNDECLARED"
@@ -123,3 +132,118 @@ def test_failed_guard_leaves_transition_uncommitted_and_retryable():
     with pytest.raises(ValueError, match="GUARD_BLOCKED"):
         engine.apply(spec)
     assert engine.audit == ()
+
+
+def persistent_backtest_spec(source: OrthogonalState) -> TransitionSpec:
+    target = OrthogonalState(
+        source.lifecycle, OperationalMode.BACKTEST, source.health, source.approval,
+        source.deployment, source.role,
+    )
+    return TransitionSpec("persistent-t1", source, target, "START_BACKTEST", idempotency_key="persistent-k")
+
+
+def test_persistent_transition_engine_commits_state_and_audit_atomically_across_restart(tmp_path):
+    source = approved_research_state()
+    spec = persistent_backtest_spec(source)
+    database = tmp_path / "transitions.sqlite3"
+
+    with PersistentTransitionEngine(database, source) as engine:
+        assert engine.current_state == source
+        assert engine.apply(spec) == spec.target
+        assert engine.current_state == spec.target
+        assert len(engine.audit) == 1
+        assert engine.audit[0]["idempotency_key"] == spec.idempotency_key
+
+    with PersistentTransitionEngine(database, source) as reopened:
+        assert reopened.current_state == spec.target
+        assert reopened.apply(spec) == spec.target
+        assert len(reopened.audit) == 1
+
+
+def test_persistent_transition_engine_rejects_idempotency_key_reuse_after_restart(tmp_path):
+    source = approved_research_state()
+    spec = persistent_backtest_spec(source)
+    database = tmp_path / "transitions.sqlite3"
+
+    with PersistentTransitionEngine(database, source) as engine:
+        engine.apply(spec)
+
+    changed = TransitionSpec(
+        "different-transition-id", spec.source, spec.target, spec.action,
+        idempotency_key=spec.idempotency_key,
+    )
+    with PersistentTransitionEngine(database, source) as reopened:
+        with pytest.raises(ValueError, match="IDEMPOTENCY_KEY_CONFLICT"):
+            reopened.apply(changed)
+        assert reopened.current_state == spec.target
+        assert len(reopened.audit) == 1
+
+
+def test_persistent_transition_engine_rolls_back_commit_audit_and_state_together(tmp_path):
+    source = approved_research_state()
+    spec = persistent_backtest_spec(source)
+    database = tmp_path / "transitions.sqlite3"
+
+    with PersistentTransitionEngine(database, source) as engine:
+        with sqlite3.connect(database) as connection:
+            connection.execute(
+                "CREATE TRIGGER reject_transition_audit BEFORE INSERT ON transition_audit "
+                "BEGIN SELECT RAISE(ABORT, 'injected audit failure'); END"
+            )
+        with pytest.raises(sqlite3.IntegrityError, match="injected audit failure"):
+            engine.apply(spec)
+        assert engine.current_state == source
+        assert engine.audit == ()
+        assert engine._db.execute("SELECT COUNT(*) FROM transition_commits").fetchone()[0] == 0
+
+
+def test_persistent_transition_engine_serializes_concurrent_exact_retries(tmp_path):
+    source = approved_research_state()
+    spec = persistent_backtest_spec(source)
+    database = tmp_path / "transitions.sqlite3"
+
+    first = PersistentTransitionEngine(database, source)
+    second = PersistentTransitionEngine(database, source)
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(lambda engine: engine.apply(spec), (first, second)))
+        assert results == [spec.target, spec.target]
+        assert first.current_state == second.current_state == spec.target
+        assert len(first.audit) == len(second.audit) == 1
+    finally:
+        first.close()
+        second.close()
+
+
+def test_persistent_transition_engine_requires_durable_path_and_guard_contract(tmp_path):
+    source = approved_research_state()
+    with pytest.raises(ValueError, match="DURABLE_DATABASE_PATH_REQUIRED"):
+        PersistentTransitionEngine(":memory:", source)
+
+    def guard(state, context):
+        return None
+
+    guarded = TransitionSpec(
+        "guarded", source, persistent_backtest_spec(source).target, "START_BACKTEST",
+        guard=guard, idempotency_key="guarded-k",
+    )
+    with PersistentTransitionEngine(tmp_path / "transitions.sqlite3", source) as engine:
+        with pytest.raises(ValueError, match="PERSISTENT_GUARD_REQUIRES_DURABLE_CONTRACT"):
+            engine.apply(guarded)
+        assert engine.current_state == source
+        assert engine.audit == ()
+
+
+def test_persistent_transition_engine_rejects_undeclared_audit_event_type(tmp_path):
+    source = approved_research_state()
+    base = persistent_backtest_spec(source)
+    spec = TransitionSpec(
+        base.transition_id, base.source, base.target, base.action,
+        idempotency_key=base.idempotency_key, audit_event_type="CUSTOM_TRANSITION",
+    )
+
+    with PersistentTransitionEngine(tmp_path / "transitions.sqlite3", source) as engine:
+        with pytest.raises(ValueError, match="UNDECLARED_TRANSITION"):
+            engine.apply(spec)
+        assert engine.current_state == source
+        assert engine.audit == ()

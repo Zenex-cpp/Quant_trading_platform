@@ -1,5 +1,13 @@
 # Trading Platform V4.29 Recovery — Release Notes
 
+## Package 3.61.43 — Durable atomic state transition
+
+- Added `PersistentTransitionEngine` for the registered `START_BACKTEST` edge. It atomically commits current state, idempotency record, and audit event in one file-backed SQLite transaction.
+- Exact retries recover the persisted target after process restart; changed specs and source-state conflicts fail closed. Concurrent writers serialize on the SQLite transaction.
+- A failure-injection test aborts audit insertion and verifies that state, idempotency, and audit all roll back. The engine rejects caller callback guards and does not execute external side effects.
+- Focused state-transition and release checks passed **19 tests**. The full local V4.29 runner passed with **1,441 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`; preflight was `READY_FOR_MILESTONE`, `allowed=true`, with 265 unique contract inputs and zero blockers. External evidence is false, production readiness is false, and activation remains `NOT_SET`.
+- FD-06 remains PARTIAL because the prompt does not provide approved positive paths for its named lifecycle/risk machines and external side-effect recovery remains open.
+
 ## Package 3.61.42 — Durable event-ID content binding
 
 - Fixed `EventStore.append` so an existing ID is returned as a duplicate only when the incoming timestamp, event type, aggregate ID, and canonical payload reproduce the stored event hash.
