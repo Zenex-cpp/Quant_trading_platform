@@ -37,6 +37,7 @@ def test_source_acceptance_entrypoint_does_not_create_repository_bytecode(tmp_pa
         checkout / "src" / "trading_platform",
         ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.pyo"),
     )
+    shutil.copytree(repository / "schemas", checkout / "schemas")
     environment = dict(os.environ)
     environment.pop("PYTHONDONTWRITEBYTECODE", None)
     environment.pop("PYTHONPATH", None)

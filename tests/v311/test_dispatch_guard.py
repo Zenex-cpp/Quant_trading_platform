@@ -13,6 +13,7 @@ from trading_platform.v338.side_effects import DurableSideEffectLedger
 from trading_platform.execution.models import OrderIntent, OrderAction, OrderType, PositionState, Side
 from trading_platform.core.ttl import ValidWindow
 from tests.dispatch_support import execution_authorities_for, risk_accounting_reservation_for, risk_decision_ledger_for
+from tests.event_schema_support import accounting_ledger_for_tests
 
 NOW = datetime(2026, 9, 13, tzinfo=timezone.utc)
 WIN = ValidWindow(NOW - timedelta(seconds=1), NOW + timedelta(minutes=5))
@@ -116,7 +117,7 @@ def test_accounting_unknown_blocks_before_transport(tmp_path):
     from trading_platform.v315 import DurableAccountingLedger, DurableFill
     from trading_platform.v316 import DurableAccountingAuthority
 
-    ledger = DurableAccountingLedger(EventStore(str(tmp_path / "accounting-unknown.db")))
+    ledger = accounting_ledger_for_tests(EventStore(str(tmp_path / "accounting-unknown.db")))
     ledger.append_fill(DurableFill("af1", "ao1", "BTCUSDT", "BUY", Decimal("1"), Decimal("100")))
     authority = DurableAccountingAuthority(ledger)
     authority.restore()
@@ -141,7 +142,7 @@ def test_reconciled_accounting_allows_transport(tmp_path):
     from trading_platform.v315 import DurableAccountingLedger, DurableFill
     from trading_platform.v316 import DurableAccountingAuthority
 
-    ledger = DurableAccountingLedger(EventStore(str(tmp_path / "accounting.db")))
+    ledger = accounting_ledger_for_tests(EventStore(str(tmp_path / "accounting.db")))
     ledger.append_fill(DurableFill("af2", "ao2", "BTCUSDT", "BUY", Decimal("1"), Decimal("100")))
     authority = DurableAccountingAuthority(ledger)
     authority.restore()

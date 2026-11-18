@@ -59,9 +59,14 @@ def test_v5_event_registry_covers_all_typed_governance_deployment_and_provenance
         "PRODUCTION_CREDENTIAL_RESOLVED",
         "PRODUCTION_CREDENTIAL_RESOLUTION_DENIED",
     }
-    assert len(registry.registrations) == 24
-    assert registered == expected | credential_events
-    assert len({item.schema_id for item in registry.registrations}) == 24
+    accounting_events = {
+        "ACCOUNTING_FILL",
+        "ACCOUNTING_FUNDING",
+        "ACCOUNTING_CASH_ADJUSTMENT",
+    }
+    assert len(registry.registrations) == 27
+    assert registered == expected | credential_events | accounting_events
+    assert len({item.schema_id for item in registry.registrations}) == 27
     assert {item.version for item in registry.registrations} == {"0.9", "1.0"}
     assert sum(item.version == "0.9" for item in registry.registrations) == 1
     assert all(item.compatibility_mode == "NONE" for item in registry.registrations)

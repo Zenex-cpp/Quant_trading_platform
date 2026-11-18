@@ -10,6 +10,7 @@ from tempfile import TemporaryDirectory
 from typing import Any, Mapping
 
 from trading_platform.audit.record import AuditRecord
+from trading_platform.events import EventSchemaRegistry
 from trading_platform.data.dataset import audit_ohlcv
 from trading_platform.data.split import chronological_split
 from trading_platform.data_v03 import FeatureProvenance, Availability, QualityStatus, assert_point_in_time, content_hash
@@ -141,6 +142,9 @@ class EndToEndAcceptanceRunner:
         return StageArtifact(name, artifact_id, upstream, provenance, _hash(output))
 
     def run(self) -> E2EAcceptanceResult:
+        event_schema_registry = EventSchemaRegistry.from_csv(
+            Path(__file__).resolve().parents[3] / "schemas/v5_event_schema_registry.csv"
+        )
         records = self._records()
         audit = audit_ohlcv(records)
         if audit.quality_status is not QualityStatus.VALID:
@@ -444,12 +448,16 @@ class EndToEndAcceptanceRunner:
 
             accounting_db = Path(td) / "accounting.sqlite"
             with EventStore(str(accounting_db)) as accounting_store:
-                initial_accounting = DurableAccountingLedger(accounting_store)
+                initial_accounting = DurableAccountingLedger(
+                    accounting_store, event_schema_registry=event_schema_registry
+                )
                 _, accounting_fill_created = initial_accounting.append_fill_once(durable_fill)
                 if not accounting_fill_created:
                     raise AssertionError("INITIAL_ACCOUNTING_FILL_NOT_NEW")
             with EventStore(str(accounting_db)) as accounting_store:
-                durable_accounting = DurableAccountingLedger(accounting_store)
+                durable_accounting = DurableAccountingLedger(
+                    accounting_store, event_schema_registry=event_schema_registry
+                )
                 accounting_before_retry = durable_accounting.reconstruct()
                 _, duplicate_accounting_created = durable_accounting.append_fill_once(
                     replace(durable_fill, fill_id="FILL-E2E-DUP")

@@ -17,6 +17,7 @@ from trading_platform.v20.reconciliation import ReconciliationDiff, Reconciliati
 from trading_platform.v331.position_authority import PositionAuthorityLedger
 from trading_platform.v332.market_authority import MarketDataAuthorityLedger
 from tests.causal_helpers import causal_authority_for_intent
+from tests.event_schema_support import accounting_ledger_for_tests
 
 
 def risk_decision_ledger_for(bridge, intent, *, now_ms: int, expires_at_ms: int | None = None):
@@ -98,7 +99,7 @@ def risk_accounting_reservation_for(
 
     accounting = accounting_authority
     if accounting is None:
-        accounting_ledger = DurableAccountingLedger(EventStore(str(root / "risk-accounting.db")))
+        accounting_ledger = accounting_ledger_for_tests(EventStore(str(root / "risk-accounting.db")))
         accounting_ledger.append_fill(DurableFill(
             f"test-fill:{intent.intent_id}", f"test-order:{intent.intent_id}",
             intent.symbol, intent.side.value, Decimal("1"), Decimal("100"),

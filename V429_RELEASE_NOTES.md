@@ -1,5 +1,13 @@
 # Trading Platform V4.29 Recovery — Release Notes
 
+## Package 3.61.46 — Validate durable accounting event schemas
+
+- Registered strict v1.0 payload schemas for durable accounting fills, funding, and cash adjustments; the registry now has 27 versioned registrations across 26 event types.
+- Persistent `DurableAccountingLedger` instances require a complete injected registry and validate payloads before append and again during reconstruction. Invalid schema payloads fail before persistence or before replay projection is applied.
+- Focused schema, accounting, dispatch, E2E, and Testnet regression checks passed **72 tests**.
+- The fixed local V4.29 runner passed on Windows/Python 3.14.7 with **1,451 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`. Preflight `.audit/V429_ACCOUNTING_SCHEMA_FINAL4_20261118.json` was `READY_FOR_MILESTONE`, `allowed=true`, with **278** input hashes and zero blockers; `external_evidence=false`, `production_ready=false`, and `activation_flag=NOT_SET`.
+- FD-10/FD-11 remain PARTIAL: the generic EventStore does not persist envelope/schema-version metadata, other authority ledgers are not fully cataloged, and accounting replay currently selects v1.0 in code.
+
 ## Package 3.61.45 — Validate credential ledger event schemas
 
 - Registered versioned payload schemas for credential registration, revocation, resolution, and denied resolution; retained a v0.9 schema for legacy registration replay.

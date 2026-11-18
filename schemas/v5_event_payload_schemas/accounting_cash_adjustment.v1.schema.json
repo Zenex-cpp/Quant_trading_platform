@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Durable accounting cash adjustment payload v1",
+  "type": "object",
+  "properties": {
+    "amount": {"type": "string", "pattern": "^-?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:[eE][+-]?[0-9]+)?$"},
+    "reason": {"type": "string", "minLength": 1}
+  },
+  "required": ["amount", "reason"],
+  "additionalProperties": false
+}

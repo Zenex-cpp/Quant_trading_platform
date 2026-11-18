@@ -16,6 +16,7 @@ from trading_platform.v318.durable_decision import (
     RiskDecisionRecord,
     RiskSystemState,
 )
+from tests.event_schema_support import accounting_ledger_for_tests
 from trading_platform.v331.position_authority import PositionAuthorityLedger
 from trading_platform.v332.market_authority import MarketDataAuthorityLedger
 from trading_platform.v333.causal_ttl import CausalTTLAuthorityLedger
@@ -112,7 +113,7 @@ def build_v385_submit_authorities(
 
     root = Path(storage_dir)
     root.mkdir(parents=True, exist_ok=True)
-    accounting_ledger = DurableAccountingLedger(EventStore(str(root / "accounting.db")))
+    accounting_ledger = accounting_ledger_for_tests(EventStore(str(root / "accounting.db")))
     accounting_ledger.append_fill(DurableFill(
         f"accounting-fill:{intent.intent_id}", f"accounting-order:{intent.intent_id}",
         intent.symbol, "BUY", Decimal("1"), Decimal("100"),

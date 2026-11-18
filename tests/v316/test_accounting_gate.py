@@ -4,10 +4,11 @@ import pytest
 from trading_platform.v21.event_store import EventStore
 from trading_platform.v315 import DurableAccountingLedger, DurableFill
 from trading_platform.v316 import AccountingGateDenied, AccountingState, DurableAccountingAuthority
+from tests.event_schema_support import accounting_ledger_for_tests
 
 
 def mkledger(tmp_path):
-    ledger = DurableAccountingLedger(EventStore(str(tmp_path / "accounting.db")))
+    ledger = accounting_ledger_for_tests(EventStore(str(tmp_path / "accounting.db")))
     ledger.append_fill(DurableFill("f1", "o1", "BTCUSDT", "BUY", Decimal("1"), Decimal("100")))
     return ledger
 

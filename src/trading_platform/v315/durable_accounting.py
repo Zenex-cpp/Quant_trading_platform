@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any, Mapping
 
+from trading_platform.events import EventSchemaRegistry
 from trading_platform.v21.event_store import EventStore, LedgerEvent, sha256_json
 
 
@@ -143,8 +144,52 @@ class DurableAccountingLedger:
     FUNDING = "ACCOUNTING_FUNDING"
     CASH_ADJUSTMENT = "ACCOUNTING_CASH_ADJUSTMENT"
 
-    def __init__(self, store: EventStore | None = None) -> None:
+    def __init__(
+        self,
+        store: EventStore | None = None,
+        *,
+        event_schema_registry: EventSchemaRegistry | None = None,
+    ) -> None:
         self.store = store or EventStore()
+        if event_schema_registry is not None and not isinstance(event_schema_registry, EventSchemaRegistry):
+            raise TypeError("ACCOUNTING_EVENT_SCHEMA_REGISTRY_INVALID")
+        if self.store.is_persistent and event_schema_registry is None:
+            raise ValueError("ACCOUNTING_EVENT_SCHEMA_REGISTRY_REQUIRED")
+        self._event_schema_registry = event_schema_registry
+        if event_schema_registry is not None:
+            required_schemas = {
+                (self.FILL, "1.0"),
+                (self.FUNDING, "1.0"),
+                (self.CASH_ADJUSTMENT, "1.0"),
+            }
+            registered_schemas = {
+                (item.event_type, item.version) for item in event_schema_registry.registrations
+            }
+            if required_schemas - registered_schemas:
+                raise ValueError("ACCOUNTING_EVENT_SCHEMA_REGISTRY_INCOMPLETE")
+            schema_probes = {
+                self.FILL: {
+                    "fill_id": "registry-probe",
+                    "order_request_id": "registry-probe",
+                    "symbol": "REGISTRY-PROBE",
+                    "side": "BUY",
+                    "quantity": "1",
+                    "price": "1",
+                    "fee": "0",
+                    "funding": "0",
+                    "occurred_at_ms": 0,
+                    "exchange_order_id": None,
+                    "trade_id": None,
+                    "venue": "REGISTRY-PROBE",
+                },
+                self.FUNDING: {"amount": "0", "symbol": "REGISTRY-PROBE"},
+                self.CASH_ADJUSTMENT: {"amount": "0", "reason": "registry-probe"},
+            }
+            try:
+                for event_type, payload in schema_probes.items():
+                    event_schema_registry.validate_payload(event_type, "1.0", payload)
+            except (KeyError, TypeError, ValueError) as exc:
+                raise ValueError("ACCOUNTING_EVENT_SCHEMA_REGISTRY_INVALID") from exc
 
     @staticmethod
     def fill_identity(fill: DurableFill) -> str:
@@ -164,6 +209,7 @@ class DurableAccountingLedger:
         event_id=(f"fill:{fill.fill_id}" if not (fill.exchange_order_id and fill.trade_id) else f"fill:{self.fill_identity(fill)}")
         existing=self.store.get(event_id)
         payload=fill.payload()
+        self._validate_event_payload(self.FILL, payload)
         if existing is not None:
             if existing.event_type != self.FILL or str(existing.aggregate_id) != fill.symbol or self._semantic_fill_payload(existing.payload) != self._semantic_fill_payload(payload):
                 raise AccountingConflict("EVENT_ID_REUSE_WITH_DIFFERENT_CONTENT")
@@ -182,17 +228,21 @@ class DurableAccountingLedger:
 
     def append_funding(self, *, event_id: str, symbol: str, amount: Decimal, occurred_at_ms: int) -> LedgerEvent:
         self._validate_amount(amount)
+        payload = {"amount": str(amount), "symbol": symbol}
+        self._validate_event_payload(self.FUNDING, payload)
         return self._append(event_id=f"funding:{event_id}", event_type=self.FUNDING,
                             aggregate_id=symbol, occurred_at_ms=occurred_at_ms,
-                            payload={"amount": str(amount), "symbol": symbol})
+                            payload=payload)
 
     def append_cash_adjustment(self, *, event_id: str, amount: Decimal, occurred_at_ms: int, reason: str) -> LedgerEvent:
         self._validate_amount(amount)
         if not reason:
             raise ValueError("MISSING_CASH_ADJUSTMENT_REASON")
+        payload = {"amount": str(amount), "reason": reason}
+        self._validate_event_payload(self.CASH_ADJUSTMENT, payload)
         return self._append(event_id=f"cash:{event_id}", event_type=self.CASH_ADJUSTMENT,
                             aggregate_id="ACCOUNT", occurred_at_ms=occurred_at_ms,
-                            payload={"amount": str(amount), "reason": reason})
+                            payload=payload)
 
     def reconstruct(self) -> AccountingProjection:
         if not self.store.verify_chain():
@@ -202,6 +252,11 @@ class DurableAccountingLedger:
         for event in self.store.iter_events():
             if event.event_id in seen:
                 raise AccountingReplayError("DUPLICATE_EVENT_IN_REPLAY")
+            if event.event_type in {self.FILL, self.FUNDING, self.CASH_ADJUSTMENT}:
+                try:
+                    self._validate_event_payload(event.event_type, event.payload)
+                except ValueError as exc:
+                    raise AccountingReplayError("ACCOUNTING_EVENT_SCHEMA_INVALID") from exc
             state = self._apply(state, event)
             seen.add(event.event_id)
         return AccountingProjection(state.cash, state.positions, tuple(sorted(seen)))
@@ -214,6 +269,14 @@ class DurableAccountingLedger:
     def _validate_amount(amount: Decimal) -> None:
         if not amount.is_finite():
             raise ValueError("NON_FINITE_ACCOUNTING_AMOUNT")
+
+    def _validate_event_payload(self, event_type: str, payload: Mapping[str, Any]) -> None:
+        if self._event_schema_registry is None:
+            return
+        try:
+            self._event_schema_registry.validate_payload(event_type, "1.0", payload)
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError("ACCOUNTING_EVENT_SCHEMA_INVALID") from exc
 
     @classmethod
     def _validate_fill(cls, fill: DurableFill) -> None:

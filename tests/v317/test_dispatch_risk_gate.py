@@ -18,6 +18,7 @@ from trading_platform.v338.side_effects import DurableSideEffectLedger
 from trading_platform.execution.models import OrderIntent, OrderAction, OrderType, PositionState, Side
 from trading_platform.core.ttl import ValidWindow
 from tests.dispatch_support import execution_authorities_for, risk_decision_ledger_for
+from tests.event_schema_support import accounting_ledger_for_tests
 
 NOW = datetime(2026, 9, 17, tzinfo=timezone.utc)
 BASE_MS = int(NOW.timestamp() * 1000)
@@ -64,7 +65,7 @@ class FakeGateway:
 
 def accounting(tmp_path: Path):
     authority = DurableAccountingAuthority(
-        DurableAccountingLedger(EventStore(str(tmp_path / "acct.db")))
+        accounting_ledger_for_tests(EventStore(str(tmp_path / "acct.db")))
     )
     authority.ledger.append_fill(DurableFill("af317", "ao317", "BTCUSDT", "BUY", Decimal("1"), Decimal("100")))
     authority.restore()
