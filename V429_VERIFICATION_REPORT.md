@@ -1,5 +1,9 @@
 # V4.29 Recovery — Verification Report
 
+## Current package — 3.61.45
+
+Package 3.61.45 adds versioned payload schemas for production credential registration, revocation, resolution, and denied resolution, plus a v0.9 registration schema for legacy replay. Production vaults require a complete registry and validate credential payloads before append and while restoring persisted metadata. Focused schema, credential, traceability, release-contract, EventStore, and permission checks passed **83 tests**. The fixed local V4.29 runner passed on Windows/Python 3.14.7 with **1,449 passed, 26 skipped**, exit code 0, and `RELEASE_HYGIENE=PASS`. Preflight `.audit/V429_CRED_SCHEMA_FINAL2_20261118.json`: `READY_FOR_MILESTONE`, `allowed=true`, `pipeline_status=PASS`, **270** input hashes, zero blockers; `external_evidence=false`, `production_ready=false`, `activation_flag=NOT_SET`. The generic EventStore still does not persist the canonical envelope or schema version, and other durable event families remain outside the registry; FD-10/FD-11 stay PARTIAL.
+
 ## Current package — 3.61.44
 
 Package 3.61.44 requires a persistent secret backend and trusted authorization provider at production credential-vault construction. Register, rotate, revoke, metadata, and resolve decisions bind the authenticated actor's capability to the exact credential resource; a caller-supplied role is rejected. Successful register/revoke/resolve events persist the provider actor and decision IDs, while identity proofs remain out of the ledger. Exact registration retries tolerate provider decision-ID rotation only when the stable request and authenticated actor match. Tests also reopen a production-shaped durable ledger and restore registration/revocation metadata.

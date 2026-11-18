@@ -53,10 +53,17 @@ def test_v5_event_registry_covers_all_typed_governance_deployment_and_provenance
         *(f"provenance.{item.value}" for item in ProvenanceEventType),
     }
 
-    assert len(registry.registrations) == 19
-    assert registered == expected
-    assert len({item.schema_id for item in registry.registrations}) == 19
-    assert all(item.version == "1.0" for item in registry.registrations)
+    credential_events = {
+        "PRODUCTION_CREDENTIAL_REGISTERED",
+        "PRODUCTION_CREDENTIAL_REVOKED",
+        "PRODUCTION_CREDENTIAL_RESOLVED",
+        "PRODUCTION_CREDENTIAL_RESOLUTION_DENIED",
+    }
+    assert len(registry.registrations) == 24
+    assert registered == expected | credential_events
+    assert len({item.schema_id for item in registry.registrations}) == 24
+    assert {item.version for item in registry.registrations} == {"0.9", "1.0"}
+    assert sum(item.version == "0.9" for item in registry.registrations) == 1
     assert all(item.compatibility_mode == "NONE" for item in registry.registrations)
     for registration in registry.registrations:
         assert registry.get_by_id(registration.schema_id) == registration
@@ -76,6 +83,62 @@ def test_v5_event_payload_schemas_match_the_typed_event_models():
         assert set(schema["properties"]) == {field.name for field in fields(event_model)}
         assert set(schema["required"]) == {field.name for field in fields(event_model)}
         assert set(schema["properties"]["event_type"]["enum"]) == {item.value for item in event_types}
+
+
+def test_v5_registry_validates_production_credential_events_and_legacy_registration():
+    registry = _registry()
+    valid_payloads = {
+        "PRODUCTION_CREDENTIAL_REGISTERED": {
+            "credential_id": "credential-1",
+            "version": "v1",
+            "valid_from_ms": 10,
+            "expires_at_ms": 20,
+            "fingerprint": "a" * 64,
+            "status": "ACTIVE",
+            "actor_role": "SECURITY_ADMIN",
+            "actor_id": "operator-1",
+            "authorization_decision_id": "decision-1",
+        },
+        "PRODUCTION_CREDENTIAL_REVOKED": {
+            "credential_id": "credential-1",
+            "version": "v1",
+            "actor_role": "SECURITY_ADMIN",
+            "actor_id": "operator-1",
+            "authorization_decision_id": "decision-2",
+        },
+        "PRODUCTION_CREDENTIAL_RESOLVED": {
+            "credential_id": "credential-1",
+            "version": "v1",
+            "actor_role": "PRODUCTION_TRADING",
+            "fingerprint": "a" * 64,
+            "actor_id": "worker-1",
+            "authorization_decision_id": "decision-3",
+        },
+        "PRODUCTION_CREDENTIAL_RESOLUTION_DENIED": {
+            "credential_id": "credential-1",
+            "version": "v1",
+            "actor_role": "SECURITY_ADMIN",
+            "reason": "AUTHORIZATION_FORBIDDEN",
+            "actor_id": "operator-1",
+            "authorization_decision_id": "decision-4",
+        },
+    }
+    for event_type, payload in valid_payloads.items():
+        registry.validate_payload(event_type, "1.0", payload)
+        with pytest.raises(ValueError, match="EVENT_PAYLOAD_SCHEMA_INVALID"):
+            registry.validate_payload(event_type, "1.0", {**payload, "unexpected": True})
+
+    legacy_payload = {
+        "credential_id": "credential-1",
+        "version": "v1",
+        "valid_from_ms": 10,
+        "expires_at_ms": 20,
+        "fingerprint": "a" * 64,
+        "status": "ACTIVE",
+    }
+    registry.validate_payload("PRODUCTION_CREDENTIAL_REGISTERED", "0.9", legacy_payload)
+    with pytest.raises(ValueError, match="EVENT_PAYLOAD_SCHEMA_INVALID"):
+        registry.validate_payload("PRODUCTION_CREDENTIAL_REGISTERED", "1.0", legacy_payload)
 
 
 def test_v5_event_registry_validates_a_real_governance_payload_and_rejects_invalid_payloads():

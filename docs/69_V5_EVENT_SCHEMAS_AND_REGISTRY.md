@@ -5,9 +5,10 @@ This artifact implements the §26 envelope fields and a schema registry for the 
 ## Canonical artifacts
 
 - `schemas/v5_event_envelope.v1.schema.json` defines the shared envelope shape.
-- `schemas/v5_event_schema_registry.csv` records all 19 registered event types from the V2.7 governance, V2.8 deployment, and V2.9 provenance streams.
-- `schemas/v5_event_payload_schemas/` contains the versioned payload contracts for those three streams.
-- `src/trading_platform/events/registry.py` loads the registry, enforces unique `(event_type, version)` and `schema_id` keys, confines schema references to the local schema directory, validates envelope chronology, and validates event payloads against JSON Schema.
+- `schemas/v5_event_schema_registry.csv` records 24 versioned registrations across 23 event types: 19 typed V2.7 governance/deployment/provenance events, four production credential-vault events, and a v0.9 registration schema retained for legacy ledger replay.
+- `schemas/v5_event_payload_schemas/` contains versioned payload contracts for those streams and credential lifecycle events.
+- `src/trading_platform/events/registry.py` loads the registry, enforces unique `(event_type, version)` and `schema_id` keys, confines schema references to the local schema directory, validates envelope chronology, and validates event payloads against JSON Schema. Payload validation can also be called directly for durable events whose store does not carry the canonical envelope.
+- `ProductionCredentialVault` requires an injected registry in production. It validates credential register, revoke, resolve, and denied-resolution payloads before append, and validates those records again while restoring the ledger. The legacy registration schema accepts pre-authorization records that have no `actor_role`; new records use v1.
 - The realtime `MarketEvent` uses the canonical `EventEnvelope` implementation.
 - `docs/79_V5_EVENT_ORDERING.md` and `schemas/v5_event_ordering_policy.csv` define deterministic §28 batch/replay ordering and fail-closed live handling for late or out-of-order records.
 
@@ -15,6 +16,8 @@ This artifact implements the §26 envelope fields and a schema registry for the 
 
 ## Verified boundary and remaining gap
 
-The registry is complete for the 19 event values in the three typed enums and is checked against their actual dataclass fields. The §28 ordering helper is separately tested, but it does not validate payload schemas or persist stream cursors. The registry is not yet a platform-wide event catalog: the V2.1 generic `EventStore` and many later durable authority ledgers accept their own event types and payloads without using this registry. Those producers, consumers, versions, migration references, and payload schemas still need to be inventoried and wired to validation. FD-10 and FD-11 therefore remain `PARTIAL`.
+The 19 typed V2.7–V2.9 event values are checked against their dataclass fields. Four credential-vault event types now have strict payload schemas and production write/replay validation. The §28 ordering helper is separately tested, but it does not validate payload schemas or persist stream cursors.
+
+This is not yet a platform-wide catalog. The V2.1 generic `EventStore` and many later durable authority ledgers still accept event types and payloads without the registry. The generic store also does not persist the canonical envelope or schema version; the credential vault selects v0.9 only for a legacy registration payload that lacks `actor_role`. Remaining producers, consumers, schemas, migrations, and envelope wiring still need inventory and enforcement. FD-10 and FD-11 therefore remain `PARTIAL`.
 
 The runtime schema validator uses the `jsonschema` dependency declared by the package. Registered references may not traverse outside the local schema root or load remote `$ref` documents.

@@ -16,6 +16,7 @@ from typing import Any, Protocol
 import re
 from uuid import uuid4
 
+from trading_platform.events.registry import EventSchemaRegistry
 from trading_platform.v21.event_store import EventStore
 from trading_platform.security.permissions import Capability, assert_capability
 from trading_platform.v35.binance_execution import RuntimeCredentialValues
@@ -156,6 +157,7 @@ class ProductionCredentialVault:
         store: EventStore | None = None,
         secret_backend: CredentialSecretBackend | None = None,
         authorization_provider: CredentialAuthorizationProvider | None = None,
+        event_schema_registry: EventSchemaRegistry | None = None,
         _test_only_authority: object | None = None,
     ):
         test_mode = _test_only_authority is _TEST_ONLY_VAULT_AUTHORITY
@@ -165,6 +167,25 @@ class ProductionCredentialVault:
             raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_EPHEMERAL_BACKEND_FORBIDDEN")
         if not test_mode and authorization_provider is None:
             raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_AUTHORIZATION_PROVIDER_REQUIRED")
+        if event_schema_registry is not None and not isinstance(event_schema_registry, EventSchemaRegistry):
+            raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_EVENT_SCHEMA_REGISTRY_INVALID")
+        if not test_mode and event_schema_registry is None:
+            raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_EVENT_SCHEMA_REGISTRY_REQUIRED")
+        if not test_mode:
+            required_schemas = {
+                (self.REGISTER_EVENT, "0.9"),
+                (self.REGISTER_EVENT, "1.0"),
+                (self.REVOKE_EVENT, "1.0"),
+                (self.RESOLVE_EVENT, "1.0"),
+                (self.DENY_EVENT, "1.0"),
+            }
+            registered_schemas = {
+                (item.event_type, item.version) for item in event_schema_registry.registrations
+            }
+            if required_schemas - registered_schemas:
+                raise ProductionCredentialAccessError(
+                    "PRODUCTION_CREDENTIAL_EVENT_SCHEMA_REGISTRY_INCOMPLETE"
+                )
         if authorization_provider is not None and not callable(
             getattr(authorization_provider, "authorize", None)
         ):
@@ -172,6 +193,7 @@ class ProductionCredentialVault:
         self.__store = store if store is not None else EventStore()
         self.__secret_backend = secret_backend
         self.__authorization_provider = authorization_provider
+        self.__event_schema_registry = event_schema_registry
         self.__test_mode = test_mode
         self.__records: dict[tuple[str, str], _CredentialRecord] = {}
         self.__lock = RLock()
@@ -183,11 +205,13 @@ class ProductionCredentialVault:
         *,
         store: EventStore | None = None,
         secret_backend: CredentialSecretBackend | None = None,
+        event_schema_registry: EventSchemaRegistry | None = None,
     ) -> "ProductionCredentialVault":
         """Construct an explicitly ephemeral vault for isolated tests only."""
         return cls(
             store=store,
             secret_backend=secret_backend or InMemoryCredentialSecretBackend(),
+            event_schema_registry=event_schema_registry,
             _test_only_authority=_TEST_ONLY_VAULT_AUTHORITY,
         )
 
@@ -275,6 +299,8 @@ class ProductionCredentialVault:
                 raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_ID_CONFLICT")
             if record is not None and record.status is CredentialStatus.REVOKED:
                 raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_VERSION_REVOKED")
+            if existing is None:
+                self.__validate_event_payload(self.REGISTER_EVENT, payload)
             try:
                 self.__secret_backend.put(
                     credential_id=credential_id,
@@ -398,6 +424,7 @@ class ProductionCredentialVault:
                     "actor_role": actor.role,
                     **actor.audit_fields(),
                 }
+                self.__validate_event_payload(self.REVOKE_EVENT, payload)
                 appended = self.__store.append(
                     event_id=f"production-credential-revoke:{credential_id}:{version}:{now_ms}",
                     occurred_at_ms=now_ms,
@@ -468,6 +495,7 @@ class ProductionCredentialVault:
                 "fingerprint": ref.fingerprint,
                 **actor.audit_fields(),
             }
+            self.__validate_event_payload(self.RESOLVE_EVENT, payload)
             appended = self.__store.append(
                 event_id=f"production-credential-resolve:{ref.credential_id}:{ref.version}:{now_ms}:{uuid4().hex}",
                 occurred_at_ms=now_ms,
@@ -563,18 +591,20 @@ class ProductionCredentialVault:
             ref.validate(now_ms=now_ms)
         except ProductionCredentialAccessError:
             raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_REFERENCE_INVALID") from None
+        payload = {
+            "credential_id": ref.credential_id,
+            "version": ref.version,
+            "actor_role": safe_role,
+            "reason": reason,
+            **actor.audit_fields(),
+        }
+        self.__validate_event_payload(self.DENY_EVENT, payload)
         self.__store.append(
             event_id=f"production-credential-deny:{ref.credential_id}:{ref.version}:{now_ms}:{safe_role}:{reason}:{uuid4().hex}",
             occurred_at_ms=now_ms,
             event_type=self.DENY_EVENT,
             aggregate_id=ref.credential_id,
-            payload={
-                "credential_id": ref.credential_id,
-                "version": ref.version,
-                "actor_role": safe_role,
-                "reason": reason,
-                **actor.audit_fields(),
-            },
+            payload=payload,
         )
         if not self.__store.verify_chain():
             raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_AUDIT_CHAIN_INVALID")
@@ -591,6 +621,18 @@ class ProductionCredentialVault:
         }
         for event in self.__store.iter_events():
             payload = event.payload
+            if event.event_type in {
+                self.REGISTER_EVENT,
+                self.RESOLVE_EVENT,
+                self.DENY_EVENT,
+                self.REVOKE_EVENT,
+            }:
+                schema_version = (
+                    "0.9"
+                    if event.event_type == self.REGISTER_EVENT and "actor_role" not in payload
+                    else "1.0"
+                )
+                self.__validate_event_payload(event.event_type, payload, version=schema_version)
             if event.event_type == self.REGISTER_EVENT:
                 try:
                     fields = frozenset(payload)
@@ -671,6 +713,19 @@ class ProductionCredentialVault:
                 except (KeyError, TypeError, ValueError):
                     raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_AUDIT_SCHEMA_INVALID") from None
         self.__records = records
+
+    def __validate_event_payload(
+        self, event_type: str, payload: Mapping[str, Any], *, version: str = "1.0"
+    ) -> None:
+        registry = self.__event_schema_registry
+        if registry is None:
+            return
+        try:
+            registry.validate_payload(event_type, version, payload)
+        except (KeyError, TypeError, ValueError):
+            raise ProductionCredentialAccessError(
+                "PRODUCTION_CREDENTIAL_EVENT_SCHEMA_INVALID"
+            ) from None
 
 
 _CREDENTIAL_KEY_MARKERS = {

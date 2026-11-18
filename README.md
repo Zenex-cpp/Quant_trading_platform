@@ -1,7 +1,7 @@
 # Quant Trading Platform
 
 **Repository release train:** `V4.29-RECOVERY`  
-**Python distribution version:** `3.61.44` (a separate versioning scheme).
+**Python distribution version:** `3.61.45` (a separate versioning scheme).
 
 The current repository is a recovery extension based on the available V4.28 recovery archive. Byte-for-byte canonical lineage to V4.23 and V4.26 is **not established** because those source archives are not available in the project.
 
@@ -14,6 +14,7 @@ The current repository is a recovery extension based on the available V4.28 reco
 - The final dispatch boundary requires durable risk-decision, position, fresh-market and causal-TTL authorities for risk-increasing orders. Missing or expired authority blocks before the gateway.
 - Package 3.61.43 adds `PersistentTransitionEngine` for the registered `START_BACKTEST` edge. It commits current state, idempotency record, and audit event in one file-backed SQLite transaction and recovers exact retries after restart; caller callbacks and external effects are not supported.
 - Package 3.61.44 requires a trusted identity and resource authorization provider for production credential operations. The provider binds capability decisions to a specific credential, and successful register/revoke/resolve ledger events record the authenticated actor and decision ID without storing the identity token. The provider integration point does not supply an identity system; FD-44 remains PARTIAL.
+- Package 3.61.45 registers versioned schemas for credential registration, revocation, resolution, and denied resolution. Production credential vaults now require the event registry and validate these payloads before append and during ledger replay; legacy registrations retain a v0.9 schema. FD-10/FD-11 remain PARTIAL because the generic EventStore envelope/version and other ledger families are not yet wired.
 - Package 3.61.42 binds each EventStore event ID to the complete canonical event hash. Exact retries return the stored event; changed timestamp, event type, aggregate, or payload raise `EVENT_APPEND_CONFLICT` without changing the chain.
 - Package 3.61.41 adds deterministic §28 event ordering for replay batches and fail-closed live stream cursors. The cursor rejects late or out-of-order events and distinguishes source-local sequence from cross-source tie-breaking. Persistent cursor integration and platform-wide registry wiring remain separate gaps.
 - Package 3.61.40 adds normalized monotone execution-risk position caps and concentration-adjusted correlated-exposure caps. The §179 register records 50 PRESENT, 5 PARTIAL, and 0 OPEN repository artifacts; FD-06, FD-08, FD-10/FD-11, and FD-44 remain PARTIAL.
@@ -128,6 +129,8 @@ The 3.61.4 safety patch restricts the legacy Testnet evidence session and runner
 
 
 ## V5.0 first-delivery work
+
+Version 3.61.45 registers and validates credential lifecycle payload schemas at the production vault's append and replay boundaries, including legacy registration records. Focused schema, credential, traceability, release-contract, EventStore, and permission checks passed 83 tests. The generic EventStore envelope/version and other authority-ledger event families remain outside the registry.
 
 Version 3.61.44 adds a fail-closed authorization boundary to `ProductionCredentialVault`: production construction requires an injected trusted provider, production operations require an authenticated identity, and capability grants are checked against the exact credential resource. Caller-supplied roles are accepted only by the explicit test factory. Audits record actor and decision IDs; the opaque identity token is never persisted. The focused suite passed 41 tests, and the full local V4.29 runner passed with 1,444 passed, 26 skipped, and `RELEASE_HYGIENE=PASS`. The provider implementation, identity lifecycle, and universal resource authorization remain external/platform-wide work, so FD-44 remains PARTIAL.
 

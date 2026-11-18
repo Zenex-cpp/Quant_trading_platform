@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from pathlib import Path
 from threading import Event, Thread
 
 import pytest
 
+from trading_platform.events import EventSchemaRegistry
 from trading_platform.v21.event_store import EventStore
 from trading_platform.security.credentials import (
     CredentialAuthorizationDecision,
@@ -20,6 +22,12 @@ from trading_platform.security.credential_backends import (
     InMemoryCredentialSecretBackend,
 )
 from trading_platform.v35.binance_execution import RuntimeCredentialValues
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def _event_schema_registry():
+    return EventSchemaRegistry.from_csv(ROOT / "schemas/v5_event_schema_registry.csv")
 
 
 class _PersistentTestBackend(InMemoryCredentialSecretBackend):
@@ -77,7 +85,9 @@ def _production_authorization_provider():
 
 def vault_and_ref():
     store = EventStore()
-    vault = ProductionCredentialVault.for_testing(store=store)
+    vault = ProductionCredentialVault.for_testing(
+        store=store, event_schema_registry=_event_schema_registry()
+    )
     ref = vault.register(
         credential_id="prod-primary",
         version="v1",
@@ -91,7 +101,7 @@ def vault_and_ref():
 
 
 def test_research_cannot_register_or_revoke_production_credentials():
-    vault = ProductionCredentialVault.for_testing()
+    vault = ProductionCredentialVault.for_testing(event_schema_registry=_event_schema_registry())
     with pytest.raises(ProductionCredentialAccessError, match="RESEARCH_FORBIDDEN"):
         vault.register(credential_id="p", version="v1", api_key="K", api_secret=b"S", valid_from_ms=1, actor_role="RESEARCH")
 
@@ -248,6 +258,59 @@ def test_production_vault_requires_trusted_identity_provider():
         ProductionCredentialVault(secret_backend=_PersistentTestBackend())
 
 
+def test_production_vault_requires_the_registered_event_schemas():
+    with pytest.raises(ProductionCredentialAccessError, match="EVENT_SCHEMA_REGISTRY_REQUIRED"):
+        ProductionCredentialVault(
+            secret_backend=_PersistentTestBackend(),
+            authorization_provider=_production_authorization_provider(),
+        )
+
+
+def test_production_vault_rejects_an_incomplete_event_schema_registry():
+    with pytest.raises(ProductionCredentialAccessError, match="EVENT_SCHEMA_REGISTRY_INCOMPLETE"):
+        ProductionCredentialVault(
+            secret_backend=_PersistentTestBackend(),
+            authorization_provider=_production_authorization_provider(),
+            event_schema_registry=EventSchemaRegistry(),
+        )
+
+
+def test_invalid_production_event_payload_schema_blocks_before_secret_write(monkeypatch):
+    class CountingBackend(_PersistentTestBackend):
+        writes = 0
+
+        def put(self, **kwargs):
+            self.writes += 1
+            return super().put(**kwargs)
+
+    store = EventStore()
+    backend = CountingBackend()
+    registry = _event_schema_registry()
+    vault = ProductionCredentialVault(
+        store=store,
+        secret_backend=backend,
+        authorization_provider=_production_authorization_provider(),
+        event_schema_registry=registry,
+    )
+
+    def reject_payload(*_args):
+        raise ValueError("TEST_SCHEMA_REJECTION")
+
+    monkeypatch.setattr(registry, "validate_payload", reject_payload)
+    with pytest.raises(ProductionCredentialAccessError, match="EVENT_SCHEMA_INVALID"):
+        vault.register(
+            credential_id="prod-primary",
+            version="v1",
+            api_key="PROD_API_KEY",
+            api_secret=b"PROD_API_SECRET",
+            valid_from_ms=10,
+            identity="config-proof",
+        )
+    assert backend.writes == 0
+    assert store.latest_sequence() == 0
+    store.close()
+
+
 def test_production_authorization_binds_identity_capability_and_resource(tmp_path):
     ledger_path = tmp_path / "production-credentials.sqlite3"
     store = EventStore(str(ledger_path))
@@ -257,6 +320,7 @@ def test_production_authorization_binds_identity_capability_and_resource(tmp_pat
         store=store,
         secret_backend=backend,
         authorization_provider=provider,
+        event_schema_registry=_event_schema_registry(),
     )
 
     def register():
@@ -292,6 +356,8 @@ def test_production_authorization_binds_identity_capability_and_resource(tmp_pat
             now_ms=22,
             identity="other-config-proof",
         )
+    with pytest.raises(ProductionCredentialAccessError, match="RESEARCH_FORBIDDEN"):
+        vault.resolve(ref, identity="config-proof", now_ms=21)
 
     vault.revoke(
         credential_id="prod-primary",
@@ -302,11 +368,14 @@ def test_production_authorization_binds_identity_capability_and_resource(tmp_pat
     events = list(store.iter_events())
     register_events = [event for event in events if event.event_type == vault.REGISTER_EVENT]
     resolve_events = [event for event in events if event.event_type == vault.RESOLVE_EVENT]
+    deny_events = [event for event in events if event.event_type == vault.DENY_EVENT]
     revoke_events = [event for event in events if event.event_type == vault.REVOKE_EVENT]
     assert len(register_events) == len(resolve_events) == len(revoke_events) == 1
+    assert len(deny_events) == 2
     assert register_events[0].payload["actor_id"] == "operator-17"
     assert register_events[0].payload["authorization_decision_id"] == "decision-1"
     assert resolve_events[0].payload["actor_id"] == "worker-4"
+    assert {event.payload.get("actor_id") for event in deny_events} == {None, "operator-17"}
     assert revoke_events[0].payload["actor_id"] == "operator-17"
     assert "config-proof" not in str(events)
     assert "trading-proof" not in str(events)
@@ -321,10 +390,48 @@ def test_production_authorization_binds_identity_capability_and_resource(tmp_pat
         store=reopened_store,
         secret_backend=backend,
         authorization_provider=provider,
+        event_schema_registry=_event_schema_registry(),
     )
     assert reopened.metadata(ref, identity="config-proof").status is CredentialStatus.REVOKED
     assert reopened_store.verify_chain()
     reopened_store.close()
+
+
+def test_production_vault_replays_legacy_registration_with_its_v09_schema():
+    store = EventStore()
+    store.append(
+        event_id="legacy-credential-registration",
+        occurred_at_ms=10,
+        event_type=ProductionCredentialVault.REGISTER_EVENT,
+        aggregate_id="legacy-credential",
+        payload={
+            "credential_id": "legacy-credential",
+            "version": "v1",
+            "valid_from_ms": 10,
+            "expires_at_ms": 20,
+            "fingerprint": "a" * 64,
+            "status": "ACTIVE",
+        },
+    )
+    vault = ProductionCredentialVault(
+        store=store,
+        secret_backend=_PersistentTestBackend(),
+        authorization_provider=_ScopedAuthorizationProvider(
+            {
+                "config-proof": (
+                    "operator-17",
+                    "SECURITY_ADMIN",
+                    frozenset({
+                        (Capability.CONFIGURATION, "production-credential:legacy-credential")
+                    }),
+                )
+            }
+        ),
+        event_schema_registry=_event_schema_registry(),
+    )
+    ref = ProductionCredentialRef("legacy-credential", "v1", 10, 20, "a" * 64)
+    assert vault.metadata(ref, identity="config-proof").status is CredentialStatus.ACTIVE
+    store.close()
 
 
 def test_production_vault_rejects_provider_decision_for_another_resource():
@@ -342,6 +449,7 @@ def test_production_vault_rejects_provider_decision_for_another_resource():
     vault = ProductionCredentialVault(
         secret_backend=_PersistentTestBackend(),
         authorization_provider=WrongResourceProvider(),
+        event_schema_registry=_event_schema_registry(),
     )
     with pytest.raises(ProductionCredentialAccessError, match="RESEARCH_FORBIDDEN"):
         vault.register(
@@ -358,7 +466,9 @@ def test_metadata_and_revocation_replay_from_durable_ledger(tmp_path):
     path = tmp_path / "credential-ledger.sqlite3"
     backend = InMemoryCredentialSecretBackend()
     store = EventStore(str(path))
-    vault = ProductionCredentialVault.for_testing(store=store, secret_backend=backend)
+    vault = ProductionCredentialVault.for_testing(
+        store=store, secret_backend=backend, event_schema_registry=_event_schema_registry()
+    )
     ref = vault.register(
         credential_id="restart-test",
         version="v1",
@@ -371,7 +481,9 @@ def test_metadata_and_revocation_replay_from_durable_ledger(tmp_path):
     store.close()
 
     reopened_store = EventStore(str(path))
-    reopened = ProductionCredentialVault.for_testing(store=reopened_store, secret_backend=backend)
+    reopened = ProductionCredentialVault.for_testing(
+        store=reopened_store, secret_backend=backend, event_schema_registry=_event_schema_registry()
+    )
     assert reopened.metadata(ref).status is CredentialStatus.ACTIVE
     assert reopened.resolve(ref, actor_role="PRODUCTION_TRADING", now_ms=20).values() == (
         "RESTART_KEY",
@@ -386,7 +498,9 @@ def test_metadata_and_revocation_replay_from_durable_ledger(tmp_path):
     reopened_store.close()
 
     final_store = EventStore(str(path))
-    restored = ProductionCredentialVault.for_testing(store=final_store, secret_backend=backend)
+    restored = ProductionCredentialVault.for_testing(
+        store=final_store, secret_backend=backend, event_schema_registry=_event_schema_registry()
+    )
     assert restored.metadata(ref).status is CredentialStatus.REVOKED
     with pytest.raises(ProductionCredentialAccessError, match="REVOKED"):
         restored.resolve(ref, actor_role="PRODUCTION_TRADING", now_ms=22)
@@ -434,7 +548,9 @@ class _BlockingSnapshotBackend(InMemoryCredentialSecretBackend):
 def test_revocation_serializes_after_in_flight_credential_resolution():
     store = EventStore()
     backend = _BlockingSnapshotBackend()
-    vault = ProductionCredentialVault.for_testing(store=store, secret_backend=backend)
+    vault = ProductionCredentialVault.for_testing(
+        store=store, secret_backend=backend, event_schema_registry=_event_schema_registry()
+    )
     ref = vault.register(
         credential_id="concurrent-revoke",
         version="v1",

@@ -1,5 +1,13 @@
 # Trading Platform V4.29 Recovery — Release Notes
 
+## Package 3.61.45 — Validate credential ledger event schemas
+
+- Registered versioned payload schemas for credential registration, revocation, resolution, and denied resolution; retained a v0.9 schema for legacy registration replay.
+- Production credential vault construction now requires the event schema registry. The vault validates credential lifecycle payloads before append and again while restoring persisted metadata.
+- Credential event schemas are included in the fixed milestone contract. FD-10/FD-11 remain PARTIAL because the generic EventStore still lacks persisted canonical envelope/schema-version metadata and other durable event families are not yet cataloged or wired.
+- Focused schema, credential, traceability, release-contract, EventStore, and permission checks passed **83 tests**.
+- The fixed local V4.29 runner passed on Windows/Python 3.14.7 with **1,449 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`. Preflight `.audit/V429_CRED_SCHEMA_FINAL2_20261118.json` was `READY_FOR_MILESTONE`, `allowed=true`, with 270 input hashes and zero blockers; `external_evidence=false`, `production_ready=false`, and `activation_flag=NOT_SET`.
+
 ## Package 3.61.44 — Resource-scoped credential authorization
 
 - Production vault construction now requires both a persistent secret backend and an injected authorization provider. Production operations require an identity proof; caller-supplied roles are rejected.

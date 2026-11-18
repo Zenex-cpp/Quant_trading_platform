@@ -149,18 +149,13 @@ class EventSchemaRegistry:
         if envelope is None or not hasattr(envelope, "validate"):
             raise ValueError("EVENT_ENVELOPE_REQUIRED")
         envelope.validate()
-        registration = self.get(envelope.event_type, envelope.schema_version)
         envelope_schema_path = self._resolve_schema_path("v5_event_envelope.v1.schema.json")
-        schema_path = self._resolve_schema_path(registration.payload_schema_ref)
         try:
             envelope_schema = json.loads(envelope_schema_path.read_text(encoding="utf-8"))
-            schema = json.loads(schema_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
             raise ValueError("EVENT_SCHEMA_UNREADABLE") from exc
         self._assert_local_references(envelope_schema)
-        self._assert_local_references(schema)
         Draft202012Validator.check_schema(envelope_schema)
-        Draft202012Validator.check_schema(schema)
 
         envelope_mapping = _json_compatible(envelope)
         try:
@@ -171,11 +166,24 @@ class EventSchemaRegistry:
             path = "/".join(str(part) for part in exc.absolute_path) or "$"
             raise ValueError(f"EVENT_ENVELOPE_SCHEMA_INVALID:{path}:{exc.validator}") from exc
 
-        payload = _json_compatible(getattr(event, "payload", None))
+        self.validate_payload(envelope.event_type, envelope.schema_version, getattr(event, "payload", None))
+
+    def validate_payload(self, event_type: str, version: str, payload: Any) -> None:
+        """Validate a durable event payload when its storage format has no envelope."""
+        registration = self.get(event_type, version)
+        schema_path = self._resolve_schema_path(registration.payload_schema_ref)
+        try:
+            schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise ValueError("EVENT_SCHEMA_UNREADABLE") from exc
+        self._assert_local_references(schema)
+        Draft202012Validator.check_schema(schema)
+
+        payload = _json_compatible(payload)
         if not isinstance(payload, Mapping):
             raise ValueError("EVENT_PAYLOAD_OBJECT_REQUIRED")
         payload_event_type = payload.get("event_type")
-        if payload_event_type is not None and payload_event_type != envelope.event_type.rsplit(".", 1)[-1]:
+        if payload_event_type is not None and payload_event_type != event_type.rsplit(".", 1)[-1]:
             raise ValueError("EVENT_PAYLOAD_TYPE_MISMATCH")
         try:
             Draft202012Validator(schema).validate(payload)
