@@ -6,6 +6,7 @@
 - Authorization decisions bind the capability and authenticated identity to the exact credential resource. Register, revoke, metadata, and resolve paths enforce this boundary, and successful ledger events store the actor and decision IDs without storing the identity proof.
 - Regression coverage verifies missing-provider failure, exact-resource grants, denied cross-resource access, caller-role rejection, durable audit replay, and idempotent registration retries with fresh decision IDs. Focused credential, permission, and release-contract checks passed **41 tests**.
 - The full local V4.29 runner passed on Windows/Python 3.14.7 with **1,444 passed, 26 skipped**, exit code 0, and `RELEASE_HYGIENE=PASS`. Preflight was `READY_FOR_MILESTONE`, `allowed=true`, with **265** unique input hashes and zero blockers; `external_evidence=false`, `production_ready=false`, and `activation_flag=NOT_SET`.
+- Hosted PR CI for code head `269324b6e803b2ba30b75f0a67a0f772715bd1a9` passed in [run 44367206088](https://github.com/Zenex-cpp/Quant_trading_platform/actions/runs/44367206088) with **1,467 passed, 3 skipped** and `RELEASE_HYGIENE=PASS`. Artifact `14458845392` has SHA-256 `286bf076bd58af43116a6447addc837465a6dd98c79c2a3c3d3f2b553b7b7e29` (34,421 bytes).
 - FD-44 remains PARTIAL because the external identity provider and entitlement source are not present, and resource-level authorization is not integrated across the platform.
 
 ## Package 3.61.43 — Durable atomic state transition
