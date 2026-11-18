@@ -124,6 +124,7 @@ CONTRACT_FILES = (
     "src/trading_platform/research/strategy_card.py",
     "src/trading_platform/state/transition.py",
     "src/trading_platform/risk/monotonicity.py",
+    "src/trading_platform/risk/execution_risk.py",
     "src/trading_platform/portfolio/allocation.py",
     "src/trading_platform/events/envelope.py",
     "src/trading_platform/events/registry.py",

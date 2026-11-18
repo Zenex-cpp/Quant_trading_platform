@@ -1,5 +1,13 @@
 # Trading Platform V4.29 Recovery — Release Notes
 
+## Package 3.61.40 — Execution-risk monotonicity contracts
+
+- Added a normalized execution-risk authority: higher caller-supplied hazard reduces the maximum position size and the shared `adjusted_risk` output; conflicting factor overrides fail closed.
+- Added a concentration-adjusted ceiling for independently measured correlated exposure. The ceiling decreases monotonically and reaches zero at the configured concentration maximum.
+- Added ordered-level and invalid-input regression coverage and updated the §14 monotonicity matrix. FD-08 remains PARTIAL because input provenance, correlation measurement, and immutable platform-wide invocation are not established.
+- This policy mapping is a conservative repository contract, not an execution-risk estimator or production authorization.
+- Verification: focused monotonicity/release checks passed **19 tests**. The fixed local V4.29 runner passed with **1,423 passed, 26 skipped**, exit code 0, and `RELEASE_HYGIENE=PASS`. Preflight: `READY_FOR_MILESTONE`, `allowed=true`, 258 unique contract-input hashes, zero blockers; `external_evidence=false`, `production_ready=false`, `activation_flag=NOT_SET`.
+
 ## Package 3.61.39 — Fail-closed §179 contracts
 
 - Added machine-readable contracts for the six risk states and factor-based risk caps, all six §20 decision TTL classes, and the complete 13-node §21 causal artifact chain.
@@ -9,6 +17,7 @@
 - FD-21, FD-24, FD-25, FD-29, FD-41, FD-53, and FD-54 are PRESENT as repository artifacts. FD-06, FD-08, FD-10/FD-11, and FD-44 remain PARTIAL; external and operational evidence remains separate.
 - The §179 register now records **50 PRESENT, 5 PARTIAL, 0 OPEN**. No production activation, exchange order, or deployment is implied.
 - Verification: the fixed local V4.29 runner passed with **1,417 passed, 26 skipped**, exit code 0, and `RELEASE_HYGIENE=PASS`. Preflight was `READY_FOR_MILESTONE`, `allowed=true`, with 257 unique contract inputs and zero blockers; `external_evidence=false`, `production_ready=false`, `activation_flag=NOT_SET`.
+- Hosted PR CI run 44348438800 passed on commit `66195a5d0323649723e91cb37f344f06ac87ea97`; audit artifact 14447910723 has SHA-256 `e8ab94b3d16e22e0057faf6f97030b12fb0760c380c3daac7e3b7c3b1b21e23a`. The separate repository-governance audit remains blocked on independent evidence.
 
 ## Package 3.61.38 — Durable risk reservation flow
 

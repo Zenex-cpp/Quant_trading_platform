@@ -1,10 +1,13 @@
 # V4.29 Open Gaps Delta
 
+- Package 3.61.40 enforces bounded monotonicity for normalized execution hazard and concentration-adjusted correlated-exposure caps. FD-08 remains PARTIAL: inputs are caller-supplied, correlation measurement is outside the helper, and global immutable ceiling binding is not proven.
+- Package 3.61.40 fixed local V4.29 runner: **1,423 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`; preflight `READY_FOR_MILESTONE`, `allowed=true`, 258 unique input hashes, zero blockers. External evidence is false, production readiness is false, and activation remains `NOT_SET`.
+
 ## §179 contracts and current repository status — 18 November 2026
 
 - Package 3.61.39 adds canonical machine-readable contracts for FD-21, FD-24, FD-25, FD-29, FD-41, FD-53, and FD-54, with loaders and contract tests. The §179 register records 50 PRESENT, 5 PARTIAL, and 0 OPEN repository artifacts.
 - The causal validator checks the 13-node chain, dependency IDs, ancestry state, timestamps, provenance, and expiry. The gate matrix checks transitive prerequisites and required artifacts. The statistical method catalog marks unimplemented §97 candidates as specification-only.
-- The fixed local V4.29 runner passes with 1,417 passed, 26 skipped, and `RELEASE_HYGIENE=PASS`; its preflight has 257 unique input hashes, `READY_FOR_MILESTONE`, `allowed=true`, and zero blockers. Hosted CI on the updated PR head is the next verification step.
+- On package 3.61.39, the fixed local V4.29 runner passed with 1,417 passed, 26 skipped, and `RELEASE_HYGIENE=PASS`; preflight had 257 unique input hashes, `READY_FOR_MILESTONE`, `allowed=true`, and zero blockers. Hosted CI run 44348438800 passed for head `66195a5d0323649723e91cb37f344f06ac87ea97`; artifact ID 14447910723, SHA-256 `e8ab94b3d16e22e0057faf6f97030b12fb0760c380c3daac7e3b7c3b1b21e23a`.
 - FD-06, FD-08, FD-10/FD-11, and FD-44 remain PARTIAL. Production identity, real licensed market data, venue integration, independent security/reviewer evidence, and production recovery exercises are not asserted by these repository artifacts.
 
 ## V5.0 §179 traceability audit — 12 November 2026

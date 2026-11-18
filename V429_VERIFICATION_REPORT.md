@@ -1,10 +1,16 @@
 # V4.29 Recovery — Verification Report
 
-## Current package — 3.61.39
+## Current package — 3.61.40
+
+Package 3.61.40 adds ordered monotonicity checks for execution-risk position-size caps and concentration-adjusted correlated-exposure caps. `adjusted_risk` applies the normalized execution-risk input, validates factor bounds, and rejects conflicting overrides. Focused monotonicity/release checks passed 19 tests. The fixed V4.29 runner passed on Windows/Python 3.14.7 with **1,423 passed, 26 skipped**, exit 0, and `RELEASE_HYGIENE=PASS`. Preflight: `READY_FOR_MILESTONE`, `allowed=true`, 258 unique input hashes, zero blockers; `external_evidence=false`, `production_ready=false`, and `activation_flag=NOT_SET`. No external evidence, production authorization, or live trading is implied.
+
+FD-08 remains PARTIAL because the measurements remain caller-supplied, correlation modeling and provenance are not established, and immutable platform-wide ceiling binding is not proven.
+
+## Package 3.61.39
 
 The §179 register now contains 55 unique deliverables: 50 PRESENT, 5 PARTIAL, and 0 OPEN. New canonical contracts cover FD-21, FD-24, FD-25, FD-29, FD-41, FD-53, and FD-54. The causal chain validator checks dependency IDs and recursively validates ancestry, state, timestamps, provenance, and expiry. Risk-state helpers apply state factors to caller-supplied ceilings; gate validation checks transitive prerequisites and their required artifacts. The statistical-method catalog also records prompt-listed methods without implementations as specification-only.
 
-The fixed local V4.29 runner passed on Windows/Python 3.14.7 with **1,417 passed, 26 skipped**, exit code 0, and `RELEASE_HYGIENE=PASS`. Preflight: `READY_FOR_MILESTONE`, `allowed=true`, 257 unique contract-input hashes, zero blockers. `external_evidence=false`, `production_ready=false`, and `activation_flag=NOT_SET`. Hosted PR CI is pending.
+The fixed local V4.29 runner passed on Windows/Python 3.14.7 with **1,417 passed, 26 skipped**, exit code 0, and `RELEASE_HYGIENE=PASS`. Preflight: `READY_FOR_MILESTONE`, `allowed=true`, 257 unique contract-input hashes, zero blockers. `external_evidence=false`, `production_ready=false`, and `activation_flag=NOT_SET`. Hosted PR CI run 44348438800 passed for head `66195a5d0323649723e91cb37f344f06ac87ea97`; its audit artifact is ID 14447910723 with SHA-256 `e8ab94b3d16e22e0057faf6f97030b12fb0760c380c3daac7e3b7c3b1b21e23a`.
 
 The remaining §179 PARTIAL entries are FD-06, FD-08, FD-10/FD-11, and FD-44. The statistical method specification rows for Deflated Sharpe, PBO, bootstrap, permutation, and multiple-testing correction explicitly state that implementations are absent. No exchange order, deployment, or production activation was performed.
 

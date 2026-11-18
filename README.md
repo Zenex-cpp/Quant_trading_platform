@@ -1,7 +1,7 @@
 # Quant Trading Platform
 
 **Repository release train:** `V4.29-RECOVERY`  
-**Python distribution version:** `3.61.39` (a separate versioning scheme).
+**Python distribution version:** `3.61.40` (a separate versioning scheme).
 
 The current repository is a recovery extension based on the available V4.28 recovery archive. Byte-for-byte canonical lineage to V4.23 and V4.26 is **not established** because those source archives are not available in the project.
 
@@ -12,7 +12,7 @@ The current repository is a recovery extension based on the available V4.28 reco
 - Holdout incidents are reconciled from the durable event store at context startup, so an interrupted invalidation is completed before dependents can be used.
 - M16 configuration authority is enforced at final Testnet dispatch and deployment activation. Resolution ID, fingerprint, status and expiry are checked against the durable ledger; failures stop dispatch or activation before the external action.
 - The final dispatch boundary requires durable risk-decision, position, fresh-market and causal-TTL authorities for risk-increasing orders. Missing or expired authority blocks before the gateway.
-- Package 3.61.39 adds fail-closed §179 contracts for Risk State, the six decision TTL classes, the complete 13-artifact causal chain, statistical methods, transitive gate prerequisites, restart, and disaster recovery. The §179 register now records 50 PRESENT, 5 PARTIAL, and 0 OPEN repository artifacts; FD-06, FD-08, FD-10/FD-11, and FD-44 remain PARTIAL.
+- Package 3.61.40 adds normalized monotone execution-risk position caps and concentration-adjusted correlated-exposure caps. The fixed V4.29 runner passes with 1,423 passed, 26 skipped, and `RELEASE_HYGIENE=PASS`; its preflight is `READY_FOR_MILESTONE`, allowed, and has 258 unique inputs with zero blockers. The §179 register records 50 PRESENT, 5 PARTIAL, and 0 OPEN repository artifacts; FD-06, FD-08, FD-10/FD-11, and FD-44 remain PARTIAL.
 - M1–M5 authority checks now cover the legacy V3.36/V3.79/V3.80/V3.84/V3.85 submit paths as well as the V3.11 dispatcher; unguarded adapters fail closed.
 - V3.75 live/shadow prediction calls now require current durable compatibility authority across all seven runtime dimensions.
 - Signed JSON model loading checks Ed25519 signature, content hash, schemas and runtime compatibility before inference; V3.75 binds the loaded model ID/hash to its M14 authorization. Trusted-key governance and production deployment remain open.
@@ -124,6 +124,8 @@ The 3.61.4 safety patch restricts the legacy Testnet evidence session and runner
 
 
 ## V5.0 first-delivery work
+
+Version 3.61.40 adds tested monotone caps for normalized execution-risk severity and concentration-adjusted correlated exposure, and wires an optional execution-risk input into `adjusted_risk`. Inputs remain caller-supplied; correlation estimation, measurement provenance, and platform-wide invocation are not established. FD-08 remains PARTIAL.
 
 Version 3.61.39 adds machine-readable, fail-closed contracts for risk states, all six §20 TTL classes, the complete §21 causal artifact chain, the current statistical method inventory plus explicit unimplemented §97 candidates, transitive promotion and activation gate dependencies, recovery/restart, and disaster recovery. The contract suite guards catalog coverage, causal ancestry validity and expiry, risk-state caps, gate prerequisites/artifacts, and recovery/DR rows. The register now records 50 PRESENT, 5 PARTIAL, and 0 OPEN repository artifacts. This is artifact coverage only; production evidence and independent review remain separate requirements.
 
