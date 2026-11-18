@@ -1,0 +1,7 @@
+state_id,severity,risk_factor,new_risk_action,existing_position_action,recovery_requirement,source_reference
+NORMAL,0,1,ALLOW_WITH_ACTIVE_LIMITS,MONITOR_AND_RECONCILE,NONE,src/trading_platform/v318/durable_decision.py
+ELEVATED,1,0.75,ALLOW_WITH_TIGHTENING,MONITOR_AND_REDUCE_IF_REQUIRED,NONE,src/trading_platform/v356/risk_state_monotonicity.py
+RESTRICTED,2,0.50,ALLOW_ONLY_WITH_REDUCED_CAP,REDUCE_OR_CLOSE,REVALIDATE_RISK_INPUTS,src/trading_platform/v356/risk_state_monotonicity.py
+FROZEN,3,0,BLOCK_NEW_RISK,CLOSE_OR_CANCEL_ONLY,RECOVERY_PROOF_REQUIRED,src/trading_platform/v318/durable_decision.py
+EMERGENCY,4,0,BLOCK_NEW_RISK_AND_HALT,CLOSE_OR_CANCEL_ONLY,RECOVERY_PROOF_AND_ESCALATION,src/trading_platform/v318/durable_decision.py
+RECOVERY,5,0,BLOCK_UNTIL_RECOVERY_PROOF,READ_ONLY_OR_CONTROLLED_EXIT,RECOVERY_PROOF_AND_RECONCILIATION,src/trading_platform/v324/recovery_proof.py

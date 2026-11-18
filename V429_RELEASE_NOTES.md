@@ -1,5 +1,15 @@
 # Trading Platform V4.29 Recovery — Release Notes
 
+## Package 3.61.39 — Fail-closed §179 contracts
+
+- Added machine-readable contracts for the six risk states and factor-based risk caps, all six §20 decision TTL classes, and the complete 13-node §21 causal artifact chain.
+- The causal validator now checks required dependency IDs, recursively validates ancestry, rejects invalid state and expired/future records, enforces timestamp order, and prevents a downstream record from outliving its upstream.
+- Added the 18-entry statistical method catalog. Methods not implemented in the repository, including Deflated Sharpe, PBO, bootstrap, permutation, and multiple-testing correction, are explicitly marked `implementation_not_present` and remain specification-only.
+- Gate checks now require the transitive prerequisite closure and every artifact declared by gates in that closure. Added unified restart and disaster-recovery plans.
+- FD-21, FD-24, FD-25, FD-29, FD-41, FD-53, and FD-54 are PRESENT as repository artifacts. FD-06, FD-08, FD-10/FD-11, and FD-44 remain PARTIAL; external and operational evidence remains separate.
+- The §179 register now records **50 PRESENT, 5 PARTIAL, 0 OPEN**. No production activation, exchange order, or deployment is implied.
+- Verification: the fixed local V4.29 runner passed with **1,417 passed, 26 skipped**, exit code 0, and `RELEASE_HYGIENE=PASS`. Preflight was `READY_FOR_MILESTONE`, `allowed=true`, with 257 unique contract inputs and zero blockers; `external_evidence=false`, `production_ready=false`, `activation_flag=NOT_SET`.
+
 ## Package 3.61.38 — Durable risk reservation flow
 
 - Risk reservation budget checks and writes now run under SQLite `BEGIN IMMEDIATE`, preventing concurrent persistent writers from allocating the same remaining budget.

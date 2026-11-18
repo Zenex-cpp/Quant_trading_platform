@@ -1,5 +1,12 @@
 # V4.29 Open Gaps Delta
 
+## §179 contracts and current repository status — 18 November 2026
+
+- Package 3.61.39 adds canonical machine-readable contracts for FD-21, FD-24, FD-25, FD-29, FD-41, FD-53, and FD-54, with loaders and contract tests. The §179 register records 50 PRESENT, 5 PARTIAL, and 0 OPEN repository artifacts.
+- The causal validator checks the 13-node chain, dependency IDs, ancestry state, timestamps, provenance, and expiry. The gate matrix checks transitive prerequisites and required artifacts. The statistical method catalog marks unimplemented §97 candidates as specification-only.
+- The fixed local V4.29 runner passes with 1,417 passed, 26 skipped, and `RELEASE_HYGIENE=PASS`; its preflight has 257 unique input hashes, `READY_FOR_MILESTONE`, `allowed=true`, and zero blockers. Hosted CI on the updated PR head is the next verification step.
+- FD-06, FD-08, FD-10/FD-11, and FD-44 remain PARTIAL. Production identity, real licensed market data, venue integration, independent security/reviewer evidence, and production recovery exercises are not asserted by these repository artifacts.
+
 ## V5.0 §179 traceability audit — 12 November 2026
 
 - Added a 55-entry, test-enforced register. The current audit marks 39 items PRESENT, 16 PARTIAL and 0 OPEN. PRESENT means a canonical repository artifact exists; it does not mean independent review or production verification.

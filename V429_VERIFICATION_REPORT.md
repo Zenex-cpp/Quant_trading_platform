@@ -1,5 +1,13 @@
 # V4.29 Recovery — Verification Report
 
+## Current package — 3.61.39
+
+The §179 register now contains 55 unique deliverables: 50 PRESENT, 5 PARTIAL, and 0 OPEN. New canonical contracts cover FD-21, FD-24, FD-25, FD-29, FD-41, FD-53, and FD-54. The causal chain validator checks dependency IDs and recursively validates ancestry, state, timestamps, provenance, and expiry. Risk-state helpers apply state factors to caller-supplied ceilings; gate validation checks transitive prerequisites and their required artifacts. The statistical-method catalog also records prompt-listed methods without implementations as specification-only.
+
+The fixed local V4.29 runner passed on Windows/Python 3.14.7 with **1,417 passed, 26 skipped**, exit code 0, and `RELEASE_HYGIENE=PASS`. Preflight: `READY_FOR_MILESTONE`, `allowed=true`, 257 unique contract-input hashes, zero blockers. `external_evidence=false`, `production_ready=false`, and `activation_flag=NOT_SET`. Hosted PR CI is pending.
+
+The remaining §179 PARTIAL entries are FD-06, FD-08, FD-10/FD-11, and FD-44. The statistical method specification rows for Deflated Sharpe, PBO, bootstrap, permutation, and multiple-testing correction explicitly state that implementations are absent. No exchange order, deployment, or production activation was performed.
+
 ## V5.0 §179 first-delivery traceability
 
 Package 3.61.30 adds a 55-row register mapped to the exact prompt deliverables. Automated contract tests require unique ordered IDs, valid repository paths, and a stated gap for each PARTIAL or OPEN entry. The Model Card and Strategy Card templates are documented; StrategyCard is immutable and fingerprints all canonical fields. The six previously OPEN safety and research items now have versioned machine-readable registries. Transition idempotency rejects a conflicting spec before changing state. Focused first-delivery validation passed 35 tests; transition, release-version, and runner-contract validation passed 34. The full V4.29 runner passed with 1,363 passed, 26 skipped, and RELEASE_HYGIENE=PASS. Its preflight is READY_FOR_MILESTONE, allowed=true, pipeline PASS, zero blockers and 188 input hashes; the local activation boundary remains external_evidence=false, production_ready=false, and activation_flag=NOT_SET.

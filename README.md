@@ -1,7 +1,7 @@
 # Quant Trading Platform
 
 **Repository release train:** `V4.29-RECOVERY`  
-**Python distribution version:** `3.61.38` (a separate versioning scheme).
+**Python distribution version:** `3.61.39` (a separate versioning scheme).
 
 The current repository is a recovery extension based on the available V4.28 recovery archive. Byte-for-byte canonical lineage to V4.23 and V4.26 is **not established** because those source archives are not available in the project.
 
@@ -12,6 +12,7 @@ The current repository is a recovery extension based on the available V4.28 reco
 - Holdout incidents are reconciled from the durable event store at context startup, so an interrupted invalidation is completed before dependents can be used.
 - M16 configuration authority is enforced at final Testnet dispatch and deployment activation. Resolution ID, fingerprint, status and expiry are checked against the durable ledger; failures stop dispatch or activation before the external action.
 - The final dispatch boundary requires durable risk-decision, position, fresh-market and causal-TTL authorities for risk-increasing orders. Missing or expired authority blocks before the gateway.
+- Package 3.61.39 adds fail-closed §179 contracts for Risk State, the six decision TTL classes, the complete 13-artifact causal chain, statistical methods, transitive gate prerequisites, restart, and disaster recovery. The §179 register now records 50 PRESENT, 5 PARTIAL, and 0 OPEN repository artifacts; FD-06, FD-08, FD-10/FD-11, and FD-44 remain PARTIAL.
 - M1–M5 authority checks now cover the legacy V3.36/V3.79/V3.80/V3.84/V3.85 submit paths as well as the V3.11 dispatcher; unguarded adapters fail closed.
 - V3.75 live/shadow prediction calls now require current durable compatibility authority across all seven runtime dimensions.
 - Signed JSON model loading checks Ed25519 signature, content hash, schemas and runtime compatibility before inference; V3.75 binds the loaded model ID/hash to its M14 authorization. Trusted-key governance and production deployment remain open.
@@ -96,6 +97,13 @@ The comparison can report agreement or divergence but cannot prove the sources a
 - [V5.0 Safety Monotonicity Matrix](docs/68_V5_SAFETY_MONOTONICITY.md)
 - [V5.0 Event Schemas and Registry](docs/69_V5_EVENT_SCHEMAS_AND_REGISTRY.md)
 - [V5.0 Source-of-Truth Matrix](docs/70_V5_SOURCE_OF_TRUTH.md)
+- [V5.0 Risk State Model](docs/72_V5_RISK_STATE_MODEL.md)
+- [V5.0 Decision TTL Contract](docs/73_V5_DECISION_TTL_CONTRACT.md)
+- [V5.0 Causal Artifact Chain](docs/74_V5_CAUSAL_ARTIFACT_CHAIN.md)
+- [V5.0 Statistical Method Registry](docs/75_V5_STATISTICAL_METHOD_REGISTRY.md)
+- [V5.0 Gate Dependency Matrix](docs/76_V5_GATE_DEPENDENCY_MATRIX.md)
+- [V5.0 Recovery and Restart Plan](docs/77_V5_RECOVERY_RESTART_PLAN.md)
+- [V5.0 Disaster Recovery Plan](docs/78_V5_DISASTER_RECOVERY_PLAN.md)
 - [`MASTER PROMPT.txt`](MASTER%20PROMPT.txt) is the normative system specification.
 - [`V429_VERIFICATION_REPORT.md`](V429_VERIFICATION_REPORT.md) records the recovery build and verification boundary.
 - [`V429_OPEN_GAPS_DELTA.md`](V429_OPEN_GAPS_DELTA.md) lists unresolved external and operational gates.
@@ -116,6 +124,10 @@ The 3.61.4 safety patch restricts the legacy Testnet evidence session and runner
 
 
 ## V5.0 first-delivery work
+
+Version 3.61.39 adds machine-readable, fail-closed contracts for risk states, all six §20 TTL classes, the complete §21 causal artifact chain, the current statistical method inventory plus explicit unimplemented §97 candidates, transitive promotion and activation gate dependencies, recovery/restart, and disaster recovery. The contract suite guards catalog coverage, causal ancestry validity and expiry, risk-state caps, gate prerequisites/artifacts, and recovery/DR rows. The register now records 50 PRESENT, 5 PARTIAL, and 0 OPEN repository artifacts. This is artifact coverage only; production evidence and independent review remain separate requirements.
+
+The fixed local V4.29 runner for package 3.61.39 passed with **1,417 passed, 26 skipped**, exit code 0, and `RELEASE_HYGIENE=PASS`. Preflight was `READY_FOR_MILESTONE`, `allowed=true`, with 257 unique contract inputs and no blockers. It remains offline: `external_evidence=false`, `production_ready=false`, and `activation_flag=NOT_SET`.
 
 Version 3.61.29 added the prompt §179 traceability register, the immutable machine-readable Strategy Card template, and safety/research registries. Version 3.61.30 binds state-transition idempotency keys to the full transition specification and rejects conflicting reuse. Version 3.61.31 makes §155 role/capability checks fail closed, publishes and tests the full 9 × 9 matrix, and separates credential configuration from production-trading access. Version 3.61.32 adds the complete §153 threat inventory with control evidence and residual risks. Version 3.61.33 adds a filesystem-checked repository map. Version 3.61.34 publishes pairwise default-reject transition tables and makes the base transition engine accept only its registered `START_BACKTEST` edge. Version 3.61.35 traces eight safety monotonicity rules to implementation and tests; execution-risk and correlated-exposure enforcement remain gaps. Version 3.61.36 adds versioned payload schemas and registry enforcement for 19 typed V2.7–V2.9 event types; generic EventStore and later authority-ledger events remain unregistered. Version 3.61.37 publishes a tested 25-domain cross-domain source-of-truth matrix with explicit external authority, persistence, and production integration boundaries. Version 3.61.38 makes reservation allocation atomic across SQLite writers, requires durable accounting and a valid persistent reservation at both final submit boundaries, and publishes the §179 reservation flow. §179 is now 43 PRESENT, 12 PARTIAL, 0 OPEN. FD-06 remains PARTIAL because positive lifecycle/risk paths and durable atomic side-effect handling are not defined. FD-08 remains PARTIAL because execution risk, correlated exposure, and platform-wide hard-ceiling binding are incomplete. FD-10/FD-11 remain PARTIAL because legacy and later event streams are not fully registered. FD-44 remains PARTIAL because resource-wide entitlement and trusted identity assignment are not present. These changes do not claim production readiness or external verification.
 

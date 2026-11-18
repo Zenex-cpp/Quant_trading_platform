@@ -16,8 +16,8 @@ def test_v5_first_delivery_register_covers_all_prompt_items_and_real_paths():
     assert len(rows) == 55
     assert [row["item_id"] for row in rows] == [f"FD-{i:02d}" for i in range(1, 56)]
     assert {row["status"] for row in rows} <= {"PRESENT", "PARTIAL", "OPEN"}
-    assert sum(row["status"] == "PRESENT" for row in rows) == 43
-    assert sum(row["status"] == "PARTIAL" for row in rows) == 12
+    assert sum(row["status"] == "PRESENT" for row in rows) == 50
+    assert sum(row["status"] == "PARTIAL" for row in rows) == 5
     assert sum(row["status"] == "OPEN" for row in rows) == 0
     for row in rows:
         references = [
@@ -34,6 +34,7 @@ def test_v5_first_delivery_register_covers_all_prompt_items_and_real_paths():
 def test_v5_traceability_document_states_the_non_operational_acceptance_boundary():
     document = (ROOT / "docs/60_V5_FIRST_DELIVERY_TRACEABILITY.md").read_text(encoding="utf-8")
     assert "55" in document
+    assert "50 PRESENT, 5 PARTIAL, and 0 OPEN" in document
     assert "do not certify external review" in document
     assert "Source code alone is not sufficient" in document
 
