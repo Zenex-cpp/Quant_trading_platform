@@ -1,5 +1,13 @@
 # Trading Platform V4.29 Recovery — Release Notes
 
+## Package 3.61.44 — Resource-scoped credential authorization
+
+- Production vault construction now requires both a persistent secret backend and an injected authorization provider. Production operations require an identity proof; caller-supplied roles are rejected.
+- Authorization decisions bind the capability and authenticated identity to the exact credential resource. Register, revoke, metadata, and resolve paths enforce this boundary, and successful ledger events store the actor and decision IDs without storing the identity proof.
+- Regression coverage verifies missing-provider failure, exact-resource grants, denied cross-resource access, caller-role rejection, durable audit replay, and idempotent registration retries with fresh decision IDs. Focused credential, permission, and release-contract checks passed **41 tests**.
+- The full local V4.29 runner passed on Windows/Python 3.14.7 with **1,444 passed, 26 skipped**, exit code 0, and `RELEASE_HYGIENE=PASS`. Preflight was `READY_FOR_MILESTONE`, `allowed=true`, with **265** unique input hashes and zero blockers; `external_evidence=false`, `production_ready=false`, and `activation_flag=NOT_SET`.
+- FD-44 remains PARTIAL because the external identity provider and entitlement source are not present, and resource-level authorization is not integrated across the platform.
+
 ## Package 3.61.43 — Durable atomic state transition
 
 - Added `PersistentTransitionEngine` for the registered `START_BACKTEST` edge. It atomically commits current state, idempotency record, and audit event in one file-backed SQLite transaction.

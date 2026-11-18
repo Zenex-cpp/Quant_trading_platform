@@ -6,6 +6,7 @@ import pytest
 
 from trading_platform.v21.event_store import EventStore
 from trading_platform.security.credentials import (
+    CredentialAuthorizationDecision,
     ProductionCredentialAccessError,
     ProductionCredentialRef,
     ProductionCredentialVault,
@@ -13,11 +14,65 @@ from trading_platform.security.credentials import (
     assert_research_arguments,
     assert_research_safe,
 )
+from trading_platform.security.permissions import Capability
 from trading_platform.security.credential_backends import (
     CredentialBackendError,
     InMemoryCredentialSecretBackend,
 )
 from trading_platform.v35.binance_execution import RuntimeCredentialValues
+
+
+class _PersistentTestBackend(InMemoryCredentialSecretBackend):
+    """In-memory implementation marked persistent only to exercise production wiring."""
+
+    persistent = True
+
+
+class _ScopedAuthorizationProvider:
+    def __init__(self, principals):
+        self.principals = principals
+        self.calls = []
+
+    def authorize(self, *, identity, capability, resource_id):
+        self.calls.append((identity, capability, resource_id))
+        principal = self.principals.get(identity)
+        if principal is None:
+            actor_id, actor_role, grants = "unverified", "UNKNOWN", frozenset()
+        else:
+            actor_id, actor_role, grants = principal
+        return CredentialAuthorizationDecision(
+            allowed=(capability, resource_id) in grants,
+            actor_id=actor_id,
+            actor_role=actor_role,
+            capability=capability,
+            resource_id=resource_id,
+            decision_id=f"decision-{len(self.calls)}",
+        )
+
+
+def _production_authorization_provider():
+    credential = "production-credential:prod-primary"
+    return _ScopedAuthorizationProvider(
+        {
+            "config-proof": (
+                "operator-17",
+                "SECURITY_ADMIN",
+                frozenset({(Capability.CONFIGURATION, credential)}),
+            ),
+            "trading-proof": (
+                "worker-4",
+                "PRODUCTION_TRADING",
+                frozenset({(Capability.PRODUCTION_TRADING, credential)}),
+            ),
+            "other-config-proof": (
+                "operator-23",
+                "CONFIGURATION",
+                frozenset({
+                    (Capability.CONFIGURATION, "production-credential:other-account")
+                }),
+            ),
+        }
+    )
 
 
 def vault_and_ref():
@@ -186,6 +241,117 @@ def test_production_vault_requires_a_persistent_backend_by_default():
         ProductionCredentialVault()
     with pytest.raises(ProductionCredentialAccessError, match="EPHEMERAL_BACKEND_FORBIDDEN"):
         ProductionCredentialVault(secret_backend=InMemoryCredentialSecretBackend())
+
+
+def test_production_vault_requires_trusted_identity_provider():
+    with pytest.raises(ProductionCredentialAccessError, match="AUTHORIZATION_PROVIDER_REQUIRED"):
+        ProductionCredentialVault(secret_backend=_PersistentTestBackend())
+
+
+def test_production_authorization_binds_identity_capability_and_resource(tmp_path):
+    ledger_path = tmp_path / "production-credentials.sqlite3"
+    store = EventStore(str(ledger_path))
+    backend = _PersistentTestBackend()
+    provider = _production_authorization_provider()
+    vault = ProductionCredentialVault(
+        store=store,
+        secret_backend=backend,
+        authorization_provider=provider,
+    )
+
+    def register():
+        return vault.register(
+            credential_id="prod-primary",
+            version="v1",
+            api_key="PROD_API_KEY",
+            api_secret=b"PROD_API_SECRET",
+            valid_from_ms=10,
+            ttl_ms=100,
+            identity="config-proof",
+        )
+
+    ref = register()
+    assert register() == ref  # A fresh decision ID does not break an exact retry.
+    assert vault.metadata(ref, identity="config-proof").status is CredentialStatus.ACTIVE
+    assert vault.resolve(ref, identity="trading-proof", now_ms=20).values() == (
+        "PROD_API_KEY",
+        b"PROD_API_SECRET",
+    )
+
+    with pytest.raises(ProductionCredentialAccessError, match="RESEARCH_FORBIDDEN"):
+        vault.resolve(
+            ref,
+            identity="trading-proof",
+            actor_role="PRODUCTION_TRADING",
+            now_ms=21,
+        )
+    with pytest.raises(ProductionCredentialAccessError, match="RESEARCH_FORBIDDEN"):
+        vault.revoke(
+            credential_id="prod-primary",
+            version="v1",
+            now_ms=22,
+            identity="other-config-proof",
+        )
+
+    vault.revoke(
+        credential_id="prod-primary",
+        version="v1",
+        now_ms=23,
+        identity="config-proof",
+    )
+    events = list(store.iter_events())
+    register_events = [event for event in events if event.event_type == vault.REGISTER_EVENT]
+    resolve_events = [event for event in events if event.event_type == vault.RESOLVE_EVENT]
+    revoke_events = [event for event in events if event.event_type == vault.REVOKE_EVENT]
+    assert len(register_events) == len(resolve_events) == len(revoke_events) == 1
+    assert register_events[0].payload["actor_id"] == "operator-17"
+    assert register_events[0].payload["authorization_decision_id"] == "decision-1"
+    assert resolve_events[0].payload["actor_id"] == "worker-4"
+    assert revoke_events[0].payload["actor_id"] == "operator-17"
+    assert "config-proof" not in str(events)
+    assert "trading-proof" not in str(events)
+    assert {resource for _, _, resource in provider.calls} == {
+        "production-credential:prod-primary"
+    }
+    assert store.verify_chain()
+    store.close()
+
+    reopened_store = EventStore(str(ledger_path))
+    reopened = ProductionCredentialVault(
+        store=reopened_store,
+        secret_backend=backend,
+        authorization_provider=provider,
+    )
+    assert reopened.metadata(ref, identity="config-proof").status is CredentialStatus.REVOKED
+    assert reopened_store.verify_chain()
+    reopened_store.close()
+
+
+def test_production_vault_rejects_provider_decision_for_another_resource():
+    class WrongResourceProvider:
+        def authorize(self, *, identity, capability, resource_id):
+            return CredentialAuthorizationDecision(
+                allowed=True,
+                actor_id="operator-17",
+                actor_role="SECURITY_ADMIN",
+                capability=capability,
+                resource_id="production-credential:other-account",
+                decision_id="decision-wrong-resource",
+            )
+
+    vault = ProductionCredentialVault(
+        secret_backend=_PersistentTestBackend(),
+        authorization_provider=WrongResourceProvider(),
+    )
+    with pytest.raises(ProductionCredentialAccessError, match="RESEARCH_FORBIDDEN"):
+        vault.register(
+            credential_id="prod-primary",
+            version="v1",
+            api_key="KEY",
+            api_secret=b"SECRET",
+            valid_from_ms=10,
+            identity="config-proof",
+        )
 
 
 def test_metadata_and_revocation_replay_from_durable_ledger(tmp_path):

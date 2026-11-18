@@ -12,7 +12,7 @@ from enum import Enum
 from hashlib import sha256
 from collections.abc import Mapping, Sequence
 from threading import RLock
-from typing import Any
+from typing import Any, Protocol
 import re
 from uuid import uuid4
 
@@ -24,6 +24,9 @@ from trading_platform.security.credential_backends import (
     CredentialSecretBackend,
     InMemoryCredentialSecretBackend,
 )
+
+
+_TEST_ONLY_VAULT_AUTHORITY = object()
 
 
 class ProductionCredentialAccessError(PermissionError):
@@ -69,6 +72,47 @@ class ProductionCredentialRef:
 
 _CREDENTIAL_IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 _CREDENTIAL_FINGERPRINT = re.compile(r"^[0-9a-f]{64}$")
+_AUTHORITY_IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:@/-]{0,255}$")
+
+
+@dataclass(frozen=True)
+class CredentialAuthorizationDecision:
+    """Authenticated, resource-scoped authorization result from a trusted provider."""
+
+    allowed: bool
+    actor_id: str
+    actor_role: str
+    capability: Capability
+    resource_id: str
+    decision_id: str
+
+
+class CredentialAuthorizationProvider(Protocol):
+    """Application-owned adapter for authenticating identity and resource grants.
+
+    Implementations must authenticate ``identity`` and decide the capability for
+    the exact resource. The opaque identity value is never written to the ledger.
+    """
+
+    def authorize(
+        self, *, identity: object, capability: Capability, resource_id: str
+    ) -> CredentialAuthorizationDecision: ...
+
+
+@dataclass(frozen=True)
+class _CredentialActor:
+    allowed: bool
+    role: str
+    actor_id: str | None = None
+    decision_id: str | None = None
+
+    def audit_fields(self) -> dict[str, str]:
+        if self.actor_id is None or self.decision_id is None:
+            return {}
+        return {
+            "actor_id": self.actor_id,
+            "authorization_decision_id": self.decision_id,
+        }
 
 
 @dataclass(frozen=True)
@@ -90,10 +134,11 @@ class _CredentialRecord:
 class ProductionCredentialVault:
     """Audited metadata vault backed by an explicitly selected secret store.
 
-    Production construction requires a persistent backend. Ephemeral credentials
-    are available only through :meth:`for_testing`. The event ledger stores
-    metadata and fingerprints only; secret bytes are fetched from the backend at
-    resolution and are never cached in a vault record.
+    Production construction requires a persistent secret backend and a trusted,
+    resource-aware authorization provider. Ephemeral credentials and caller-role
+    authorization are available only through :meth:`for_testing`. The event
+    ledger stores metadata and fingerprints only; secret bytes are fetched from
+    the backend at resolution and are never cached in a vault record.
     """
 
     REGISTER_EVENT = "PRODUCTION_CREDENTIAL_REGISTERED"
@@ -101,7 +146,8 @@ class ProductionCredentialVault:
     DENY_EVENT = "PRODUCTION_CREDENTIAL_RESOLUTION_DENIED"
     REVOKE_EVENT = "PRODUCTION_CREDENTIAL_REVOKED"
     _REGISTER_FIELDS = {
-        "credential_id", "version", "valid_from_ms", "expires_at_ms", "fingerprint", "status", "actor_role"
+        "credential_id", "version", "valid_from_ms", "expires_at_ms", "fingerprint", "status",
+        "actor_role", "actor_id", "authorization_decision_id",
     }
 
     def __init__(
@@ -109,14 +155,24 @@ class ProductionCredentialVault:
         *,
         store: EventStore | None = None,
         secret_backend: CredentialSecretBackend | None = None,
-        _allow_ephemeral_for_tests: bool = False,
+        authorization_provider: CredentialAuthorizationProvider | None = None,
+        _test_only_authority: object | None = None,
     ):
+        test_mode = _test_only_authority is _TEST_ONLY_VAULT_AUTHORITY
         if not isinstance(secret_backend, CredentialSecretBackend):
             raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_BACKEND_REQUIRED")
-        if not secret_backend.persistent and not _allow_ephemeral_for_tests:
+        if not secret_backend.persistent and not test_mode:
             raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_EPHEMERAL_BACKEND_FORBIDDEN")
+        if not test_mode and authorization_provider is None:
+            raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_AUTHORIZATION_PROVIDER_REQUIRED")
+        if authorization_provider is not None and not callable(
+            getattr(authorization_provider, "authorize", None)
+        ):
+            raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_AUTHORIZATION_PROVIDER_INVALID")
         self.__store = store if store is not None else EventStore()
         self.__secret_backend = secret_backend
+        self.__authorization_provider = authorization_provider
+        self.__test_mode = test_mode
         self.__records: dict[tuple[str, str], _CredentialRecord] = {}
         self.__lock = RLock()
         self.__restore_metadata()
@@ -132,7 +188,7 @@ class ProductionCredentialVault:
         return cls(
             store=store,
             secret_backend=secret_backend or InMemoryCredentialSecretBackend(),
-            _allow_ephemeral_for_tests=True,
+            _test_only_authority=_TEST_ONLY_VAULT_AUTHORITY,
         )
 
     @property
@@ -156,15 +212,26 @@ class ProductionCredentialVault:
         api_secret: bytes,
         valid_from_ms: int,
         ttl_ms: int = 3_600_000,
-        actor_role: str,
+        actor_role: str | None = None,
+        identity: object | None = None,
     ) -> ProductionCredentialRef:
-        role = self._assert_management_access(actor_role)
         if (
             not isinstance(credential_id, str)
             or not isinstance(version, str)
-            or not credential_id
-            or not version
-            or not isinstance(api_key, str)
+            or not _CREDENTIAL_IDENTIFIER.fullmatch(credential_id)
+            or not _CREDENTIAL_IDENTIFIER.fullmatch(version)
+        ):
+            raise ValueError("PRODUCTION_CREDENTIAL_IDENTIFIER_INVALID")
+        actor = self._authorize(
+            identity=identity,
+            actor_role=actor_role,
+            capability=Capability.CONFIGURATION,
+            credential_id=credential_id,
+        )
+        if not actor.allowed:
+            raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_RESEARCH_FORBIDDEN")
+        if (
+            not isinstance(api_key, str)
             or not api_key
             or not isinstance(api_secret, bytes)
             or not api_secret
@@ -192,14 +259,15 @@ class ProductionCredentialVault:
             "expires_at_ms": ref.expires_at_ms,
             "fingerprint": fingerprint,
             "status": CredentialStatus.ACTIVE.value,
-            "actor_role": role,
+            "actor_role": actor.role,
+            **actor.audit_fields(),
         }
         with self.__lock:
             existing = self.__store.get(event_id)
             if existing is not None and (
                 existing.event_type != self.REGISTER_EVENT
                 or existing.aggregate_id != credential_id
-                or dict(existing.payload) != payload
+                or not self.__register_retry_matches(dict(existing.payload), payload)
             ):
                 raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_ID_CONFLICT")
             record = self.__records.get(key)
@@ -241,7 +309,8 @@ class ProductionCredentialVault:
         api_secret: bytes,
         valid_from_ms: int,
         ttl_ms: int = 3_600_000,
-        actor_role: str,
+        actor_role: str | None = None,
+        identity: object | None = None,
     ) -> ProductionCredentialRef:
         """Register a new version; the old version remains auditable and independently revocable."""
         return self.register(
@@ -252,11 +321,30 @@ class ProductionCredentialVault:
             valid_from_ms=valid_from_ms,
             ttl_ms=ttl_ms,
             actor_role=actor_role,
+            identity=identity,
         )
 
-    def metadata(self, ref: ProductionCredentialRef) -> ProductionCredentialMetadata:
+    def metadata(
+        self,
+        ref: ProductionCredentialRef,
+        *,
+        actor_role: str | None = None,
+        identity: object | None = None,
+    ) -> ProductionCredentialMetadata:
         if not isinstance(ref, ProductionCredentialRef):
             raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_REFERENCE_INVALID")
+        if not _CREDENTIAL_IDENTIFIER.fullmatch(ref.credential_id):
+            raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_REFERENCE_INVALID")
+        actor = self._authorize(
+            identity=identity,
+            actor_role=(actor_role or Capability.SECURITY_ADMIN.value)
+            if self.__test_mode
+            else actor_role,
+            capability=Capability.CONFIGURATION,
+            credential_id=ref.credential_id,
+        )
+        if not actor.allowed:
+            raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_AUTHORIZATION_FORBIDDEN")
         with self.__lock:
             record = self.__records.get((ref.credential_id, ref.version))
             if record is None:
@@ -272,8 +360,30 @@ class ProductionCredentialVault:
                 record.ref.fingerprint,
             )
 
-    def revoke(self, *, credential_id: str, version: str, now_ms: int, actor_role: str) -> None:
-        role = self._assert_management_access(actor_role)
+    def revoke(
+        self,
+        *,
+        credential_id: str,
+        version: str,
+        now_ms: int,
+        actor_role: str | None = None,
+        identity: object | None = None,
+    ) -> None:
+        if (
+            not isinstance(credential_id, str)
+            or not _CREDENTIAL_IDENTIFIER.fullmatch(credential_id)
+            or not isinstance(version, str)
+            or not _CREDENTIAL_IDENTIFIER.fullmatch(version)
+        ):
+            raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_REFERENCE_INVALID")
+        actor = self._authorize(
+            identity=identity,
+            actor_role=actor_role,
+            capability=Capability.CONFIGURATION,
+            credential_id=credential_id,
+        )
+        if not actor.allowed:
+            raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_RESEARCH_FORBIDDEN")
         if not isinstance(now_ms, int) or isinstance(now_ms, bool) or now_ms < 0:
             raise ValueError("PRODUCTION_CREDENTIAL_REVOCATION_TIME_INVALID")
         key = (credential_id, version)
@@ -282,7 +392,12 @@ class ProductionCredentialVault:
             if record is None:
                 raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_UNKNOWN")
             if record.status is not CredentialStatus.REVOKED:
-                payload = {"credential_id": credential_id, "version": version, "actor_role": role}
+                payload = {
+                    "credential_id": credential_id,
+                    "version": version,
+                    "actor_role": actor.role,
+                    **actor.audit_fields(),
+                }
                 appended = self.__store.append(
                     event_id=f"production-credential-revoke:{credential_id}:{version}:{now_ms}",
                     occurred_at_ms=now_ms,
@@ -304,18 +419,25 @@ class ProductionCredentialVault:
             except CredentialBackendError:
                 raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_BACKEND_DELETE_FAILED") from None
 
-    def resolve(self, ref: ProductionCredentialRef, *, actor_role: str, now_ms: int) -> RuntimeCredentialValues:
-        role = self._normalized_role(actor_role)
-        if role != Capability.PRODUCTION_TRADING.value:
-            self.__audit_deny(ref, role, now_ms, "ROLE_FORBIDDEN")
-            raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_RESEARCH_FORBIDDEN")
-        try:
-            assert_capability(role, Capability.PRODUCTION_TRADING)
-        except PermissionError:
-            self.__audit_deny(ref, role, now_ms, "CAPABILITY_FORBIDDEN")
-            raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_RESEARCH_FORBIDDEN")
+    def resolve(
+        self,
+        ref: ProductionCredentialRef,
+        *,
+        now_ms: int,
+        actor_role: str | None = None,
+        identity: object | None = None,
+    ) -> RuntimeCredentialValues:
         if not isinstance(ref, ProductionCredentialRef):
             raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_REFERENCE_INVALID")
+        actor = self._authorize(
+            identity=identity,
+            actor_role=actor_role,
+            capability=Capability.PRODUCTION_TRADING,
+            credential_id=ref.credential_id,
+        )
+        if not actor.allowed:
+            self.__audit_deny(ref, actor, now_ms, "AUTHORIZATION_FORBIDDEN")
+            raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_RESEARCH_FORBIDDEN")
         ref.validate(now_ms=now_ms)
         with self.__lock:
             record = self.__records.get((ref.credential_id, ref.version))
@@ -342,8 +464,9 @@ class ProductionCredentialVault:
             payload = {
                 "credential_id": ref.credential_id,
                 "version": ref.version,
-                "actor_role": role,
+                "actor_role": actor.role,
                 "fingerprint": ref.fingerprint,
+                **actor.audit_fields(),
             }
             appended = self.__store.append(
                 event_id=f"production-credential-resolve:{ref.credential_id}:{ref.version}:{now_ms}:{uuid4().hex}",
@@ -360,19 +483,80 @@ class ProductionCredentialVault:
     def _normalized_role(actor_role: Any) -> str:
         if not isinstance(actor_role, str):
             return "UNKNOWN"
-        role = actor_role.upper()
+        role = actor_role.strip().upper()
         allowed = {capability.value for capability in Capability}
         return role if role in allowed else "UNKNOWN"
 
-    def _assert_management_access(self, actor_role: str) -> str:
-        role = self._normalized_role(actor_role)
-        if role not in {Capability.SECURITY_ADMIN.value, Capability.CONFIGURATION.value}:
-            raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_RESEARCH_FORBIDDEN")
-        assert_capability(role, Capability.CONFIGURATION)
-        return role
+    def _authorize(
+        self,
+        *,
+        identity: object | None,
+        actor_role: str | None,
+        capability: Capability,
+        credential_id: str,
+    ) -> _CredentialActor:
+        resource_id = f"production-credential:{credential_id}"
+        if self.__test_mode:
+            role = self._normalized_role(actor_role)
+            if identity is not None or actor_role is None:
+                return _CredentialActor(False, role)
+            try:
+                assert_capability(role, capability)
+            except PermissionError:
+                return _CredentialActor(False, role)
+            return _CredentialActor(True, role)
 
-    def __audit_deny(self, ref: ProductionCredentialRef, actor_role: str, now_ms: int, reason: str) -> None:
-        safe_role = self._normalized_role(actor_role)
+        provider = self.__authorization_provider
+        if provider is None or identity is None or actor_role is not None:
+            return _CredentialActor(False, "UNKNOWN")
+        try:
+            decision = provider.authorize(
+                identity=identity,
+                capability=capability,
+                resource_id=resource_id,
+            )
+        except PermissionError:
+            return _CredentialActor(False, "UNKNOWN")
+        if not isinstance(decision, CredentialAuthorizationDecision):
+            return _CredentialActor(False, "UNKNOWN")
+        role = self._normalized_role(decision.actor_role)
+        if (
+            not isinstance(decision.allowed, bool)
+            or not isinstance(decision.actor_id, str)
+            or not _AUTHORITY_IDENTIFIER.fullmatch(decision.actor_id)
+            or not isinstance(decision.decision_id, str)
+            or not _AUTHORITY_IDENTIFIER.fullmatch(decision.decision_id)
+            or decision.capability is not capability
+            or decision.resource_id != resource_id
+        ):
+            return _CredentialActor(False, "UNKNOWN")
+        try:
+            assert_capability(role, capability)
+            role_allowed = True
+        except PermissionError:
+            role_allowed = False
+        return _CredentialActor(
+            allowed=decision.allowed and role_allowed,
+            role=role,
+            actor_id=decision.actor_id,
+            decision_id=decision.decision_id,
+        )
+
+    @staticmethod
+    def __register_retry_matches(existing: dict[str, Any], requested: dict[str, Any]) -> bool:
+        # A provider may issue a fresh decision ID for an exact request retry.
+        # Preserve the original audit decision while binding all stable fields,
+        # including the authenticated actor, to the retry.
+        existing_stable = dict(existing)
+        requested_stable = dict(requested)
+        existing_stable.pop("authorization_decision_id", None)
+        requested_stable.pop("authorization_decision_id", None)
+        return existing_stable == requested_stable
+
+    def __audit_deny(
+        self, ref: ProductionCredentialRef, actor: _CredentialActor, now_ms: int, reason: str
+    ) -> None:
+        safe_role = actor.role
         if not isinstance(ref, ProductionCredentialRef):
             raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_REFERENCE_INVALID")
         try:
@@ -389,6 +573,7 @@ class ProductionCredentialVault:
                 "version": ref.version,
                 "actor_role": safe_role,
                 "reason": reason,
+                **actor.audit_fields(),
             },
         )
         if not self.__store.verify_chain():
@@ -398,19 +583,37 @@ class ProductionCredentialVault:
         if not self.__store.verify_chain():
             raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_AUDIT_CHAIN_INVALID")
         records: dict[tuple[str, str], _CredentialRecord] = {}
-        legacy_register_fields = self._REGISTER_FIELDS - {"actor_role"}
+        legacy_register_fields = self._REGISTER_FIELDS - {
+            "actor_role", "actor_id", "authorization_decision_id"
+        }
+        role_only_register_fields = self._REGISTER_FIELDS - {
+            "actor_id", "authorization_decision_id"
+        }
         for event in self.__store.iter_events():
             payload = event.payload
             if event.event_type == self.REGISTER_EVENT:
                 try:
                     fields = frozenset(payload)
-                    if fields not in {frozenset(self._REGISTER_FIELDS), frozenset(legacy_register_fields)}:
+                    if fields not in {
+                        frozenset(self._REGISTER_FIELDS),
+                        frozenset(role_only_register_fields),
+                        frozenset(legacy_register_fields),
+                    }:
                         raise ValueError
                     credential_id = payload["credential_id"]
                     version = payload["version"]
                     if event.aggregate_id != credential_id:
                         raise ValueError
                     role = payload.get("actor_role", "UNKNOWN")
+                    if ("actor_id" in payload) != ("authorization_decision_id" in payload):
+                        raise ValueError
+                    if "actor_id" in payload and (
+                        not isinstance(payload["actor_id"], str)
+                        or not _AUTHORITY_IDENTIFIER.fullmatch(payload["actor_id"])
+                        or not isinstance(payload["authorization_decision_id"], str)
+                        or not _AUTHORITY_IDENTIFIER.fullmatch(payload["authorization_decision_id"])
+                    ):
+                        raise ValueError
                     if role != "UNKNOWN" and role not in {
                         Capability.SECURITY_ADMIN.value,
                         Capability.CONFIGURATION.value,
@@ -438,11 +641,24 @@ class ProductionCredentialVault:
                     raise ProductionCredentialAccessError("PRODUCTION_CREDENTIAL_AUDIT_SCHEMA_INVALID") from None
             elif event.event_type == self.REVOKE_EVENT:
                 try:
-                    if set(payload) != {"credential_id", "version", "actor_role"}:
+                    old_revoke_fields = {"credential_id", "version", "actor_role"}
+                    new_revoke_fields = old_revoke_fields | {"actor_id", "authorization_decision_id"}
+                    if frozenset(payload) not in {
+                        frozenset(old_revoke_fields), frozenset(new_revoke_fields)
+                    }:
                         raise ValueError
                     credential_id = payload["credential_id"]
                     version = payload["version"]
                     role = payload["actor_role"]
+                    if ("actor_id" in payload) != ("authorization_decision_id" in payload):
+                        raise ValueError
+                    if "actor_id" in payload and (
+                        not isinstance(payload["actor_id"], str)
+                        or not _AUTHORITY_IDENTIFIER.fullmatch(payload["actor_id"])
+                        or not isinstance(payload["authorization_decision_id"], str)
+                        or not _AUTHORITY_IDENTIFIER.fullmatch(payload["authorization_decision_id"])
+                    ):
+                        raise ValueError
                     if event.aggregate_id != credential_id or role not in {
                         Capability.CONFIGURATION.value,
                         Capability.SECURITY_ADMIN.value,

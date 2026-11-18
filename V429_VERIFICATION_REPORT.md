@@ -1,6 +1,12 @@
 # V4.29 Recovery — Verification Report
 
-## Current package — 3.61.43
+## Current package — 3.61.44
+
+Package 3.61.44 requires a persistent secret backend and trusted authorization provider at production credential-vault construction. Register, rotate, revoke, metadata, and resolve decisions bind the authenticated actor's capability to the exact credential resource; a caller-supplied role is rejected. Successful register/revoke/resolve events persist the provider actor and decision IDs, while identity proofs remain out of the ledger. Exact registration retries tolerate provider decision-ID rotation only when the stable request and authenticated actor match. Tests also reopen a production-shaped durable ledger and restore registration/revocation metadata.
+
+Focused credential, permissions, and release-integrity checks passed **41 tests**. The full local V4.29 runner passed on Windows/Python 3.14.7 with **1,444 passed, 26 skipped**, exit code 0, and `RELEASE_HYGIENE=PASS`. Preflight: `READY_FOR_MILESTONE`, `allowed=true`, `pipeline_status=PASS`, **265** unique input hashes, zero blockers; `external_evidence=false`, `production_ready=false`, `activation_flag=NOT_SET`. Hosted CI will be recorded after publication. FD-44 remains `PARTIAL`: the identity provider and entitlement source are not included, and platform-wide resource enforcement is not implemented.
+
+## Package 3.61.43
 
 Package 3.61.43 adds `PersistentTransitionEngine` for the single registered `START_BACKTEST` transition. The engine persists the current orthogonal state, idempotency record, and audit event in one SQLite transaction, recovers exact retries after restart, rejects changed specifications and stale source states, and serializes concurrent writers. A trigger-injected audit failure verifies all records roll back together. Caller callbacks and external side effects are deliberately unsupported. The focused state-transition and release checks passed **19 tests**. The full V4.29 runner passed on Windows/Python 3.14.7 with **1,441 passed, 26 skipped**, exit code 0, and `RELEASE_HYGIENE=PASS`. Preflight: `READY_FOR_MILESTONE`, `allowed=true`, `pipeline_status=PASS`, 265 unique input hashes, zero blockers; `external_evidence=false`, `production_ready=false`, `activation_flag=NOT_SET`. Hosted CI for code head `d6201e0e67b2ffeebf55ee9b14187615aabb9c97` passed in [run 44360777245](https://github.com/Zenex-cpp/Quant_trading_platform/actions/runs/44360777245) with **1,464 passed, 3 skipped**, `RELEASE_HYGIENE=PASS`; artifact 14455665032 has SHA-256 `196d519d597c491105d2d8a8f81fab1781d54ea20d7717b57bb1f12024e220bb` (34,412 bytes). Governance remains BLOCKED by missing trusted governance evidence.
 
