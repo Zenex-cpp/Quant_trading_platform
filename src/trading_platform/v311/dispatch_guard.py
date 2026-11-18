@@ -14,6 +14,8 @@ from trading_platform.v310.runtime_orchestrator import RuntimeCycleSnapshot
 from trading_platform.v316.accounting_gate import AccountingGateDenied, DurableAccountingAuthority
 from trading_platform.v317.durable_risk import RiskReservationConflict, RiskReservationGate
 from trading_platform.v318.durable_decision import RiskDecisionConflict, DurableRiskDecisionLedger
+from trading_platform.v349.liquidity_assessment import LiquidityAssessment
+from trading_platform.v348.uncertainty_assessment import UncertaintyAssessment
 from trading_platform.v319.durable_intent import DurableOrderIntentLedger, OrderIntentConflict
 from trading_platform.v320.durable_request import DurableOrderRequestLedger, OrderRequestConflict
 from trading_platform.v321.durable_dispatch import DurableDispatchAttemptLedger, DispatchAttemptConflict, DispatchAttemptState
@@ -44,6 +46,8 @@ def assert_final_dispatch_authorities(
     position_authority: PositionAuthorityLedger | None,
     market_data_authority: MarketDataAuthorityLedger | None,
     causal_ttl_authority: CausalTTLAuthorityLedger | None,
+    liquidity_assessment: LiquidityAssessment | None = None,
+    uncertainty_assessment: UncertaintyAssessment | None = None,
 ) -> None:
     """Apply the shared M1–M5 authority checks immediately before transport.
 
@@ -84,6 +88,10 @@ def assert_final_dispatch_authorities(
             reservation_id=intent.risk_reservation_id,
             requested_exposure=Decimal(str(requested_exposure)),
             truth_hash=truth_hash,
+            uncertainty=(None if uncertainty_assessment is None else uncertainty_assessment.uncertainty),
+            uncertainty_assessment=uncertainty_assessment,
+            liquidity_stress=(None if liquidity_assessment is None else liquidity_assessment.liquidity_stress),
+            liquidity_assessment=liquidity_assessment,
         )
     except RiskDecisionConflict as exc:
         raise DispatchGuardDenied(f"RISK_DECISION_DENIED:{exc}") from exc
@@ -92,11 +100,25 @@ def assert_final_dispatch_authorities(
         if market_data_authority is None:
             raise DispatchGuardDenied("MARKET_DATA_AUTHORITY_REQUIRED")
         try:
-            market_data_authority.assert_fresh(
+            market_record = market_data_authority.assert_fresh(
                 symbol=intent.symbol, now_ms=now_ms, feed_id="primary",
             )
         except MarketDataAuthorityConflict as exc:
             raise DispatchGuardDenied(f"MARKET_DATA_AUTHORITY_DENIED:{exc}") from exc
+        if liquidity_assessment is not None:
+            if not liquidity_assessment.matches_order(
+                symbol=intent.symbol, side=intent.side, quantity=intent.quantity,
+            ):
+                raise DispatchGuardDenied("LIQUIDITY_INTENT_MISMATCH")
+            if liquidity_assessment.source_evidence_id != market_record.fingerprint:
+                raise DispatchGuardDenied("LIQUIDITY_MARKET_EVIDENCE_MISMATCH")
+            if (
+                market_record.sequence_number is not None
+                and liquidity_assessment.last_update_id != market_record.sequence_number
+            ):
+                raise DispatchGuardDenied("LIQUIDITY_MARKET_SEQUENCE_MISMATCH")
+            if not liquidity_assessment.source_fresh_at(now_ms * 1_000_000):
+                raise DispatchGuardDenied("LIQUIDITY_SOURCE_EXPIRED")
         if causal_ttl_authority is None:
             raise DispatchGuardDenied("CAUSAL_TTL_AUTHORITY_REQUIRED")
         try:
@@ -169,8 +191,19 @@ class GuardedExecutionDispatcher:
         self.market_data_authority = market_data_authority
         self.causal_ttl_authority = causal_ttl_authority
         if side_effect_ledger is None:
+            candidate_stores = [
+                ledger.store
+                for ledger in (dispatch_attempt_ledger, order_request_ledger)
+                if ledger is not None
+            ]
+            accounting_ledger = getattr(accounting_authority, "ledger", None)
+            if accounting_ledger is not None:
+                candidate_stores.append(accounting_ledger.store)
+            side_effect_store = next((store for store in candidate_stores if store.is_persistent), None)
+            if side_effect_store is None:
+                side_effect_store = candidate_stores[0] if candidate_stores else EventStore()
             side_effect_ledger = DurableSideEffectLedger(
-                dispatch_attempt_ledger.store if dispatch_attempt_ledger is not None else EventStore()
+                side_effect_store
             )
         self.side_effect_ledger = side_effect_ledger
         self.side_effect_executor = DurableSideEffectExecutor(self.side_effect_ledger)
@@ -217,6 +250,8 @@ class GuardedExecutionDispatcher:
             position_authority=self.position_authority,
             market_data_authority=self.market_data_authority,
             causal_ttl_authority=self.causal_ttl_authority,
+            liquidity_assessment=req.authority.liquidity_assessment,
+            uncertainty_assessment=req.authority.uncertainty_assessment,
         )
         attempt_intent_fp = (self.order_intent_ledger.fingerprint(intent)
                              if self.order_intent_ledger is not None
@@ -256,6 +291,7 @@ class GuardedExecutionDispatcher:
                 self.accounting_authority.assert_new_risk_allowed()
             except AccountingGateDenied as exc:
                 raise DispatchGuardDenied(str(exc)) from exc
+        consumes_risk_budget = intent.action in {OrderAction.OPEN, OrderAction.INCREASE}
         if self.dispatch_attempt_ledger is not None:
             try:
                 self.dispatch_attempt_ledger.assert_dispatchable_new(
@@ -269,6 +305,19 @@ class GuardedExecutionDispatcher:
             except DispatchAttemptConflict as exc:
                 raise DispatchGuardDenied(f"DISPATCH_ATTEMPT_DENIED:{exc}") from exc
         self.bridge.assert_dispatchable(intent.intent_id)
+        if not self.side_effect_ledger.store.is_persistent:
+            raise DispatchGuardDenied("SIDE_EFFECT_LEDGER_NOT_PERSISTENT")
+        if consumes_risk_budget:
+            if self.accounting_authority is None:
+                raise DispatchGuardDenied("RISK_ACCOUNTING_AUTHORITY_REQUIRED")
+            accounting_store = getattr(getattr(self.accounting_authority, "ledger", None), "store", None)
+            if accounting_store is None or not accounting_store.is_persistent:
+                raise DispatchGuardDenied("RISK_ACCOUNTING_LEDGER_NOT_PERSISTENT")
+            if self.risk_reservation_gate is None:
+                raise DispatchGuardDenied("RISK_RESERVATION_GATE_REQUIRED")
+            reservation_store = getattr(getattr(self.risk_reservation_gate, "book", None), "store", None)
+            if reservation_store is None or not reservation_store.is_persistent:
+                raise DispatchGuardDenied("RISK_RESERVATION_LEDGER_NOT_PERSISTENT")
         accounting_hash = None
         if self.accounting_authority is not None:
             accounting_hash = self.accounting_authority.snapshot().projection_hash
@@ -292,7 +341,7 @@ class GuardedExecutionDispatcher:
             except DispatchAttemptConflict as exc:
                 raise DispatchGuardDenied(f"DISPATCH_ATTEMPT_DENIED:{exc}") from exc
 
-        if self.risk_reservation_gate is not None:
+        if consumes_risk_budget:
             reservation_id = intent.risk_reservation_id
             if not reservation_id:
                 raise DispatchGuardDenied("RISK_RESERVATION_REQUIRED")

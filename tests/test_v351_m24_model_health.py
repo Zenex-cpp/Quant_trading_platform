@@ -5,7 +5,7 @@ import pytest
 
 from trading_platform.risk.monotonicity import adjusted_risk
 from trading_platform.v21.event_store import EventStore
-from trading_platform.v25.health import EvidenceFreshness, HealthState, assess_health
+from trading_platform.v25.health import EvidenceFreshness, HealthAssessment, HealthState, assess_health
 from trading_platform.v30.truth import AxisSnapshot, CanonicalAction, ConfigurationStatus, TruthComponent, TruthStatus, build_truth
 from trading_platform.v31.authority import AuthorityStatus, RuntimeAuthority
 from trading_platform.v318 import DurableRiskDecisionLedger, RiskDecisionAction, RiskDecisionConflict, RiskDecisionRecord, RiskSystemState
@@ -19,11 +19,11 @@ from trading_platform.v351 import (
 AXES = AxisSnapshot("ACTIVE", "LIVE", "HEALTHY", "APPROVED", "ACTIVE", "CHAMPION")
 
 
-def truth():
+def truth(*, observed_at_ns: int = 10):
     comps = tuple(TruthComponent(n, TruthStatus.VERIFIED, "OK", (f"E-{n}",)) for n in ("health", "provenance", "governance", "reconciliation", "accounting", "ledger"))
     caps = {k: Decimal("100") for k in ("health_cap", "deployment_cap", "accounting_cap", "reconciliation_cap", "provenance_cap", "operator_cap")}
     return build_truth(
-        observed_at_ns=1,
+        observed_at_ns=observed_at_ns,
         axes=AXES,
         components=comps,
         requested_risk=Decimal("100"),
@@ -33,11 +33,18 @@ def truth():
     )
 
 
-def assessment(*, assessment_id: str = "H-M24", state: HealthState = HealthState.HEALTHY, fresh: bool = True, drift: bool = False, quality: bool = True):
+def assessment(
+    *, assessment_id: str = "H-M24", state: HealthState = HealthState.HEALTHY,
+    fresh: bool = True, drift: bool = False, quality: bool = True,
+    now_ns: int = 10, evidence_id: str = "EV-M24",
+    captured_at_ns: int = 1, ttl_ns: int | None = None,
+):
+    if ttl_ns is None:
+        ttl_ns = 100 if fresh else 1
     return assess_health(
         assessment_id=assessment_id,
-        now_ns=10,
-        evidence=EvidenceFreshness("EV-M24", captured_at_ns=1, ttl_ns=100, verified=True) if fresh else EvidenceFreshness("EV-M24", captured_at_ns=1, ttl_ns=1, verified=True),
+        now_ns=now_ns,
+        evidence=EvidenceFreshness(evidence_id, captured_at_ns=captured_at_ns, ttl_ns=ttl_ns, verified=True),
         drift_critical=drift,
         quality_ok=quality,
         stream_healthy=state is not HealthState.BLOCKED,
@@ -52,6 +59,21 @@ def assessment(*, assessment_id: str = "H-M24", state: HealthState = HealthState
 
 
 def decision(*, allowed="50", model_health=None, model_health_factor=None, model_health_max=None, assessment_id=None, state=None, fresh=None, drift=None, quality=None):
+    source_evidence = None
+    source_fingerprint = None
+    assessed_at_ns = None
+    if model_health is not None:
+        source_evidence = EvidenceFreshness(
+            "EV-M24", captured_at_ns=100_000_000, ttl_ns=60_000_000, verified=True,
+        )
+        assessed_at_ns = 100_000_000
+        source_assessment = HealthAssessment(
+            state=HealthState(str(state)), evidence_fresh=bool(fresh),
+            drift_critical=bool(drift), quality_ok=bool(quality), reason="TEST",
+            assessment_id=str(assessment_id), source_evidence=source_evidence,
+            assessed_at_ns=assessed_at_ns,
+        )
+        source_fingerprint = source_assessment.source_fingerprint
     return RiskDecisionRecord(
         decision_id="D-MH",
         action=RiskDecisionAction.ALLOW,
@@ -83,6 +105,12 @@ def decision(*, allowed="50", model_health=None, model_health_factor=None, model
         model_health_evidence_fresh=fresh,
         model_health_drift_critical=drift,
         model_health_quality_ok=quality,
+        model_health_source_evidence_id=None if source_evidence is None else source_evidence.evidence_id,
+        model_health_source_captured_at_ns=None if source_evidence is None else source_evidence.captured_at_ns,
+        model_health_source_ttl_ns=None if source_evidence is None else source_evidence.ttl_ns,
+        model_health_source_verified=None if source_evidence is None else source_evidence.verified,
+        model_health_assessed_at_ns=assessed_at_ns,
+        model_health_source_fingerprint=source_fingerprint,
     )
 
 
@@ -134,6 +162,10 @@ def test_durable_decision_rejects_budget_above_model_health_cap():
     with pytest.raises(ValueError, match="RISK_ALLOWED_EXCEEDS_MODEL_HEALTH_CAP"):
         ledger.record(decision(allowed="21", model_health="0.2", model_health_factor="0.2", model_health_max="1", assessment_id="H-M24", state="HEALTHY", fresh=True, drift=False, quality=True))
 
+    with pytest.raises(ValueError, match="INVALID_MODEL_HEALTH_SOURCE_PROVENANCE"):
+        tampered = decision(allowed="20", model_health="0.2", model_health_factor="0.2", model_health_max="1", assessment_id="H-M24", state="HEALTHY", fresh=True, drift=False, quality=True)
+        ledger.record(tampered.__class__(**{**tampered.__dict__, "model_health_source_evidence_id": "EV-TAMPERED"}))
+
 
 def test_durable_decision_restart_safe_and_health_stale_blocks(tmp_path: Path):
     path = str(tmp_path / "risk.db")
@@ -142,17 +174,37 @@ def test_durable_decision_restart_safe_and_health_stale_blocks(tmp_path: Path):
     ledger.record(d)
     restored = DurableRiskDecisionLedger(EventStore(path)).get("D-MH")
     assert restored == d
+    durable_assessment = assessment(
+        assessment_id="H-M24", now_ns=100_000_000, evidence_id="EV-M24",
+        captured_at_ns=100_000_000, ttl_ns=60_000_000,
+    )
     snap = DurableRiskDecisionLedger(EventStore(path)).assert_valid_for_new_risk(
         decision_id="D-MH", now_ms=150, intent_id="I-MH", reservation_id="RR-MH", requested_exposure=Decimal("20"), truth_hash="TH-MH", model_health=Decimal("0.2"), model_health_assessment_id="H-M24",
+        model_health_assessment=durable_assessment,
     )
     assert snap.model_health == Decimal("0.2")
+    assert snap.model_health_source_fingerprint == durable_assessment.source_fingerprint
     with pytest.raises(RiskDecisionConflict, match="RISK_DECISION_MODEL_HEALTH_STALE"):
         DurableRiskDecisionLedger(EventStore(path)).assert_valid_for_new_risk(
             decision_id="D-MH", now_ms=150, intent_id="I-MH", reservation_id="RR-MH", requested_exposure=Decimal("20"), truth_hash="TH-MH", model_health=Decimal("0.1"), model_health_assessment_id="H-M24",
+        model_health_assessment=assessment(assessment_id="H-M24", now_ns=100_000_000, evidence_id="EV-M24", captured_at_ns=100_000_000, ttl_ns=60_000_000),
         )
     with pytest.raises(RiskDecisionConflict, match="RISK_DECISION_MODEL_HEALTH_ASSESSMENT_STALE"):
         DurableRiskDecisionLedger(EventStore(path)).assert_valid_for_new_risk(
             decision_id="D-MH", now_ms=150, intent_id="I-MH", reservation_id="RR-MH", requested_exposure=Decimal("20"), truth_hash="TH-MH", model_health=Decimal("0.2"), model_health_assessment_id="H-OTHER",
+        model_health_assessment=assessment(assessment_id="H-OTHER", now_ns=100_000_000, evidence_id="EV-M24", captured_at_ns=100_000_000, ttl_ns=60_000_000),
+        )
+
+    with pytest.raises(RiskDecisionConflict, match="RISK_DECISION_MODEL_HEALTH_SOURCE_STALE"):
+        DurableRiskDecisionLedger(EventStore(path)).assert_valid_for_new_risk(
+            decision_id="D-MH", now_ms=150, intent_id="I-MH", reservation_id="RR-MH", requested_exposure=Decimal("20"), truth_hash="TH-MH", model_health=Decimal("0.2"), model_health_assessment_id="H-M24",
+            model_health_assessment=assessment(assessment_id="H-M24", now_ns=100_000_000, evidence_id="EV-OTHER", captured_at_ns=100_000_000, ttl_ns=60_000_000),
+        )
+
+    with pytest.raises(RiskDecisionConflict, match="RISK_DECISION_MODEL_HEALTH_SOURCE_EXPIRED"):
+        DurableRiskDecisionLedger(EventStore(path)).assert_valid_for_new_risk(
+            decision_id="D-MH", now_ms=161, intent_id="I-MH", reservation_id="RR-MH", requested_exposure=Decimal("20"), truth_hash="TH-MH", model_health=Decimal("0.2"), model_health_assessment_id="H-M24",
+            model_health_assessment=assessment(assessment_id="H-M24", now_ns=100_000_000, evidence_id="EV-M24", captured_at_ns=100_000_000, ttl_ns=60_000_000),
         )
 
 
@@ -163,7 +215,9 @@ def test_capability_identity_changes_with_model_health_and_commit_rechecks_sourc
     from trading_platform.execution.models import OrderAction, OrderIntent, OrderType, PositionState, Side
     from trading_platform.core.ttl import ValidWindow
     now = datetime(2026, 9, 25, tzinfo=timezone.utc)
-    a = assessment()
+    delta = now - datetime(1970, 1, 1, tzinfo=timezone.utc)
+    now_ns = ((delta.days * 86400 + delta.seconds) * 1_000_000_000) + delta.microseconds * 1_000
+    a = assessment(now_ns=now_ns, captured_at_ns=now_ns - 1_000_000, ttl_ns=60_000_000_000)
     window = ValidWindow(now - timedelta(seconds=1), now + timedelta(minutes=5))
     intent = OrderIntent("I-MH-CAP", "D", "P", "R", "S", "M", "E", "BTCUSDT", Side.BUY, OrderAction.OPEN, Decimal("0.001"), OrderType.MARKET, window)
     payload = {
@@ -172,15 +226,28 @@ def test_capability_identity_changes_with_model_health_and_commit_rechecks_sourc
         "order_type": intent.order_type.value, "price": None, "execution_version": intent.execution_version,
     }
     ca = CapabilityAuthority()
-    good = ca.issue(truth=truth(), requested_risk=Decimal("10"), decision_id="MHCAP", intent_payload=payload, expires_at=now + timedelta(seconds=10), model_health=Decimal("0.9"), model_health_assessment=a, model_health_assessment_id="H-M24")
-    bad = ca.issue(truth=truth(), requested_risk=Decimal("10"), decision_id="MHCAP2", intent_payload=payload, expires_at=now + timedelta(seconds=10), model_health=Decimal("0.2"), model_health_assessment=a, model_health_assessment_id="H-M24")
+    good = ca.issue(truth=truth(observed_at_ns=now_ns), requested_risk=Decimal("10"), decision_id="MHCAP", intent_payload=payload, expires_at=now + timedelta(seconds=120), model_health=Decimal("0.9"), model_health_assessment=a, model_health_assessment_id="H-M24")
+    same_decision_different_source = assessment(
+        now_ns=now_ns, evidence_id="EV-M24-OTHER", captured_at_ns=now_ns - 1_000_000,
+        ttl_ns=60_000_000_000,
+    )
+    changed_source = ca.issue(truth=truth(observed_at_ns=now_ns), requested_risk=Decimal("10"), decision_id="MHCAP", intent_payload=payload, expires_at=now + timedelta(seconds=120), model_health=Decimal("0.9"), model_health_assessment=same_decision_different_source, model_health_assessment_id="H-M24")
+    bad = ca.issue(truth=truth(observed_at_ns=now_ns), requested_risk=Decimal("10"), decision_id="MHCAP2", intent_payload=payload, expires_at=now + timedelta(seconds=120), model_health=Decimal("0.2"), model_health_assessment=a, model_health_assessment_id="H-M24")
     assert good.capability_id != bad.capability_id
+    assert good.capability_id != changed_source.capability_id
+    assert good.authority.input_fingerprint != changed_source.authority.input_fingerprint
     assert good.authority.input_fingerprint != bad.authority.input_fingerprint
     with pytest.raises(CapabilityError, match="MODEL_HEALTH_CHANGED"):
         CommitRouter().commit(
-            capability=good, intent=intent, truth=truth(), now=now, position_state=PositionState.FLAT,
+            capability=good, intent=intent, truth=truth(observed_at_ns=now_ns), now=now, position_state=PositionState.FLAT,
             market_window=window, upstream_windows=[window], risk_valid=True,
             model_health=Decimal("0.2"), model_health_assessment=a, model_health_assessment_id="H-M24",
+        )
+    with pytest.raises(CapabilityError, match="MODEL_HEALTH_SOURCE_EXPIRED"):
+        CommitRouter(capability_authority=ca).commit(
+            capability=good, intent=intent, truth=truth(observed_at_ns=now_ns), now=now + timedelta(seconds=61),
+            position_state=PositionState.FLAT, market_window=window, upstream_windows=[window], risk_valid=True,
+            model_health=Decimal("0.9"), model_health_assessment=a, model_health_assessment_id="H-M24",
         )
 
 

@@ -6,6 +6,7 @@ from .compatibility_authority import (
     CompatibilityAuthorityError,
     CompatibilityAuthorityInvalid,
     CompatibilityAuthorityLedger,
+    CompatibilityGuardedArtifactExecutor,
 )
 
 __all__ = [
@@ -14,4 +15,5 @@ __all__ = [
     "CompatibilityAuthorityError",
     "CompatibilityAuthorityInvalid",
     "CompatibilityAuthorityLedger",
+    "CompatibilityGuardedArtifactExecutor",
 ]

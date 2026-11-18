@@ -19,6 +19,8 @@ from trading_platform.v310.runtime_orchestrator import OrchestrationState, Runti
 from trading_platform.execution.models import OrderIntent, OrderAction, OrderType, PositionState, Side
 from trading_platform.core.ttl import ValidWindow
 from tests.dispatch_support import execution_authorities_for
+from tests.event_schema_support import accounting_ledger_for_tests
+from tests.event_schema_support import risk_reservation_book_for_tests
 
 NOW = datetime(2026, 9, 17, tzinfo=timezone.utc)
 BASE_MS = int(NOW.timestamp() * 1000)
@@ -68,7 +70,7 @@ def risk(ledger_path: str, truth_hash: str):
 
 
 def accounting(path: str):
-    authority = DurableAccountingAuthority(DurableAccountingLedger(EventStore(path)))
+    authority = DurableAccountingAuthority(accounting_ledger_for_tests(EventStore(path)))
     authority.ledger.append_fill(DurableFill("af318", "ao318", "BTCUSDT", "BUY", Decimal("1"), Decimal("100")))
     authority.restore()
     authority.mark_reconciled(evidence_id="recon318")
@@ -76,7 +78,7 @@ def accounting(path: str):
 
 
 def reservation(path: str, truth_hash: str):
-    b=DurableRiskReservationBook(EventStore(path), allocated=Decimal("10"))
+    b=risk_reservation_book_for_tests(EventStore(path), allocated=Decimal("10"))
     b.reserve(RiskReservationRecord("RR318", __import__("trading_platform.risk.budget", fromlist=["BudgetScope"]).BudgetScope.ORDER, Decimal("3"), Decimal("3"), "I318", "R318", truth_hash, BASE_MS, BASE_MS + 100000))
     return RiskReservationGate(b)
 

@@ -1,6 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal
 from pathlib import Path
+from threading import Barrier
 
 import pytest
 
@@ -12,6 +13,7 @@ from trading_platform.v317.durable_risk import (
     RiskReservationRecord,
     RiskReservationState,
 )
+from tests.event_schema_support import risk_reservation_book_for_tests
 
 
 def record(rid="R20", expires=100000):
@@ -19,7 +21,7 @@ def record(rid="R20", expires=100000):
 
 
 def setup(path: Path):
-    b = DurableRiskReservationBook(EventStore(str(path)), allocated=Decimal("10"))
+    b = risk_reservation_book_for_tests(EventStore(str(path)), allocated=Decimal("10"))
     b.reserve(record())
 
 
@@ -28,7 +30,7 @@ def test_concurrent_consume_consume_has_one_terminal_event(tmp_path):
     setup(path)
 
     def worker():
-        book = DurableRiskReservationBook(EventStore(str(path)), allocated=Decimal("10"))
+        book = risk_reservation_book_for_tests(EventStore(str(path)), allocated=Decimal("10"))
         try:
             return book.consume("R20", intent_id="I20", risk_decision_id="RD20", requested_risk=Decimal("3"), accounting_projection_hash="A20", occurred_at_ms=101)
         except RiskReservationConflict as exc:
@@ -38,10 +40,36 @@ def test_concurrent_consume_consume_has_one_terminal_event(tmp_path):
         out = list(pool.map(lambda _: worker(), (1, 2)))
 
     assert sum(isinstance(v, RiskReservationConflict) for v in out) in (0, 1)
-    restored = DurableRiskReservationBook(EventStore(str(path)), allocated=Decimal("10"))
+    restored = risk_reservation_book_for_tests(EventStore(str(path)), allocated=Decimal("10"))
     assert restored.reservations()[0].state is RiskReservationState.CONSUMED
     consumed = [e for e in restored.store.iter_events() if e.event_type == restored.CONSUMED]
     assert len(consumed) == 1
+
+
+def test_concurrent_reservations_cannot_overdraw_budget(tmp_path):
+    path = tmp_path / "reserve-race.db"
+    risk_reservation_book_for_tests(EventStore(str(path)), allocated=Decimal("3"))
+    start = Barrier(2)
+
+    def worker(reservation_id):
+        book = risk_reservation_book_for_tests(EventStore(str(path)), allocated=Decimal("3"))
+        start.wait()
+        try:
+            return book.reserve(RiskReservationRecord(
+                reservation_id, BudgetScope.ORDER, Decimal("3"), Decimal("3"),
+                f"I-{reservation_id}", f"RD-{reservation_id}", "A20", 100, 100000,
+            ))
+        except RiskReservationConflict as exc:
+            return exc
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        out = list(pool.map(worker, ("R20-A", "R20-B")))
+
+    assert sum(isinstance(value, RiskReservationConflict) for value in out) == 1
+    assert any(isinstance(value, RiskReservationConflict) and str(value) == "RISK_BUDGET_EXCEEDED" for value in out)
+    restored = risk_reservation_book_for_tests(EventStore(str(path)), allocated=Decimal("3"))
+    assert restored.projection.reserved == Decimal("3")
+    assert len(restored.reservations()) == 1
 
 
 @pytest.mark.parametrize("terminal", ["release", "expire", "override"])
@@ -50,16 +78,16 @@ def test_consume_races_other_terminal_transition(tmp_path, terminal):
     setup(path)
 
     def consume_worker():
-        book = DurableRiskReservationBook(EventStore(str(path)), allocated=Decimal("10"))
+        book = risk_reservation_book_for_tests(EventStore(str(path)), allocated=Decimal("10"))
         try:
             return ("consume", book.consume("R20", intent_id="I20", risk_decision_id="RD20", requested_risk=Decimal("3"), accounting_projection_hash="A20", occurred_at_ms=101))
         except RiskReservationConflict as exc:
             return ("consume_error", str(exc))
 
     def terminal_worker():
-        book = DurableRiskReservationBook(EventStore(str(path)), allocated=Decimal("10"))
+        book = risk_reservation_book_for_tests(EventStore(str(path)), allocated=Decimal("10"))
         fn = {"release": lambda: book.release("R20", reason="TEST", occurred_at_ms=101),
-              "expire": lambda: book.expire("R20", occurred_at_ms=101),
+              "expire": lambda: book.expire("R20", occurred_at_ms=100000),
               "override": lambda: book.override("R20", reason="TEST", occurred_at_ms=101)}[terminal]
         try:
             return (terminal, fn())
@@ -71,7 +99,7 @@ def test_consume_races_other_terminal_transition(tmp_path, terminal):
         b = pool.submit(terminal_worker)
         results = [a.result(), b.result()]
 
-    restored = DurableRiskReservationBook(EventStore(str(path)), allocated=Decimal("10"))
+    restored = risk_reservation_book_for_tests(EventStore(str(path)), allocated=Decimal("10"))
     snaps = restored.reservations()
     assert len(snaps) == 1
     assert snaps[0].state in {

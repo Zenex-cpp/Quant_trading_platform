@@ -1,0 +1,17 @@
+severity,scope,containment,required_response,resume_condition
+CRITICAL,INSTRUMENT,Block new risk for the instrument,Escalate immediately and reconcile affected state,Verified reconciliation and explicit scope release
+CRITICAL,STRATEGY,Block strategy entries and invalidate affected evidence,Escalate immediately and assess dependent gates,Fresh evidence and authorized revalidation
+CRITICAL,PORTFOLIO,Block portfolio new risk and freeze allocation,Escalate immediately and reconcile all positions,Verified portfolio reconciliation and approval
+CRITICAL,SYSTEM,Block all new risk and activation,Declare incident and require recovery proof,Verified system recovery and independent gate pass
+HIGH,INSTRUMENT,Block new entries for the instrument,Notify operator and review source and venue state,Fresh source and operator review
+HIGH,STRATEGY,Freeze affected strategy and promotion,Notify owner and assess dependent evidence,Revalidated strategy scope and gates
+HIGH,PORTFOLIO,Block portfolio increases and review reservations,Notify risk owner and reconcile exposures,Valid reservations and portfolio review
+HIGH,SYSTEM,Block activation and affected services,Escalate to incident owner and preserve audit evidence,Recovery proof and readiness approval
+MEDIUM,INSTRUMENT,Limit actions to verified reduction or closure,Record incident and review before next session,Fresh data and completed review
+MEDIUM,STRATEGY,Pause changes to affected strategy,Record incident and test corrective action,Required tests and evidence pass
+MEDIUM,PORTFOLIO,Hold allocation changes,Review limits and reservation ledger,Current risk assessment passes
+MEDIUM,SYSTEM,Freeze affected subsystem changes,Record incident and monitor scope,Subsystem checks and owner review pass
+LOW,INSTRUMENT,Continue only within existing verified limits,Record and monitor recurrence,No further action unless trend escalates
+LOW,STRATEGY,Continue research only within approved scope,Record and monitor evidence,No further action unless trend escalates
+LOW,PORTFOLIO,No limit increase from the incident,Record and review at scheduled checkpoint,Existing portfolio gates remain current
+LOW,SYSTEM,Record and monitor without changing safety gates,Review trend and preserve audit record,Escalate if frequency or impact increases

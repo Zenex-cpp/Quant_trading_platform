@@ -58,6 +58,39 @@ def test_evidence_graph_and_invalidation():
     impact=propagate_invalidation(g,'D',{'EV':e},{'G1':('EV','M')},{'C1':('G1',)},{'P1':('C1',)})
     assert 'EV' in impact.invalidated_evidence and 'G1' in impact.invalidated_gates and 'P1' in impact.affected_promotions
 
+def test_invalidation_closes_transitive_evidence_and_all_promotion_layers():
+    graph = make_graph()
+    evidence = {
+        "EV-1": Evidence("EV-1", "FEATURE", EvidenceState.VALID, "1", NOW.isoformat(), (), ("X",), "M1", {}, (None, None), "H1", "owner"),
+        "EV-2": Evidence("EV-2", "MODEL", EvidenceState.VALID, "1", NOW.isoformat(), ("EV-1",), (), "M1", {}, (None, None), "H2", "owner"),
+        "EV-3": Evidence("EV-3", "STRATEGY", EvidenceState.VALID, "1", NOW.isoformat(), ("EV-2",), ("EV-2",), "M1", {}, (None, None), "H3", "owner"),
+    }
+    impact = propagate_invalidation(
+        graph,
+        "D",
+        evidence,
+        {"G1": ("EV-3",), "G2": ("G1",)},
+        {"C1": ("G2",)},
+        {"P1": ("C1",), "P2": ("P1",)},
+    )
+    assert impact.invalidated_evidence == ("EV-1", "EV-2", "EV-3")
+    assert impact.invalidated_gates == ("G1", "G2")
+    assert impact.affected_candidates == ("C1",)
+    assert impact.affected_promotions == ("P1", "P2")
+    assert impact.required_revalidation == (
+        "C1", "EV-1", "EV-2", "EV-3", "F", "G1", "G2", "M", "P1", "P2", "X"
+    )
+    assert impact.deployment_impact == "BLOCK_OR_REVALIDATE"
+
+def test_invalidation_without_registered_dependents_reports_no_downstream_impact():
+    impact = propagate_invalidation(EvidenceDependencyGraph(), "UNRELATED", {}, {}, {}, {})
+    assert impact.required_revalidation == ()
+    assert impact.deployment_impact == "NO_REGISTERED_DEPENDENT_OBJECT"
+
+def test_invalidation_requires_a_changed_component_identifier():
+    with pytest.raises(ValueError, match="INVALIDATION_COMPONENT_REQUIRED"):
+        propagate_invalidation(EvidenceDependencyGraph(), "  ", {}, {}, {}, {})
+
 def test_evidence_suspend():
     e=Evidence('EV','BACKTEST',EvidenceState.VALID,'1',NOW.isoformat(),(),(), '1',{},(None,None),'h','r')
     ev=suspend(e,'INC1',('EV',),('G1',),'bug')

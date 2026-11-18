@@ -1,0 +1,7 @@
+decision_class,artifact_type,required,expiry_precedence,downstream_rule,on_expiry,implementation_reference
+Prediction,PREDICTION,TRUE,UPSTREAM_EXPIRES_FIRST,REQUIRE_ALL_UPSTREAM_VALID,BLOCK_NEW_RISK,src/trading_platform/core/ttl.py
+Signal,SIGNAL,TRUE,UPSTREAM_EXPIRES_FIRST,REQUIRE_ALL_UPSTREAM_VALID,BLOCK_NEW_RISK,src/trading_platform/v333/causal_ttl.py
+Opportunity Score,OPPORTUNITY,TRUE,UPSTREAM_EXPIRES_FIRST,REQUIRE_ALL_UPSTREAM_VALID,BLOCK_NEW_RISK,src/trading_platform/v333/causal_ttl.py
+Portfolio Allocation Decision,PORTFOLIO_DECISION,TRUE,UPSTREAM_EXPIRES_FIRST,REQUIRE_ALL_UPSTREAM_VALID,BLOCK_NEW_RISK,src/trading_platform/v333/causal_ttl.py
+Risk Decision,RISK_DECISION,TRUE,UPSTREAM_EXPIRES_FIRST,REQUIRE_ALL_UPSTREAM_VALID,BLOCK_NEW_RISK,src/trading_platform/v318/durable_decision.py
+Order Intent,ORDER_INTENT,TRUE,UPSTREAM_EXPIRES_FIRST,REQUIRE_ALL_UPSTREAM_VALID,BLOCK_NEW_RISK,src/trading_platform/v333/causal_ttl.py

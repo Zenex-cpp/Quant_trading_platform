@@ -1,0 +1,15 @@
+error_code,error_class,severity_default,description,default_response
+SEC-001,SECURITY,CRITICAL,Credential or trust boundary is invalid,BLOCK_SIDE_EFFECTS
+INT-001,INTEGRITY,CRITICAL,Artifact or event content hash is invalid,BLOCK_DEPENDENTS_AND_AUDIT
+DATA-001,DATA_QUALITY,HIGH,Required source data is malformed or incomplete,BLOCK_CONSUMERS
+PIT-001,DATA_AVAILABILITY,CRITICAL,Data availability or revision time is unknown or in the future,BLOCK_CONSUMERS
+TIME-001,CLOCK_TTL,CRITICAL,Clock semantics or decision freshness is invalid,BLOCK_NEW_RISK
+STATE-001,STATE_COMPATIBILITY,HIGH,State axes or requested action are incompatible,BLOCK_ACTION
+DEP-001,DEPENDENCY_EVIDENCE,CRITICAL,Required dependency is missing stale or invalid,BLOCK_DOWNSTREAM
+REC-001,RECONCILIATION,CRITICAL,Order position or accounting state is unknown or mismatched,BLOCK_NEW_RISK_AND_RECONCILE
+RISK-001,RISK_AUTHORITY,CRITICAL,Risk decision reservation or limit is invalid,BLOCK_NEW_RISK
+EXEC-001,EXECUTION,CRITICAL,Side-effect outcome is pending unknown or inconsistent,BLOCK_RETRY_AND_RECONCILE
+MODEL-001,MODEL_STRATEGY,HIGH,Model or strategy validity is degraded or out of scope,BLOCK_OR_REDUCE_RISK
+OPS-001,RECOVERY,CRITICAL,Recovery proof is missing or invalid,BLOCK_READY_AND_LIVE
+NET-001,NETWORK_POLICY,CRITICAL,Traffic violates an environment boundary,BLOCK_EGRESS
+INPUT-001,INPUT_VALIDATION,HIGH,User or operator input violates its contract,REJECT_INPUT

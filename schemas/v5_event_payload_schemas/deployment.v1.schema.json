@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quant-trading-platform.invalid/schemas/deployment-event-payload/v1",
+  "title": "Deployment Event Payload v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["sequence", "event_type", "deployment_id", "actor", "from_phase", "to_phase", "risk_before", "risk_after", "reason", "timestamp_ns", "previous_hash", "event_hash"],
+  "properties": {
+    "sequence": {"type": "integer", "minimum": 1},
+    "event_type": {"enum": ["PREPARE", "STAGE", "CANARY_START", "CANARY_ABORT", "ACTIVATE", "ROLLBACK", "CLOSE"]},
+    "deployment_id": {"type": "string", "minLength": 1},
+    "actor": {"type": "string", "minLength": 1},
+    "from_phase": {"enum": ["IDLE", "PREPARED", "STAGED", "CANARY", "ACTIVATED", "ABORTED", "ROLLED_BACK", "CLOSED"]},
+    "to_phase": {"enum": ["IDLE", "PREPARED", "STAGED", "CANARY", "ACTIVATED", "ABORTED", "ROLLED_BACK", "CLOSED"]},
+    "risk_before": {"type": "string", "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$"},
+    "risk_after": {"type": "string", "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$"},
+    "reason": {"type": "string", "minLength": 1},
+    "timestamp_ns": {"type": "integer", "minimum": 0},
+    "previous_hash": {"type": "string", "pattern": "^(GENESIS|[0-9a-f]{64})$"},
+    "event_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

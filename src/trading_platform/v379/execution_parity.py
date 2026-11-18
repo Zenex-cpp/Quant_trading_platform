@@ -18,7 +18,7 @@ from decimal import Decimal
 from enum import Enum
 import hashlib
 import json
-from typing import Any, Mapping, Protocol, Sequence
+from typing import Any, Callable, Mapping, Protocol, Sequence
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
@@ -33,6 +33,7 @@ from trading_platform.v375.decision_parity import (
     _value_hash,
     compare_decision_traces,
 )
+from trading_platform.v341.compatibility_authority import CompatibilityGuardedArtifactExecutor
 from trading_platform.v378 import (
     BinanceVenueExecutionEngine,
     BinanceVenueExecutionModelConfig,
@@ -142,18 +143,27 @@ class ExecutionParityHarness:
         symbol: str,
         venue_events: Sequence[VenueMarketEvent],
         adapter: ExecutionAdapter,
+        compatibility_executor: CompatibilityGuardedArtifactExecutor,
+        now_provider: Callable[[], datetime],
         seed: int = 0,
     ) -> tuple[ExecutionParityComparison, VenueExecutionResult]:
+        market_events = tuple(item.market for item in venue_events)
+        compatibility_now = now_provider()
+        if not isinstance(compatibility_now, datetime) or compatibility_now.tzinfo is None:
+            raise ValueError("RUNTIME_CLOCK_TIMEZONE_REQUIRED")
+        compatibility_executor.assert_valid(now=compatibility_now)
+
         collector = BacktestDecisionTraceCollector(stages)
         backtest_result = BinanceVenueExecutionEngine(
             collector.traced_stages(), execution_model, symbol, seed
         ).run(venue_events)
         backtest_trace = collector.trace()
 
-        market_events = tuple(item.market for item in venue_events)
-        live_decision = LiveDecisionEngine(stages).run(
-            market_events, backtest_trace.position_quantities
-        )
+        live_decision = LiveDecisionEngine(
+            stages,
+            compatibility_executor=compatibility_executor,
+            now_provider=now_provider,
+        ).run(market_events, backtest_trace.position_quantities)
         decision_comparison = compare_decision_traces(backtest_trace, live_decision.trace)
 
         live_intents = {

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Durable accounting fill payload v1",
+  "type": "object",
+  "properties": {
+    "fill_id": {"type": "string", "minLength": 1},
+    "order_request_id": {"type": "string", "minLength": 1},
+    "symbol": {"type": "string", "minLength": 1},
+    "side": {"type": "string", "minLength": 1},
+    "quantity": {"type": "string", "pattern": "^-?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:[eE][+-]?[0-9]+)?$"},
+    "price": {"type": "string", "pattern": "^-?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:[eE][+-]?[0-9]+)?$"},
+    "fee": {"type": "string", "pattern": "^-?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:[eE][+-]?[0-9]+)?$"},
+    "funding": {"type": "string", "pattern": "^-?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:[eE][+-]?[0-9]+)?$"},
+    "occurred_at_ms": {"type": "integer", "minimum": 0},
+    "exchange_order_id": {"type": ["string", "null"]},
+    "trade_id": {"type": ["string", "null"]},
+    "venue": {"type": "string", "minLength": 1}
+  },
+  "required": ["order_request_id", "symbol", "side", "quantity", "price", "fee", "funding", "occurred_at_ms", "exchange_order_id", "trade_id", "venue"],
+  "anyOf": [
+    {"required": ["fill_id"]},
+    {"properties": {"exchange_order_id": {"type": "string", "minLength": 1}, "trade_id": {"type": "string", "minLength": 1}}}
+  ],
+  "additionalProperties": false
+}

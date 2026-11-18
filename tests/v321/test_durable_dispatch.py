@@ -23,7 +23,8 @@ from trading_platform.v35.binance_execution import ExchangeOutcome, RuntimeCrede
 from trading_platform.v310.runtime_orchestrator import OrchestrationState, RuntimeCycleSnapshot
 from trading_platform.v30.truth import AxisSnapshot, TruthComponent, TruthStatus, build_truth
 from trading_platform.v32.capability import CapabilityAuthority
-from tests.dispatch_support import execution_authorities_for, risk_decision_ledger_for
+from trading_platform.v338.side_effects import DurableSideEffectLedger
+from tests.dispatch_support import execution_authorities_for, risk_accounting_reservation_for, risk_decision_ledger_for
 
 NOW = datetime(2026, 9, 19, tzinfo=timezone.utc)
 WIN = ValidWindow(NOW - timedelta(seconds=1), NOW + timedelta(minutes=5))
@@ -84,7 +85,10 @@ class Gateway:
         return self.result
 
 
-def dispatcher(b, i, intent_ledger, request_ledger, attempt_ledger, gateway):
+def dispatcher(b, i, intent_ledger, request_ledger, attempt_ledger, gateway, *, tmp_path: Path, side_effect_ledger=None):
+    accounting, reservation_gate = risk_accounting_reservation_for(
+        b, i, now_ms=int(NOW.timestamp() * 1000), directory=tmp_path,
+    )
     return GuardedExecutionDispatcher(
         bridge=b,
         gateway=gateway,
@@ -92,8 +96,11 @@ def dispatcher(b, i, intent_ledger, request_ledger, attempt_ledger, gateway):
         order_intent_ledger=intent_ledger,
         order_request_ledger=request_ledger,
         dispatch_attempt_ledger=attempt_ledger,
+        side_effect_ledger=side_effect_ledger,
         **execution_authorities_for(i, now_ms=int(NOW.timestamp() * 1000)),
         risk_decision_ledger=risk_decision_ledger_for(b, i, now_ms=int(NOW.timestamp() * 1000)),
+        accounting_authority=accounting,
+        risk_reservation_gate=reservation_gate,
         clock_ms=lambda: int(NOW.timestamp() * 1000),
     )
 
@@ -110,7 +117,7 @@ def test_attempt_is_persisted_before_transport(tmp_path: Path):
             seen.append(rec.state if rec else None)
             return super().submit(order, credentials=credentials)
 
-    d = dispatcher(b, i, intent_ledger, req_ledger, attempt_ledger, InspectingGateway())
+    d = dispatcher(b, i, intent_ledger, req_ledger, attempt_ledger, InspectingGateway(), tmp_path=tmp_path)
     d.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
     assert seen == [DispatchAttemptState.PENDING]
     rec = attempt_ledger.get(b.committed_request(i.intent_id).request.order_request_id)
@@ -132,7 +139,7 @@ def test_pending_restart_blocks_second_transport(tmp_path: Path):
     )
     fresh_ledger = DurableDispatchAttemptLedger(EventStore(str(tmp_path / "attempt.db")))
     gateway = Gateway()
-    d = dispatcher(b, i, intent_ledger, req_ledger, fresh_ledger, gateway)
+    d = dispatcher(b, i, intent_ledger, req_ledger, fresh_ledger, gateway, tmp_path=tmp_path)
     with pytest.raises(DispatchGuardDenied, match="DISPATCH_ATTEMPT_PENDING_REQUIRES_RECONCILIATION"):
         d.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
     assert gateway.calls == 0
@@ -142,7 +149,7 @@ def test_transport_exception_persists_unknown_and_blocks_retry(tmp_path: Path):
     b, i, req_ledger, intent_ledger = committed_bridge(tmp_path)
     attempt_ledger = DurableDispatchAttemptLedger(EventStore(str(tmp_path / "attempt.db")))
     gateway = Gateway(error=RuntimeError("timeout"))
-    d = dispatcher(b, i, intent_ledger, req_ledger, attempt_ledger, gateway)
+    d = dispatcher(b, i, intent_ledger, req_ledger, attempt_ledger, gateway, tmp_path=tmp_path)
     with pytest.raises(RuntimeError, match="timeout"):
         d.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
     rid = b.committed_request(i.intent_id).request.order_request_id
@@ -156,12 +163,36 @@ def test_resolved_attempt_replays_durable_result_without_second_submit(tmp_path:
     b, i, req_ledger, intent_ledger = committed_bridge(tmp_path)
     attempt_ledger = DurableDispatchAttemptLedger(EventStore(str(tmp_path / "attempt.db")))
     gateway = Gateway()
-    d = dispatcher(b, i, intent_ledger, req_ledger, attempt_ledger, gateway)
+    d = dispatcher(b, i, intent_ledger, req_ledger, attempt_ledger, gateway, tmp_path=tmp_path)
     first = d.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
     second = d.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
     assert gateway.calls == 1
     assert second.exchange_order_id == first.exchange_order_id
     assert second.exchange_outcome == first.exchange_outcome
+
+
+def test_persistent_order_request_store_blocks_duplicate_across_dispatcher_restart(tmp_path: Path):
+    b, i, req_ledger, intent_ledger = committed_bridge(tmp_path)
+    gateway = Gateway()
+    first = dispatcher(b, i, intent_ledger, req_ledger, None, gateway, tmp_path=tmp_path)
+    receipt = first.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
+
+    restarted = dispatcher(b, i, intent_ledger, req_ledger, None, gateway, tmp_path=tmp_path)
+    replay = restarted.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
+
+    assert gateway.calls == 1
+    assert replay.exchange_order_id == receipt.exchange_order_id
+
+
+def test_ephemeral_side_effect_store_fails_closed_before_transport(tmp_path: Path):
+    b, i, req_ledger, intent_ledger = committed_bridge(tmp_path)
+    gateway = Gateway()
+    ephemeral = DurableSideEffectLedger(EventStore())
+    d = dispatcher(b, i, intent_ledger, req_ledger, None, gateway, tmp_path=tmp_path, side_effect_ledger=ephemeral)
+
+    with pytest.raises(DispatchGuardDenied, match="SIDE_EFFECT_LEDGER_NOT_PERSISTENT"):
+        d.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
+    assert gateway.calls == 0
 
 
 def test_binding_conflict_fails_before_external_side_effect(tmp_path: Path):
@@ -177,7 +208,7 @@ def test_binding_conflict_fails_before_external_side_effect(tmp_path: Path):
         attempted_at_ms=int(NOW.timestamp() * 1000),
     )
     gateway = Gateway()
-    d = dispatcher(b, i, intent_ledger, req_ledger, ledger, gateway)
+    d = dispatcher(b, i, intent_ledger, req_ledger, ledger, gateway, tmp_path=tmp_path)
     with pytest.raises(DispatchGuardDenied, match="DISPATCH_ATTEMPT_BINDING_CONFLICT"):
         d.dispatch_submit(intent=i, credentials=RuntimeCredentialValues("API", b"SECRET"))
     assert gateway.calls == 0

@@ -21,6 +21,15 @@ def test_research_cannot_reach_production_or_testnet():
     p = NetworkSegmentationPolicyV391()
     assert p.decide(NetworkZoneV391.RESEARCH, "https://fapi.binance.com/fapi/v1/time") is SegmentationDecisionV391.DENY
     assert p.decide(NetworkZoneV391.RESEARCH, "https://testnet.binancefuture.com/fapi/v1/time") is SegmentationDecisionV391.DENY
+    assert p.decide(NetworkZoneV391.RESEARCH, "https://data.binance.vision/data/futures/um/daily/klines/BTCUSDT/1h/file.zip") is SegmentationDecisionV391.DENY
+
+
+def test_public_market_data_zone_is_separate_and_cannot_reach_trading_hosts():
+    p = NetworkSegmentationPolicyV391()
+    archive_url = "https://data.binance.vision/data/futures/um/daily/klines/BTCUSDT/1h/file.zip"
+    assert p.decide(NetworkZoneV391.PUBLIC_MARKET_DATA, archive_url) is SegmentationDecisionV391.ALLOW
+    assert p.decide(NetworkZoneV391.PUBLIC_MARKET_DATA, "https://fapi.binance.com/fapi/v1/time") is SegmentationDecisionV391.DENY
+    assert p.decide(NetworkZoneV391.PUBLIC_MARKET_DATA, "https://testnet.binancefuture.com/fapi/v1/time") is SegmentationDecisionV391.DENY
 
 
 def test_testnet_zone_allows_only_testnet_hosts():
@@ -40,6 +49,22 @@ def test_non_tls_and_unknown_hosts_are_denied():
     p = NetworkSegmentationPolicyV391()
     assert p.decide(NetworkZoneV391.TESTNET_EXECUTION, "http://testnet.binancefuture.com/fapi/v1/time") is SegmentationDecisionV391.DENY
     assert p.decide(NetworkZoneV391.TESTNET_EXECUTION, "https://evil.example") is SegmentationDecisionV391.DENY
+
+
+def test_only_default_tls_port_is_allowed_for_listed_hosts():
+    p = NetworkSegmentationPolicyV391()
+    assert p.decide(NetworkZoneV391.PUBLIC_MARKET_DATA, "https://data.binance.vision/archive.zip") is SegmentationDecisionV391.ALLOW
+    assert p.decide(NetworkZoneV391.PUBLIC_MARKET_DATA, "https://data.binance.vision:443/archive.zip") is SegmentationDecisionV391.ALLOW
+    assert p.decide(NetworkZoneV391.PUBLIC_MARKET_DATA, "https://data.binance.vision:8443/archive.zip") is SegmentationDecisionV391.DENY
+    assert p.decide(NetworkZoneV391.TESTNET_EXECUTION, "wss://fstream.binancefuture.com:9443/private") is SegmentationDecisionV391.DENY
+
+
+def test_userinfo_malformed_ports_and_invalid_inputs_fail_closed():
+    p = NetworkSegmentationPolicyV391()
+    assert p.decide(NetworkZoneV391.PUBLIC_MARKET_DATA, "https://user:secret@data.binance.vision/archive.zip") is SegmentationDecisionV391.DENY
+    assert p.decide(NetworkZoneV391.PUBLIC_MARKET_DATA, "https://data.binance.vision:invalid/archive.zip") is SegmentationDecisionV391.DENY
+    assert p.decide("PUBLIC_MARKET_DATA", "https://data.binance.vision/archive.zip") is SegmentationDecisionV391.DENY
+    assert p.decide(NetworkZoneV391.PUBLIC_MARKET_DATA, None) is SegmentationDecisionV391.DENY
 
 
 def test_wildcards_are_rejected():
@@ -67,6 +92,13 @@ def test_production_zone_cannot_invent_endpoint():
     bad = dict(DEFAULT_ALLOWED_HOSTS_V391)
     bad[NetworkZoneV391.PRODUCTION_TRADING] = frozenset({"prod.example"})
     with pytest.raises(SegmentationBoundaryErrorV391, match="PRODUCTION_ZONE_ENDPOINT_NOT_ALLOWLISTED"):
+        NetworkSegmentationPolicyV391(allowed_hosts=bad).validate()
+
+
+def test_public_data_zone_cannot_invent_endpoint():
+    bad = dict(DEFAULT_ALLOWED_HOSTS_V391)
+    bad[NetworkZoneV391.PUBLIC_MARKET_DATA] = frozenset({"untrusted.example"})
+    with pytest.raises(SegmentationBoundaryErrorV391, match="PUBLIC_DATA_ZONE_ENDPOINT_NOT_ALLOWLISTED"):
         NetworkSegmentationPolicyV391(allowed_hosts=bad).validate()
 
 

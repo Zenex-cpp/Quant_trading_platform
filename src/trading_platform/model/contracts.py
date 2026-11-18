@@ -70,14 +70,19 @@ class Prediction:
     calibration_state: str
     valid_from: datetime
     expires_at: datetime
+    artifact_hash: str | None = None
+    uncertainty_method: str = "SIGNED_MODEL_DECLARED"
+    uncertainty_source: str = "SIGNED_MODEL_ARTIFACT_HASH_AND_PREDICTION_ID"
 
     def validate(self) -> None:
         if self.timestamp.tzinfo is None or self.valid_from.tzinfo is None or self.expires_at.tzinfo is None:
             raise ValueError("PREDICTION_TIMEZONE_REQUIRED")
         if self.expires_at <= self.valid_from:
             raise ValueError("INVALID_PREDICTION_TTL")
-        if self.uncertainty < 0:
-            raise ValueError("NEGATIVE_UNCERTAINTY")
+        if not 0.0 <= self.uncertainty <= 1.0:
+            raise ValueError("INVALID_UNCERTAINTY")
+        if self.calibration_state not in {"CALIBRATED", "ACCEPTABLE", "POOR", "UNKNOWN"}:
+            raise ValueError("UNKNOWN_CALIBRATION_STATE")
         if not (-1e-15 <= self.prediction <= 1 + 1e-15):
             # Prediction itself is allowed to be a score, but probabilities are not.
             pass

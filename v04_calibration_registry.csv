@@ -1,2 +1,2 @@
-method_id,version,applicability,limitations
-empirical_diagnostic,1.0,binary_probability,"requires independent calibration/evaluation sample; thresholds configurable"
+method_id,version,applicability,source,definition,minimum_samples,thresholds,drift_definition,limitations
+empirical_diagnostic,1.1,binary_probability,distinct current and reference labeled evaluation windows,"Brier score; ten-bin expected calibration error; per-bin mean probability and observed frequency; drift=max absolute change in Brier or ECE",30,"CALIBRATED: Brier<=0.10; ECE<=0.05; drift<=0.05 | ACCEPTABLE: Brier<=0.25; ECE<=0.10; drift<=0.10 | POOR: sufficient evidence and acceptable thresholds exceeded | UNKNOWN: missing source/reference or insufficient samples","current-window metrics compared with a distinct reference window",thresholds are generic defaults and require independent market/regime-specific calibration before production use

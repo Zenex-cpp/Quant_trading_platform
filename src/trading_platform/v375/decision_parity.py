@@ -34,6 +34,7 @@ from trading_platform.v373.backtest_engine import (
     MarketEvent,
 )
 from trading_platform.execution.models import OrderIntent
+from trading_platform.v341.compatibility_authority import CompatibilityGuardedArtifactExecutor
 
 
 class ParityInputError(ValueError):
@@ -81,6 +82,7 @@ class ParityComparison:
     mismatch_offsets: tuple[int, ...]
     backtest_hash: str
     live_hash: str
+    validation_errors: tuple[str, ...] = ()
 
     @property
     def passed(self) -> bool:
@@ -269,10 +271,52 @@ def capture_backtest_decision_trace(
 
 
 class LiveDecisionEngine:
-    """Decision-only live/shadow runner using the same stage object."""
+    """Decision-only live/shadow runner with compatibility checks at every stage."""
 
-    def __init__(self, stages: BacktestStageFunctions) -> None:
+    def __init__(
+        self,
+        stages: BacktestStageFunctions,
+        *,
+        compatibility_executor: CompatibilityGuardedArtifactExecutor,
+        now_provider: Callable[[], datetime],
+    ) -> None:
+        if not isinstance(compatibility_executor, CompatibilityGuardedArtifactExecutor):
+            raise ParityInputError("RUNTIME_COMPATIBILITY_EXECUTOR_REQUIRED")
+        if not callable(now_provider):
+            raise ParityInputError("RUNTIME_CLOCK_PROVIDER_REQUIRED")
         self._stages = stages
+        self._compatibility_executor = compatibility_executor
+        self._now_provider = now_provider
+
+    def _execute_stage(self, executable: Callable, *args: Any) -> Any:
+        now = self._now_provider()
+        if not isinstance(now, datetime) or now.tzinfo is None:
+            raise ParityInputError("RUNTIME_CLOCK_TIMEZONE_REQUIRED")
+        return self._compatibility_executor.execute(executable, *args, now=now)
+
+    def _execute_prediction_stage(self, executable: Callable, *args: Any) -> Any:
+        """Bind signed model objects to the exact artifact named by M14 authority."""
+        contract = getattr(executable, "contract", None)
+        artifact_hash = getattr(executable, "artifact_hash", None)
+        if contract is None and artifact_hash is None:
+            return self._execute_stage(executable, *args)
+        from trading_platform.model.artifact_runtime import SignedLinearModelV1
+
+        if type(executable) is not SignedLinearModelV1 or executable.signature_verified is not True:
+            raise ParityInputError("RUNTIME_MODEL_SIGNATURE_VERIFICATION_REQUIRED")
+        artifact_id = getattr(contract, "model_id", None)
+        if not isinstance(artifact_id, str) or not isinstance(artifact_hash, str):
+            raise ParityInputError("RUNTIME_MODEL_ARTIFACT_BINDING_REQUIRED")
+        now = self._now_provider()
+        if not isinstance(now, datetime) or now.tzinfo is None:
+            raise ParityInputError("RUNTIME_CLOCK_TIMEZONE_REQUIRED")
+        return self._compatibility_executor.execute_artifact(
+            executable,
+            *args,
+            artifact_id=artifact_id,
+            artifact_hashes=(artifact_hash,),
+            now=now,
+        )
 
     def run(
         self,
@@ -291,14 +335,14 @@ class LiveDecisionEngine:
                 raise ParityInputError("OUT_OF_ORDER_LIVE_EVENT")
             last_offset = event.event_offset
 
-            feature = self._stages.feature_fn(event)
-            regime = self._stages.regime_fn(event, feature)
-            prediction = self._stages.prediction_fn(event, feature, regime)
-            signal = self._stages.signal_fn(event, prediction)
-            opportunity = self._stages.opportunity_fn(event, signal, regime)
-            portfolio = self._stages.portfolio_fn(event, opportunity, position_quantity)
-            risk = self._stages.risk_fn(event, portfolio, position_quantity)
-            intent = self._stages.intent_fn(event, risk)
+            feature = self._execute_stage(self._stages.feature_fn, event)
+            regime = self._execute_stage(self._stages.regime_fn, event, feature)
+            prediction = self._execute_prediction_stage(self._stages.prediction_fn, event, feature, regime)
+            signal = self._execute_stage(self._stages.signal_fn, event, prediction)
+            opportunity = self._execute_stage(self._stages.opportunity_fn, event, signal, regime)
+            portfolio = self._execute_stage(self._stages.portfolio_fn, event, opportunity, position_quantity)
+            risk = self._execute_stage(self._stages.risk_fn, event, portfolio, position_quantity)
+            intent = self._execute_stage(self._stages.intent_fn, event, risk)
 
             records.append(
                 DecisionTraceRecord(
@@ -334,24 +378,83 @@ def compare_decision_traces(
     backtest_trace: DecisionTrace,
     live_trace: DecisionTrace,
 ) -> ParityComparison:
-    mismatch_offsets: list[int] = []
-    by_offset = {record.event_offset: record for record in live_trace.records}
+    validation_errors: list[str] = []
 
-    for record in backtest_trace.records:
-        other = by_offset.get(record.event_offset)
-        if other != record:
-            mismatch_offsets.append(record.event_offset)
+    def validate_trace(trace: DecisionTrace, label: str) -> tuple[DecisionTraceRecord, ...]:
+        if not isinstance(trace, DecisionTrace):
+            validation_errors.append(f"{label}_TRACE_TYPE_INVALID")
+            return ()
+        if trace.trace_version != "V375_DECISION_TRACE_1":
+            validation_errors.append(f"{label}_TRACE_VERSION_UNSUPPORTED")
+        if not isinstance(trace.records, tuple):
+            validation_errors.append(f"{label}_TRACE_RECORDS_NOT_IMMUTABLE")
+            return ()
+        records = trace.records
+        if not records:
+            validation_errors.append(f"{label}_TRACE_EMPTY")
+        if any(not isinstance(record, DecisionTraceRecord) for record in records):
+            validation_errors.append(f"{label}_TRACE_RECORD_TYPE_INVALID")
+            return ()
 
-    for offset in live_trace.event_offsets:
-        if offset not in {record.event_offset for record in backtest_trace.records}:
-            mismatch_offsets.append(offset)
+        offsets = tuple(record.event_offset for record in records)
+        valid_offsets = tuple(
+            offset
+            for offset in offsets
+            if isinstance(offset, int) and not isinstance(offset, bool) and offset >= 0
+        )
+        if len(valid_offsets) != len(offsets):
+            validation_errors.append(f"{label}_TRACE_EVENT_OFFSET_INVALID")
+        if len(valid_offsets) != len(set(valid_offsets)):
+            validation_errors.append(f"{label}_TRACE_DUPLICATE_EVENT_OFFSETS")
+        if valid_offsets != tuple(sorted(valid_offsets)):
+            validation_errors.append(f"{label}_TRACE_EVENT_OFFSETS_OUT_OF_ORDER")
 
-    mismatch_offsets = sorted(set(mismatch_offsets))
-    status = "PASS" if not mismatch_offsets else "FAIL"
+        state = {
+            "trace_version": trace.trace_version,
+            "records": [record.as_dict() for record in records],
+        }
+        if trace.state_hash != canonical_hash(state):
+            validation_errors.append(f"{label}_TRACE_STATE_HASH_MISMATCH")
+        return tuple(
+            record
+            for record in records
+            if isinstance(record.event_offset, int)
+            and not isinstance(record.event_offset, bool)
+            and record.event_offset >= 0
+        )
+
+    backtest_records = validate_trace(backtest_trace, "BACKTEST")
+    live_records = validate_trace(live_trace, "LIVE")
+    if (
+        isinstance(backtest_trace, DecisionTrace)
+        and isinstance(live_trace, DecisionTrace)
+        and backtest_trace.trace_version != live_trace.trace_version
+    ):
+        validation_errors.append("TRACE_VERSION_MISMATCH")
+
+    backtest_by_offset: dict[int, list[DecisionTraceRecord]] = {}
+    live_by_offset: dict[int, list[DecisionTraceRecord]] = {}
+    for record in backtest_records:
+        backtest_by_offset.setdefault(record.event_offset, []).append(record)
+    for record in live_records:
+        live_by_offset.setdefault(record.event_offset, []).append(record)
+
+    mismatch_offsets = tuple(
+        sorted(
+            offset
+            for offset in backtest_by_offset.keys() | live_by_offset.keys()
+            if backtest_by_offset.get(offset, []) != live_by_offset.get(offset, [])
+        )
+    )
+    unique_validation_errors = tuple(dict.fromkeys(validation_errors))
+    status = "PASS" if not mismatch_offsets and not unique_validation_errors else "FAIL"
+    backtest_hash = backtest_trace.state_hash if isinstance(backtest_trace, DecisionTrace) else ""
+    live_hash = live_trace.state_hash if isinstance(live_trace, DecisionTrace) else ""
     return ParityComparison(
         status=status,
-        compared_events=max(len(backtest_trace.records), len(live_trace.records)),
-        mismatch_offsets=tuple(mismatch_offsets),
-        backtest_hash=backtest_trace.state_hash,
-        live_hash=live_trace.state_hash,
+        compared_events=max(len(backtest_records), len(live_records)),
+        mismatch_offsets=mismatch_offsets,
+        backtest_hash=backtest_hash,
+        live_hash=live_hash,
+        validation_errors=unique_validation_errors,
     )

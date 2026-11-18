@@ -1,10 +1,16 @@
+from dataclasses import replace
 from datetime import timedelta
 from decimal import Decimal
 from pathlib import Path
 
 import pytest
 
-from tests._m14_helpers import authorize_compatibility, compatible_report, incompatible_report
+from tests._m14_helpers import (
+    authorize_compatibility,
+    authorize_runtime_executor,
+    compatible_report,
+    incompatible_report,
+)
 from tests._m19_helpers import authorize_promotion_bundle
 from tests.v325.test_deployment_activation import approval, bundle, gates, readiness, truth
 from tests._m13_helpers import green_reconciliation
@@ -22,6 +28,7 @@ from trading_platform.v341.compatibility_authority import (
     CompatibilityAuthorityConflict,
     CompatibilityAuthorityInvalid,
     CompatibilityAuthorityLedger,
+    CompatibilityGuardedArtifactExecutor,
 )
 
 from datetime import datetime, timezone
@@ -101,6 +108,80 @@ def test_authority_survives_restart(tmp_path: Path):
         code_version="CODE1", configuration_version="C1", execution_model_version="E1",
     )
     assert restored == auth
+
+
+@pytest.mark.parametrize(
+    "dimension",
+    (
+        "runtime_input_schema", "output_schema", "feature_schema", "configuration",
+        "dependencies", "execution", "venue_rules",
+    ),
+)
+@pytest.mark.parametrize("status", (Compatibility.INCOMPATIBLE, Compatibility.UNKNOWN))
+def test_runtime_execution_blocks_every_non_pass_compatibility_dimension(dimension, status):
+    report = replace(compatible_report(), **{dimension: status})
+    executor = authorize_runtime_executor(NOW, report_provider=lambda: report)
+    executed = []
+
+    with pytest.raises(CompatibilityAuthorityInvalid, match=f"ARTIFACT_COMPATIBILITY_{status.value}"):
+        executor.execute(lambda: executed.append("called"), now=NOW)
+
+    assert executed == []
+
+
+def test_runtime_execution_rechecks_compatibility_report_before_each_call():
+    reports = [compatible_report(), compatible_report()]
+    calls = []
+    executor = authorize_runtime_executor(
+        NOW,
+        report_provider=lambda: calls.append("report") or reports.pop(0),
+    )
+
+    assert executor.execute(lambda value: value + 1, 4, now=NOW) == 5
+    assert executor.execute(lambda value: value + 1, 8, now=NOW) == 9
+    assert calls == ["report", "report"]
+
+
+def test_runtime_execution_blocks_expired_authorization_before_callable():
+    executor = authorize_runtime_executor(NOW, expires_at=NOW)
+    executed = []
+
+    with pytest.raises(CompatibilityAuthorityInvalid, match="COMPATIBILITY_AUTHORIZATION_EXPIRED"):
+        executor.execute(lambda: executed.append("called"), now=NOW)
+
+    assert executed == []
+
+
+def test_runtime_execution_requires_dependency_authority_from_the_authorization_store():
+    store = EventStore()
+    dependencies = DependencyInvalidationLedger(store)
+    authorization = CompatibilityAuthorityLedger(store).authorize(
+        authorization_id="RUNTIME-STORE-BINDING",
+        artifact_id="MODEL-ARTIFACT-1",
+        artifact_hashes=("sha256:model-artifact-1",),
+        code_version="CODE-1",
+        configuration_version="CONFIG-1",
+        execution_model_version="PARITY-BASE",
+        report=compatible_report(),
+        valid_from=NOW - timedelta(minutes=1),
+        expires_at=NOW + timedelta(hours=1),
+        reviewer="reviewer",
+        recorded_at_ms=1,
+        dependency_authority=dependencies,
+    )[0]
+
+    with pytest.raises(CompatibilityAuthorityInvalid, match="COMPATIBILITY_DEPENDENCY_STORE_MISMATCH"):
+        CompatibilityGuardedArtifactExecutor(
+            ledger=CompatibilityAuthorityLedger(store),
+            authorization_id=authorization.authorization_id,
+            artifact_id=authorization.artifact_id,
+            artifact_hashes=authorization.artifact_hashes,
+            code_version=authorization.code_version,
+            configuration_version=authorization.configuration_version,
+            execution_model_version=authorization.execution_model_version,
+            report_provider=compatible_report,
+            dependency_authority=DependencyInvalidationLedger(EventStore()),
+        )
 
 
 def test_activation_requires_durable_compatibility_authority(tmp_path: Path):

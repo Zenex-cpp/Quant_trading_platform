@@ -8,6 +8,7 @@ from trading_platform.core.ttl import ValidWindow
 from trading_platform.v21.event_store import EventStore
 from trading_platform.v34.execution_bridge import ExecutionBridge, BridgeStatus
 from trading_platform.v339.fill_authority import DurableFillAuthority, FillIdentityConflict
+from tests.event_schema_support import accounting_ledger_for_tests
 
 NOW = datetime(2026, 9, 24, tzinfo=timezone.utc)
 WINDOW = ValidWindow(NOW, NOW.replace(second=1))
@@ -69,8 +70,8 @@ def test_bridge_durable_authority_blocks_second_source_after_restart(tmp_path):
     assert b2.position_ledger.positions.get("BTCUSDT") is None
 
 def test_durable_accounting_uses_venue_trade_identity(tmp_path):
-    from trading_platform.v315.durable_accounting import DurableAccountingLedger, DurableFill
-    ledger = DurableAccountingLedger(EventStore(str(tmp_path / "acct.db")))
+    from trading_platform.v315.durable_accounting import DurableFill
+    ledger = accounting_ledger_for_tests(EventStore(str(tmp_path / "acct.db")))
     one = DurableFill("local-1", "or1", "BTCUSDT", "BUY", Decimal("0.4"), Decimal("100"), Decimal("0.1"), occurred_at_ms=1000, exchange_order_id="77", trade_id="9", venue="BINANCE")
     two = DurableFill("local-2", "or1", "BTCUSDT", "BUY", Decimal("0.4"), Decimal("100"), Decimal("0.1"), occurred_at_ms=1001, exchange_order_id="77", trade_id="9", venue="BINANCE")
     first, created = ledger.append_fill_once(one)

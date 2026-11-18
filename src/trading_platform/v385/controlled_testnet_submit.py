@@ -19,8 +19,10 @@ from hashlib import sha256
 import json
 from typing import Any, Mapping
 
-from trading_platform.execution.models import OrderIntent, OrderRequest
+from trading_platform.execution.models import OrderAction, OrderIntent, OrderRequest
 from trading_platform.v21.event_store import EventStore
+from trading_platform.v316.accounting_gate import AccountingGateDenied, DurableAccountingAuthority
+from trading_platform.v317.durable_risk import RiskReservationConflict, RiskReservationGate
 from trading_platform.v321.durable_dispatch import (
     DurableDispatchAttemptLedger,
     DispatchAttemptState,
@@ -108,6 +110,7 @@ class PreTradeSnapshotV385:
     market_stale: bool
     truth_hash: str = ""
     requested_exposure: Decimal = Decimal("0")
+    accounting_projection_hash: str = ""
 
     def validate(self, *, now: datetime) -> None:
         if now < self.captured_at:
@@ -117,6 +120,7 @@ class PreTradeSnapshotV385:
             self.positions_hash, self.portfolio_hash, self.risk_hash, self.limits_hash,
             self.market_hash, self.liquidity_hash, self.model_health_hash,
             self.strategy_health_hash, self.versions_hash, self.truth_hash,
+            self.accounting_projection_hash,
         )
         if not all(required):
             raise ControlledSubmitError("PRE_TRADE_SNAPSHOT_FIELDS_REQUIRED")
@@ -192,6 +196,8 @@ class ControlledTestnetSubmitAuthorityV385:
         activation: TestnetExecutionActivationAuthorityV384,
         gateway,
         risk_decision_ledger: DurableRiskDecisionLedger | None = None,
+        accounting_authority: DurableAccountingAuthority | None = None,
+        risk_reservation_gate: RiskReservationGate | None = None,
         position_authority: PositionAuthorityLedger | None = None,
         market_data_authority: MarketDataAuthorityLedger | None = None,
         causal_ttl_authority: CausalTTLAuthorityLedger | None = None,
@@ -201,6 +207,8 @@ class ControlledTestnetSubmitAuthorityV385:
         self.activation = activation
         self.gateway = gateway
         self.risk_decision_ledger = risk_decision_ledger
+        self.accounting_authority = accounting_authority
+        self.risk_reservation_gate = risk_reservation_gate
         self.position_authority = position_authority
         self.market_data_authority = market_data_authority
         self.causal_ttl_authority = causal_ttl_authority
@@ -256,6 +264,31 @@ class ControlledTestnetSubmitAuthorityV385:
         except DispatchGuardDenied as exc:
             raise ControlledSubmitError(str(exc)) from exc
 
+        consumes_risk_budget = intent.action in {OrderAction.OPEN, OrderAction.INCREASE}
+        accounting_projection_hash: str | None = None
+        if consumes_risk_budget:
+            if not self.store.is_persistent:
+                raise ControlledSubmitError("DISPATCH_EVENT_STORE_NOT_PERSISTENT")
+            if self.accounting_authority is None:
+                raise ControlledSubmitError("RISK_ACCOUNTING_AUTHORITY_REQUIRED")
+            accounting_store = getattr(getattr(self.accounting_authority, "ledger", None), "store", None)
+            if accounting_store is None or not accounting_store.is_persistent:
+                raise ControlledSubmitError("RISK_ACCOUNTING_LEDGER_NOT_PERSISTENT")
+            if self.risk_reservation_gate is None:
+                raise ControlledSubmitError("RISK_RESERVATION_GATE_REQUIRED")
+            reservation_store = getattr(getattr(self.risk_reservation_gate, "book", None), "store", None)
+            if reservation_store is None or not reservation_store.is_persistent:
+                raise ControlledSubmitError("RISK_RESERVATION_LEDGER_NOT_PERSISTENT")
+            try:
+                self.accounting_authority.assert_new_risk_allowed()
+            except AccountingGateDenied as exc:
+                raise ControlledSubmitError(str(exc)) from exc
+            accounting_projection_hash = self.accounting_authority.snapshot().projection_hash
+            if not accounting_projection_hash:
+                raise ControlledSubmitError("RISK_ACCOUNTING_PROJECTION_REQUIRED")
+            if pre_trade_snapshot.accounting_projection_hash != accounting_projection_hash:
+                raise ControlledSubmitError("PRE_TRADE_ACCOUNTING_HASH_STALE")
+
         authorization = self.activation.authorize(intent=intent, reference_price=reference_price, now=now)
         if not authorization.allowed:
             raise ControlledSubmitError(authorization.reason)
@@ -270,6 +303,23 @@ class ControlledTestnetSubmitAuthorityV385:
             idempotency_key=request.idempotency_key,
             attempted_at_ms=int(now.timestamp() * 1000),
         )
+        if consumes_risk_budget:
+            reservation_id = intent.risk_reservation_id
+            if not reservation_id:
+                raise ControlledSubmitError("RISK_RESERVATION_REQUIRED")
+            assert self.risk_reservation_gate is not None
+            assert accounting_projection_hash is not None
+            try:
+                self.risk_reservation_gate.consume_for_dispatch(
+                    reservation_id=reservation_id,
+                    intent_id=intent.intent_id,
+                    risk_decision_id=intent.risk_decision_id,
+                    requested_risk=requested_exposure,
+                    accounting_projection_hash=accounting_projection_hash,
+                    occurred_at_ms=int(now.timestamp() * 1000),
+                )
+            except RiskReservationConflict as exc:
+                raise ControlledSubmitError(f"RISK_RESERVATION_DENIED:{exc}") from exc
         try:
             observation: SubmitObservation = self.gateway.submit(request, credentials=credentials)
         except Exception as exc:

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quant-trading-platform.invalid/schemas/event-envelope/v1",
+  "title": "Quant Trading Platform Event Envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "event_type",
+    "event_version",
+    "schema_version",
+    "event_time",
+    "receive_time",
+    "processing_time",
+    "source",
+    "correlation_id",
+    "sequence_number"
+  ],
+  "properties": {
+    "event_id": {"type": "string", "minLength": 1},
+    "event_type": {"type": "string", "minLength": 1},
+    "event_version": {"type": "string", "minLength": 1},
+    "schema_version": {"type": "string", "minLength": 1},
+    "event_time": {"type": "string", "format": "date-time"},
+    "receive_time": {"type": "string", "format": "date-time"},
+    "processing_time": {"type": "string", "format": "date-time"},
+    "source": {"type": "string", "minLength": 1},
+    "correlation_id": {"type": ["string", "null"], "minLength": 1},
+    "sequence_number": {"type": ["integer", "null"], "minimum": 0}
+  }
+}

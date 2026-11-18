@@ -254,7 +254,7 @@ class ExternalDRAttestationAuthorityV396:
             }
             self.store.append(
                 event_id=event_id,
-                occurred_at_ms=now_ms,
+                occurred_at_ms=attestation.attested_at_ms,
                 event_type=self.EVENT_TYPE,
                 aggregate_id=attestation.attestation_id,
                 payload=payload,

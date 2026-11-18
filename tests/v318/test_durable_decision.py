@@ -1,3 +1,4 @@
+from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 from pathlib import Path
 import pytest
@@ -12,6 +13,9 @@ from trading_platform.v318 import (
     RiskDecisionReplayError,
     RiskSystemState,
 )
+from trading_platform.model.contracts import Prediction
+from trading_platform.v348 import UncertaintyAssessment
+from tests._m21_calibration_helpers import synthetic_calibration_report
 
 
 def decision(*, did="D1", intent="I1", reservation="RR1", truth="TH1", valid_from=100, expires=200):
@@ -37,6 +41,19 @@ def decision(*, did="D1", intent="I1", reservation="RR1", truth="TH1", valid_fro
         truth_hash=truth,
         input_fingerprint="input1",
     )
+
+
+def uncertainty_assessment(value="0.8", *, prediction_id=None, ttl_seconds=2):
+    timestamp=datetime.fromtimestamp(0.1, tz=timezone.utc)
+    probability=float(value)
+    prediction=Prediction(
+        prediction_id=prediction_id or f"P-DURABLE-{value}", model_id="M-SYNTHETIC", model_version="1",
+        timestamp=timestamp, feature_version="F1", target_version="T1", prediction=probability,
+        probability=probability, expected_return=None, expected_risk=probability, uncertainty=probability,
+        calibration_state="CALIBRATED", valid_from=timestamp, expires_at=timestamp+timedelta(seconds=ttl_seconds),
+        artifact_hash="d"*64,
+    )
+    return UncertaintyAssessment.from_prediction(prediction, calibration_report=synthetic_calibration_report())
 
 
 def test_record_is_restart_safe_and_idempotent(tmp_path: Path):
@@ -120,6 +137,7 @@ def test_uncertainty_bound_rejects_allowed_exposure_above_conservative_cap(tmp_p
         "uncertainty_risk_factor": Decimal("0.2"),
         "uncertainty_method": "CONSERVATIVE_LINEAR",
         "uncertainty_method_version": "1",
+        "uncertainty_assessment": uncertainty_assessment(),
     })
     with pytest.raises(ValueError, match="RISK_ALLOWED_EXCEEDS_UNCERTAINTY_CAP"):
         ledger.record(d)
@@ -138,6 +156,7 @@ def test_uncertainty_bound_is_restart_safe_and_stale_uncertainty_blocks(tmp_path
         "uncertainty_risk_factor": Decimal("0.2"),
         "uncertainty_method": "CONSERVATIVE_LINEAR",
         "uncertainty_method_version": "1",
+        "uncertainty_assessment": uncertainty_assessment(),
     })
     ledger.record(d)
     restored = DurableRiskDecisionLedger(EventStore(path)).get("D1")
@@ -145,10 +164,46 @@ def test_uncertainty_bound_is_restart_safe_and_stale_uncertainty_blocks(tmp_path
     snap = DurableRiskDecisionLedger(EventStore(path)).assert_valid_for_new_risk(
         decision_id="D1", now_ms=150, intent_id="I1", reservation_id="RR1",
         requested_exposure=Decimal("20"), truth_hash="TH1", uncertainty=Decimal("0.8"),
+        uncertainty_assessment=uncertainty_assessment(),
     )
     assert snap.uncertainty == Decimal("0.8")
+    with pytest.raises(RiskDecisionConflict, match="RISK_DECISION_UNCERTAINTY_SOURCE_REQUIRED"):
+        DurableRiskDecisionLedger(EventStore(path)).assert_valid_for_new_risk(
+            decision_id="D1", now_ms=150, intent_id="I1", reservation_id="RR1",
+            requested_exposure=Decimal("20"), truth_hash="TH1", uncertainty=Decimal("0.8"),
+        )
     with pytest.raises(RiskDecisionConflict, match="RISK_DECISION_UNCERTAINTY_STALE"):
         DurableRiskDecisionLedger(EventStore(path)).assert_valid_for_new_risk(
             decision_id="D1", now_ms=150, intent_id="I1", reservation_id="RR1",
             requested_exposure=Decimal("20"), truth_hash="TH1", uncertainty=Decimal("0.9"),
+            uncertainty_assessment=uncertainty_assessment("0.8"),
         )
+
+
+def test_uncertainty_assessment_source_change_and_decision_ttl_fail_closed(tmp_path: Path):
+    path=str(tmp_path / "source-decision.db")
+    d=decision()
+    assessment=uncertainty_assessment()
+    d=RiskDecisionRecord(**{
+        **d.__dict__, "requested_exposure": Decimal("100"), "allowed_exposure": Decimal("20"),
+        "uncertainty": Decimal("0.8"), "uncertainty_max": Decimal("1"),
+        "uncertainty_floor": Decimal("0"), "uncertainty_risk_factor": Decimal("0.2"),
+        "uncertainty_method": "CONSERVATIVE_LINEAR", "uncertainty_method_version": "1",
+        "uncertainty_assessment": assessment,
+    })
+    ledger=DurableRiskDecisionLedger(EventStore(path))
+    ledger.record(d)
+    with pytest.raises(RiskDecisionConflict, match="RISK_DECISION_UNCERTAINTY_SOURCE_STALE"):
+        ledger.assert_valid_for_new_risk(
+            decision_id="D1", now_ms=150, intent_id="I1", reservation_id="RR1",
+            requested_exposure=Decimal("20"), truth_hash="TH1", uncertainty=Decimal("0.8"),
+            uncertainty_assessment=uncertainty_assessment(prediction_id="P-DIFFERENT"),
+        )
+
+    short_assessment=uncertainty_assessment(ttl_seconds=.05)
+    too_long=RiskDecisionRecord(**{
+        **d.__dict__, "decision_id":"D-SHORT-SOURCE", "input_fingerprint":"input-short",
+        "uncertainty_assessment":short_assessment,
+    })
+    with pytest.raises(ValueError, match="UNCERTAINTY_DECISION_EXCEEDS_SOURCE_TTL"):
+        DurableRiskDecisionLedger(EventStore(str(tmp_path / "short-source.db"))).record(too_long)

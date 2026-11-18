@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Durable accounting funding payload v1",
+  "type": "object",
+  "properties": {
+    "amount": {"type": "string", "pattern": "^-?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:[eE][+-]?[0-9]+)?$"},
+    "symbol": {"type": "string", "minLength": 1}
+  },
+  "required": ["amount", "symbol"],
+  "additionalProperties": false
+}

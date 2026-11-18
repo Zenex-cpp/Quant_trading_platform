@@ -75,6 +75,9 @@ def test_unhealthy_blocks():
 def test_research_permission_boundary():
     with pytest.raises(PermissionError): assert_capability('RESEARCH',Capability.PRODUCTION_TRADING)
     assert_capability('RESEARCH',Capability.BACKTEST)
+    with pytest.raises(PermissionError): assert_capability('RESEARCH',Capability.DEPLOYMENT)
+    with pytest.raises(PermissionError): assert_capability('RESEARCH',Capability.CANARY)
+    with pytest.raises(PermissionError): assert_capability('UNLISTED_ROLE',Capability.BACKTEST)
 
 def test_readiness_and_kill_switch():
     good=OperationalReadiness(*([True]*19))

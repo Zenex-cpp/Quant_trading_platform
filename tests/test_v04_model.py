@@ -22,7 +22,49 @@ def test_target_length_mismatch_blocks():
 
 def test_calibration_report():
     r=calibration_report([.95,.9,.05,.1],[1,1,0,0])
-    assert r.sample_size==4 and r.state=='CALIBRATED'
+    assert r.sample_size==4 and r.state=='UNKNOWN'
+    assert r.calibration_drift is None
+
+
+def test_calibration_report_tracks_reliability_and_reference_drift():
+    probabilities = [.02] * 15 + [.98] * 15
+    outcomes = [0] * 15 + [1] * 15
+    r=calibration_report(
+        probabilities, outcomes, source_id='window-current',
+        reference_probabilities=probabilities, reference_outcomes=outcomes,
+        reference_source_id='window-reference',
+    )
+    assert r.sample_size==30 and r.reference_sample_size==30
+    assert r.state=='CALIBRATED'
+    assert r.calibration_drift==0
+    assert sum(item.sample_count for item in r.reliability)==30
+
+
+def test_calibration_report_distinguishes_acceptable_and_poor():
+    probabilities = [.5] * 30
+    outcomes = [0, 1] * 15
+    acceptable = calibration_report(
+        probabilities, outcomes, source_id='current-acceptable',
+        reference_probabilities=probabilities, reference_outcomes=outcomes,
+        reference_source_id='reference-acceptable',
+    )
+    assert acceptable.state=='ACCEPTABLE'
+
+    poor_probabilities = [.9] * 30
+    poor_outcomes = [0] * 30
+    poor = calibration_report(
+        poor_probabilities, poor_outcomes, source_id='current-poor',
+        reference_probabilities=poor_probabilities, reference_outcomes=poor_outcomes,
+        reference_source_id='reference-poor',
+    )
+    assert poor.state=='POOR'
+
+
+def test_calibration_rejects_nonprobabilities_and_invalid_outcomes():
+    with pytest.raises(ValueError, match='CALIBRATION_INPUT_INVALID'):
+        calibration_report([1.1, .2], [1, 0])
+    with pytest.raises(ValueError, match='CALIBRATION_INPUT_INVALID'):
+        calibration_report([.1, .2], [1, 2])
 
 def test_uncertainty_monotonicity():
     low=conservative_risk_factor(.1)
@@ -31,7 +73,11 @@ def test_uncertainty_monotonicity():
 
 def test_uncertainty_primitives():
     assert bernoulli_entropy(.5) > bernoulli_entropy(.99)
+    assert bernoulli_entropy(.5) == 1
+    assert ensemble_dispersion([0, 1]) == .25
     assert ensemble_dispersion([1,1,1]) == 0
+    with pytest.raises(ValueError, match='INVALID_ENSEMBLE_PROBABILITY'):
+        ensemble_dispersion([.2, 1.1])
 
 def test_artifact_preload_rejects_hash():
     s1=SchemaContract('features','1',('x',))

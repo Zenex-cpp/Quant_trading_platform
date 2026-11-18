@@ -1,0 +1,8 @@
+precedence,failure_class,authority,decision_rule
+1,SECURITY,Trust and identity boundary,Highest priority; reject unsafe side effects
+2,DATA_INTEGRITY,Content provenance and PIT,Reject invalid or unavailable source state
+3,RECONCILIATION,Exchange and local state agreement,Resolve unknown orders positions and accounting first
+4,RISK,Risk authority and reservation,Block new or increased risk without valid authorization
+5,EXECUTION,Transport and side-effect lifecycle,Do not retry or replace an unresolved side effect
+6,MODEL_STRATEGY,Validity scope and health,Block or reduce exposure when model or strategy is degraded
+7,PERFORMANCE,Optimization and ranking,Apply only after all safety and authority checks pass

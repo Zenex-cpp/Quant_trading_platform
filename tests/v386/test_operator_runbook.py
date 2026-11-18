@@ -34,19 +34,21 @@ def activation():
         reconciliation_state="GREEN",now=BASE)
     return a
 
-def snapshot():
+def snapshot(tmp_path):
     i=intent(); rid="or-"+hashlib.sha256((i.intent_id+i.execution_version).encode()).hexdigest()[:24]
-    return build_v385_submit_authorities(i, BASE).snapshot(i, "SNP-386")
+    return build_v385_submit_authorities(i, BASE, storage_dir=tmp_path / "snapshot-authorities").snapshot(i, "SNP-386")
 
 def evidence():
     return ConnectivityEvidenceV383(PreflightStatus.VERIFIED,"https://testnet.binancefuture.com","wss://ws-api.testnet.binancefuture.com/ws-api/v3","wss://ws-api.testnet.binancefuture.com/ws-api/v3","RESOLVED",BASE.timestamp()*1000,BASE.timestamp()*1000,0,"OK")
 
-def session(outcome=ExchangeOutcome.ACKNOWLEDGED):
-    store=EventStore(); gw=Gateway(outcome)
-    auth=activation(); authorities=build_v385_submit_authorities(intent(), BASE)
+def session(tmp_path, outcome=ExchangeOutcome.ACKNOWLEDGED):
+    store=EventStore(str(tmp_path / "submit.db")); gw=Gateway(outcome)
+    auth=activation(); authorities=build_v385_submit_authorities(intent(), BASE, storage_dir=tmp_path / "authorities")
     ctl=ControlledTestnetSubmitAuthorityV385(
         activation=auth, gateway=gw, event_store=store, clock=lambda:BASE,
         risk_decision_ledger=authorities.risk_decision_ledger,
+        accounting_authority=authorities.accounting_authority,
+        risk_reservation_gate=authorities.risk_reservation_gate,
         position_authority=authorities.position_authority,
         market_data_authority=authorities.market_data_authority,
         causal_ttl_authority=authorities.causal_ttl_authority,
@@ -59,50 +61,50 @@ def good_ud():
 def creds():
     return RuntimeCredentialValues("KEY_RUNTIME",b"SECRET_RUNTIME")
 
-def test_gate_requires_fresh_healthy_user_data():
-    s,_=session()
+def test_gate_requires_fresh_healthy_user_data(tmp_path):
+    s,_=session(tmp_path)
     r=s.preflight(connectivity=evidence(),user_data=good_ud(),reconciliation_green=True,credentials=creds(),now=BASE)
     assert r.allowed and s.state.value=="READY"
 
-def test_stale_user_data_blocks():
-    s,_=session(); stale=UserDataHealthV386(True,True,True,(BASE-timedelta(seconds=16)).timestamp(),"STALE")
+def test_stale_user_data_blocks(tmp_path):
+    s,_=session(tmp_path); stale=UserDataHealthV386(True,True,True,(BASE-timedelta(seconds=16)).timestamp(),"STALE")
     r=s.preflight(connectivity=evidence(),user_data=stale,reconciliation_green=True,credentials=creds(),now=BASE)
     assert not r.allowed and r.reason=="USER_DATA_EVENT_FRESH"
 
-def test_unhealthy_user_data_blocks():
-    s,_=session(); bad=UserDataHealthV386(True,False,True,BASE.timestamp(),"WS_DOWN")
+def test_unhealthy_user_data_blocks(tmp_path):
+    s,_=session(tmp_path); bad=UserDataHealthV386(True,False,True,BASE.timestamp(),"WS_DOWN")
     r=s.preflight(connectivity=evidence(),user_data=bad,reconciliation_green=True,credentials=creds(),now=BASE)
     assert not r.allowed and r.reason=="USER_DATA_WEBSOCKET_HEALTHY"
 
-def test_missing_credentials_blocks():
-    s,_=session(); r=s.preflight(connectivity=evidence(),user_data=good_ud(),reconciliation_green=True,credentials=None,now=BASE)
+def test_missing_credentials_blocks(tmp_path):
+    s,_=session(tmp_path); r=s.preflight(connectivity=evidence(),user_data=good_ud(),reconciliation_green=True,credentials=None,now=BASE)
     assert not r.allowed and r.reason=="RUNTIME_CREDENTIALS_PRESENT"
 
-def test_nonverified_connectivity_blocks_even_with_active_activation():
-    s,_=session(); bad=ConnectivityEvidenceV383(PreflightStatus.NOT_VERIFIED,"https://testnet.binancefuture.com","","","UNRESOLVED",None,BASE.timestamp()*1000,None,"DNS")
+def test_nonverified_connectivity_blocks_even_with_active_activation(tmp_path):
+    s,_=session(tmp_path); bad=ConnectivityEvidenceV383(PreflightStatus.NOT_VERIFIED,"https://testnet.binancefuture.com","","","UNRESOLVED",None,BASE.timestamp()*1000,None,"DNS")
     r=s.preflight(connectivity=bad,user_data=good_ud(),reconciliation_green=True,credentials=creds(),now=BASE)
     assert not r.allowed and r.reason=="CONNECTIVITY_VERIFIED"
 
-def test_controlled_submit_only_after_ready_gate():
-    s,gw=session(); g=s.preflight(connectivity=evidence(),user_data=good_ud(),reconciliation_green=True,credentials=creds(),now=BASE)
-    out=s.submit_once(gate=g,intent=intent(),credentials=creds(),pre_trade_snapshot=snapshot(),now=BASE)
+def test_controlled_submit_only_after_ready_gate(tmp_path):
+    s,gw=session(tmp_path); g=s.preflight(connectivity=evidence(),user_data=good_ud(),reconciliation_green=True,credentials=creds(),now=BASE)
+    out=s.submit_once(gate=g,intent=intent(),credentials=creds(),pre_trade_snapshot=snapshot(tmp_path),now=BASE)
     assert out.status=="ACKNOWLEDGED" and gw.calls==1
 
-def test_submit_rejected_when_gate_blocked():
-    s,gw=session(); g=s.preflight(connectivity=evidence(),user_data=good_ud(),reconciliation_green=False,credentials=creds(),now=BASE)
+def test_submit_rejected_when_gate_blocked(tmp_path):
+    s,gw=session(tmp_path); g=s.preflight(connectivity=evidence(),user_data=good_ud(),reconciliation_green=False,credentials=creds(),now=BASE)
     with pytest.raises(PermissionError,match="OPERATOR_MUTATION_GATE_BLOCKED"):
-        s.submit_once(gate=g,intent=intent(),credentials=creds(),pre_trade_snapshot=snapshot(),now=BASE)
+        s.submit_once(gate=g,intent=intent(),credentials=creds(),pre_trade_snapshot=snapshot(tmp_path),now=BASE)
     assert gw.calls==0
 
-def test_unknown_requires_post_trade_reconciliation():
-    s,gw=session(ExchangeOutcome.UNKNOWN); g=s.preflight(connectivity=evidence(),user_data=good_ud(),reconciliation_green=True,credentials=creds(),now=BASE)
-    out=s.submit_once(gate=g,intent=intent(),credentials=creds(),pre_trade_snapshot=snapshot(),now=BASE)
+def test_unknown_requires_post_trade_reconciliation(tmp_path):
+    s,gw=session(tmp_path, ExchangeOutcome.UNKNOWN); g=s.preflight(connectivity=evidence(),user_data=good_ud(),reconciliation_green=True,credentials=creds(),now=BASE)
+    out=s.submit_once(gate=g,intent=intent(),credentials=creds(),pre_trade_snapshot=snapshot(tmp_path),now=BASE)
     assert out.status=="UNKNOWN" and s.state.value=="UNKNOWN"
     with pytest.raises(ControlledSubmitError,match="POST_TRADE_RECONCILIATION_REQUIRED"):
         s.assert_post_trade_reconciliation(reconciliation_green=True)
 
-def test_closed_session_cannot_mutate():
-    s,gw=session(); g=s.preflight(connectivity=evidence(),user_data=good_ud(),reconciliation_green=True,credentials=creds(),now=BASE); s.close()
+def test_closed_session_cannot_mutate(tmp_path):
+    s,gw=session(tmp_path); g=s.preflight(connectivity=evidence(),user_data=good_ud(),reconciliation_green=True,credentials=creds(),now=BASE); s.close()
     with pytest.raises(PermissionError,match="OPERATOR_SESSION_CLOSED"):
-        s.submit_once(gate=g,intent=intent(),credentials=creds(),pre_trade_snapshot=snapshot(),now=BASE)
+        s.submit_once(gate=g,intent=intent(),credentials=creds(),pre_trade_snapshot=snapshot(tmp_path),now=BASE)
     assert gw.calls==0

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Mapping, Protocol
 from decimal import Decimal
@@ -23,8 +23,8 @@ class RuntimeCredentials(Protocol):
 
 @dataclass(frozen=True)
 class RuntimeCredentialValues:
-    api_key: str
-    api_secret: bytes
+    api_key: str = field(repr=False)
+    api_secret: bytes = field(repr=False)
     def values(self) -> tuple[str, bytes]:
         if not self.api_key or not self.api_secret:
             raise ValueError("RUNTIME_CREDENTIALS_REQUIRED")

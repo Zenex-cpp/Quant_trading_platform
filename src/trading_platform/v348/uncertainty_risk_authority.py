@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 
 from trading_platform.v348.uncertainty_registry import get_production_uncertainty_method
+from trading_platform.v348.uncertainty_assessment import UncertaintyAssessment
 
 
 class UncertaintyRiskError(RuntimeError):
@@ -20,6 +21,10 @@ class UncertaintyRiskBinding:
     risk_factor: Decimal
     method: str
     method_version: str
+    assessment_id: str | None = None
+    source_fingerprint: str | None = None
+    calibration_state: str | None = None
+    calibration_risk_cap: Decimal = Decimal("1")
 
     @property
     def worsens_with_uncertainty(self) -> bool:
@@ -59,6 +64,8 @@ def bind_uncertainty_to_risk(
     floor: Decimal | int | float | str = Decimal("0"),
     method: str = "CONSERVATIVE_LINEAR",
     method_version: str = "1",
+    assessment: UncertaintyAssessment | None = None,
+    now_ns: int | None = None,
 ) -> UncertaintyRiskBinding:
     if not method or not method_version:
         raise UncertaintyRiskError("UNCERTAINTY_METHOD_IDENTITY_REQUIRED")
@@ -69,11 +76,29 @@ def bind_uncertainty_to_risk(
     baseline = _decimal(baseline_risk, "INVALID_BASELINE_RISK")
     if baseline < 0:
         raise UncertaintyRiskError("INVALID_BASELINE_RISK")
+    assessment_id = None
+    source_fingerprint = None
+    calibration_state = None
+    calibration_risk_cap = Decimal("1")
+    if assessment is not None:
+        if not assessment.is_valid():
+            raise UncertaintyRiskError("INVALID_UNCERTAINTY_ASSESSMENT")
+        if _decimal(uncertainty, "INVALID_UNCERTAINTY") != assessment.uncertainty:
+            raise UncertaintyRiskError("UNCERTAINTY_ASSESSMENT_VALUE_MISMATCH")
+        if now_ns is None:
+            raise UncertaintyRiskError("UNCERTAINTY_SOURCE_VALIDATION_TIME_REQUIRED")
+        if not assessment.source_fresh_at(now_ns):
+            raise UncertaintyRiskError("UNCERTAINTY_SOURCE_EXPIRED")
+        assessment_id = assessment.assessment_id
+        source_fingerprint = assessment.source_fingerprint
+        calibration_state = assessment.calibration_state
+        calibration_risk_cap = assessment.calibration_risk_cap
     factor = conservative_risk_factor_decimal(
         uncertainty,
         max_uncertainty=max_uncertainty,
         floor=floor,
     )
+    factor = min(factor, calibration_risk_cap)
     allowed = baseline * factor
     return UncertaintyRiskBinding(
         uncertainty=_decimal(uncertainty, "INVALID_UNCERTAINTY"),
@@ -84,6 +109,10 @@ def bind_uncertainty_to_risk(
         risk_factor=factor,
         method=method,
         method_version=method_version,
+        assessment_id=assessment_id,
+        source_fingerprint=source_fingerprint,
+        calibration_state=calibration_state,
+        calibration_risk_cap=calibration_risk_cap,
     )
 
 
