@@ -1,6 +1,10 @@
 # V4.29 Recovery — Verification Report
 
-## Current package — 3.61.40
+## Current package — 3.61.41
+
+Package 3.61.41 adds a deterministic §28 batch-ordering function and an in-memory per-source stream guard. It canonicalizes simultaneous events without claiming cross-source causality, rejects late/out-of-order stream input, and requires replay after a conflict. Focused event-ordering, schema-registry, and release-version checks passed **21 tests**. The fixed local V4.29 runner passed on Windows/Python 3.14.7 with **1,431 passed, 26 skipped**, exit 0, and `RELEASE_HYGIENE=PASS`. Preflight: `READY_FOR_MILESTONE`, `allowed=true`, 262 unique hashes, zero blockers; `external_evidence=false`, `production_ready=false`, `activation_flag=NOT_SET`. Durable cursor persistence and platform-wide event registry integration remain unverified.
+
+## Package 3.61.40
 
 Package 3.61.40 adds ordered monotonicity checks for execution-risk position-size caps and concentration-adjusted correlated-exposure caps. `adjusted_risk` applies the normalized execution-risk input, validates factor bounds, and rejects conflicting overrides. Focused monotonicity/release checks passed 19 tests. The fixed V4.29 runner passed on Windows/Python 3.14.7 with **1,423 passed, 26 skipped**, exit 0, and `RELEASE_HYGIENE=PASS`. Preflight: `READY_FOR_MILESTONE`, `allowed=true`, 258 unique input hashes, zero blockers; `external_evidence=false`, `production_ready=false`, and `activation_flag=NOT_SET`. No external evidence, production authorization, or live trading is implied.
 

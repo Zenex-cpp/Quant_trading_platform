@@ -1,5 +1,15 @@
 # Trading Platform V4.29 Recovery — Release Notes
 
+## Package 3.61.41 — Deterministic event ordering
+
+- Added deterministic batch/replay ordering by UTC event time, source, source-local sequence, receive time, and event ID.
+- Added a live stream guard that rejects late event times, non-increasing source sequences, duplicate event IDs, and same-time tie-break regressions. It requires replay before a blocked stream resumes.
+- Sequence numbers are never compared across sources. The source-name tie-break for concurrent venues is a deterministic replay convention, not a causal guarantee. Missing sequence numbers use receive time and event ID; gaps then remain unobservable.
+- Added §28 machine-readable policy and tests for equal timestamps, missing sequences, conflicting chronology, late events, and multi-venue ties. The in-memory guard does not replace durable source cursors or the §29 idempotency contract.
+- Focused event-ordering, schema-registry, and release-version checks passed **21 tests**.
+- The fixed local V4.29 runner passed with **1,431 passed, 26 skipped**, exit code 0, and `RELEASE_HYGIENE=PASS`. Preflight was `READY_FOR_MILESTONE`, `allowed=true`, with 262 unique contract inputs and zero blockers; `external_evidence=false`, `production_ready=false`, `activation_flag=NOT_SET`.
+- FD-10/FD-11 remain PARTIAL because the generic EventStore and later authority ledgers are not yet covered by the typed schema registry.
+
 ## Package 3.61.40 — Execution-risk monotonicity contracts
 
 - Added a normalized execution-risk authority: higher caller-supplied hazard reduces the maximum position size and the shared `adjusted_risk` output; conflicting factor overrides fail closed.
