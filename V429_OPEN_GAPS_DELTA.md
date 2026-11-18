@@ -1,5 +1,6 @@
 # V4.29 Open Gaps Delta
 
+- Package 3.61.42 enforces content-bound duplicate handling in the generic EventStore; a reused event ID with changed content fails without mutating the persisted chain. The local V4.29 runner passed with 1,435 passed, 26 skipped, hygiene PASS, 265 unique hashes, and zero preflight blockers; external evidence remains false and production readiness remains false.
 - Package 3.61.41 supplies deterministic §28 batch ordering and fail-closed in-memory stream checks; FD-10/FD-11 remain PARTIAL because generic EventStore payload schemas and durable registry enforcement are not complete. Its fixed local runner passed with 1,431 passed, 26 skipped, hygiene PASS, 262 unique hashes, and zero preflight blockers; external evidence is false and production readiness is false.
 - Package 3.61.40 enforces bounded monotonicity for normalized execution hazard and concentration-adjusted correlated-exposure caps. FD-08 remains PARTIAL: inputs are caller-supplied, correlation measurement is outside the helper, and global immutable ceiling binding is not proven.
 - Package 3.61.40 fixed local V4.29 runner: **1,423 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`; preflight `READY_FOR_MILESTONE`, `allowed=true`, 258 unique input hashes, zero blockers. External evidence is false, production readiness is false, and activation remains `NOT_SET`.

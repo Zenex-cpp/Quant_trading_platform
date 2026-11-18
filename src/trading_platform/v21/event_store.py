@@ -123,10 +123,28 @@ class EventStore:
         ).fetchone()
         if existing:
             event = self._row_to_event(existing)
-            candidate = self._compute_hash(event.sequence, event.event_id, event.occurred_at_ms,
-                                           event.event_type, event.aggregate_id, event.payload, event.prev_hash)
-            if candidate != event.event_hash:
+            stored_hash = self._compute_hash(
+                event.sequence,
+                event.event_id,
+                event.occurred_at_ms,
+                event.event_type,
+                event.aggregate_id,
+                event.payload,
+                event.prev_hash,
+            )
+            if stored_hash != event.event_hash:
                 raise RuntimeError("EVENT_STORE_CORRUPTED")
+            incoming_hash = self._compute_hash(
+                event.sequence,
+                event_id,
+                occurred_at_ms,
+                event_type,
+                aggregate_id,
+                payload,
+                event.prev_hash,
+            )
+            if incoming_hash != event.event_hash:
+                raise RuntimeError("EVENT_APPEND_CONFLICT")
             return AppendResult(event, True)
 
         row = self._db.execute("SELECT sequence,event_hash FROM events ORDER BY sequence DESC LIMIT 1").fetchone()

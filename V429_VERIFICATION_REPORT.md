@@ -1,6 +1,10 @@
 # V4.29 Recovery — Verification Report
 
-## Current package — 3.61.41
+## Current package — 3.61.42
+
+Package 3.61.42 binds EventStore event-ID retries to the persisted canonical event hash over timestamp, type, aggregate, and payload. Exact retries return the prior record; changed content raises `EVENT_APPEND_CONFLICT`. Regression tests cover each field and confirm the original event and chain remain unchanged after rejection. The stable attestation timestamp also keeps V3.96 retries byte-for-byte idempotent after a process restart. Focused EventStore, concurrency, V3.96 attestation, and release checks passed **29 tests**. The full V4.29 runner passed on Windows/Python 3.14.7 with **1,435 passed, 26 skipped**, exit code 0, and `RELEASE_HYGIENE=PASS`. Preflight: `READY_FOR_MILESTONE`, `allowed=true`, `pipeline_status=PASS`, 265 unique input hashes, zero blockers; `external_evidence=false`, `production_ready=false`, `activation_flag=NOT_SET`. Hosted CI is pending for this package.
+
+## Package 3.61.41
 
 Package 3.61.41 adds a deterministic §28 batch-ordering function and an in-memory per-source stream guard. It canonicalizes simultaneous events without claiming cross-source causality, rejects late/out-of-order stream input, and requires replay after a conflict. Focused event-ordering, schema-registry, and release-version checks passed **21 tests**. The fixed local V4.29 runner passed on Windows/Python 3.14.7 with **1,431 passed, 26 skipped**, exit 0, and `RELEASE_HYGIENE=PASS`. Preflight: `READY_FOR_MILESTONE`, `allowed=true`, 262 unique hashes, zero blockers; `external_evidence=false`, `production_ready=false`, `activation_flag=NOT_SET`. Durable cursor persistence and platform-wide event registry integration remain unverified.
 

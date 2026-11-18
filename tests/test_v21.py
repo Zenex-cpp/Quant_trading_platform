@@ -1,4 +1,5 @@
 from decimal import Decimal
+import pytest
 from trading_platform.v21.event_store import EventStore
 from trading_platform.v21.ledger import EventSourcedLedger
 from trading_platform.v21.replay import DeterministicReplayer
@@ -8,9 +9,34 @@ from trading_platform.v21.reconciliation import reconcile_timeline, TemporalReco
 
 def test_event_store_idempotent_and_chain_verified():
     s=EventStore()
-    a=s.append(event_id="e1",occurred_at_ms=1,event_type="CASH_ADJUSTMENT",aggregate_id="A",payload={"amount":"100"})
-    b=s.append(event_id="e1",occurred_at_ms=1,event_type="CASH_ADJUSTMENT",aggregate_id="A",payload={"amount":"100"})
+    a=s.append(event_id="e1",occurred_at_ms=1,event_type="CASH_ADJUSTMENT",aggregate_id="A",payload={"amount":"100","currency":"USD"})
+    b=s.append(event_id="e1",occurred_at_ms=1,event_type="CASH_ADJUSTMENT",aggregate_id="A",payload={"currency":"USD","amount":"100"})
     assert not a.duplicate and b.duplicate and s.verify_chain() and s.latest_sequence()==1
+
+
+@pytest.mark.parametrize("changed", [
+    {"occurred_at_ms": 2},
+    {"event_type": "FILL"},
+    {"aggregate_id": "B"},
+    {"payload": {"amount": "200"}},
+])
+def test_event_store_rejects_event_id_reuse_with_different_content(changed):
+    store = EventStore()
+    original = {
+        "event_id": "e1",
+        "occurred_at_ms": 1,
+        "event_type": "CASH_ADJUSTMENT",
+        "aggregate_id": "A",
+        "payload": {"amount": "100"},
+    }
+    store.append(**original)
+
+    with pytest.raises(RuntimeError, match="EVENT_APPEND_CONFLICT"):
+        store.append(**(original | changed))
+
+    assert store.get("e1").payload == original["payload"]
+    assert store.latest_sequence() == 1
+    assert store.verify_chain()
 
 
 def test_event_sourced_ledger_rebuild_deterministic():

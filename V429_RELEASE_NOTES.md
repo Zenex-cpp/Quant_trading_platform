@@ -1,5 +1,12 @@
 # Trading Platform V4.29 Recovery — Release Notes
 
+## Package 3.61.42 — Durable event-ID content binding
+
+- Fixed `EventStore.append` so an existing ID is returned as a duplicate only when the incoming timestamp, event type, aggregate ID, and canonical payload reproduce the stored event hash.
+- Reusing an event ID with changed content raises `EVENT_APPEND_CONFLICT`; the persisted event and hash chain remain unchanged. Exact canonical retries remain idempotent even when mapping key insertion order differs.
+- Added regression coverage for each conflicting field and for unchanged chain state after rejection. The V4.29 runner now hashes both the shared EventStore implementation and its contract test.
+- The focused EventStore, concurrency, V3.96 attestation, and release-contract suite passed **29 tests**. The full local V4.29 runner passed with **1,435 passed, 26 skipped**, `RELEASE_HYGIENE=PASS`; preflight was `READY_FOR_MILESTONE`, `allowed=true`, with 265 unique contract inputs and zero blockers. `external_evidence=false`, `production_ready=false`, and `activation_flag=NOT_SET` remain in force.
+
 ## Package 3.61.41 — Deterministic event ordering
 
 - Added deterministic batch/replay ordering by UTC event time, source, source-local sequence, receive time, and event ID.
